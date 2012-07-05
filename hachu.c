@@ -81,7 +81,7 @@ typedef struct {
 } PieceDesc;
 
 typedef struct {
-  int from, to, piece, victim, new, booty, epSquare, epVictim, ep2Square, ep2Victim;
+  int from, to, piece, victim, new, booty, epSquare, epVictim, ep2Square, ep2Victim, savKeyL, savKeyH;
 } UndoInfo;
 
 int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, retMSP, retFirst, level, chuFlag=1;
@@ -995,6 +995,8 @@ MakeMove(Move m, UndoInfo *u)
   u->piece = board[u->from];
   board[u->from] = EMPTY;
   u->booty = 0;
+  u->savKeyL = hashKeyL;
+  u->savKeyH = hashKeyH;
 
   if(m & (PROMOTE | DEFER)) {
     if(m & DEFER) {
@@ -1065,6 +1067,9 @@ UnMake(UndoInfo *u)
   p[u->new].pos = ABSENT; 
   p[u->piece].pos = u->from; // this can be the same as above
   board[u->from] = u->piece;
+
+  hashKeyL = u->savKeyL;
+  hashKeyH = u->savKeyH;
 }
 	
 void
@@ -1183,7 +1188,6 @@ int
 Search (int alpha, int beta, int difEval, int depth, int oldPromo, int promoSuppress)
 {
   int i, j, k, firstMove, oldMSP = msp, curMove, sorted, bad, phase, king, iterDep, replyDep, nextVictim, to, defer, dubious, bestMoveNr;
-  int savHashL = hashKeyL, savHashH = hashKeyH;
   int score, bestScore, curEval, iterAlpha;
   Move move, nullMove;
   UndoInfo tb;
@@ -1318,8 +1322,6 @@ if(PATH) pmap(attacks, stm);
 attacks -= 2*BSIZE;
 level--;
       UnMake(&tb);
-      hashKeyL = savHashL;
-      hashKeyH = savHashH;
       xstm = stm; stm ^= WHITE;
 #if 1
 if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), score, bestScore);
