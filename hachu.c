@@ -1184,7 +1184,7 @@ Search (int alpha, int beta, int difEval, int depth, int oldPromo, int promoSupp
 {
   int i, j, k, firstMove, oldMSP = msp, curMove, sorted, bad, phase, king, iterDep, replyDep, nextVictim, to, defer, dubious, bestMoveNr;
   int savHashL = hashKeyL, savHashH = hashKeyH;
-  int score, bestScore, curEval;
+  int score, bestScore, curEval, iterAlpha;
   Move move, nullMove;
   UndoInfo tb;
 if(PATH) printf("search(%d) %d-%d eval=%d, stm=%d\n",depth,alpha,beta,difEval,stm),fflush(stdout);
@@ -1206,11 +1206,11 @@ if(PATH) printf("search(%d) %d-%d eval=%d, stm=%d\n",depth,alpha,beta,difEval,st
   alpha -= (alpha < curEval);
   beta  -= (beta <= curEval);
 
-  firstMove = curMove = sorted = nonCapts = msp += 20; // leave 20 empty slots in front of move list
+  firstMove = curMove = sorted = msp += 20; // leave 20 empty slots in front of move list
   phase = 0; iterDep=1; replyDep = (depth < 1 ? depth : 1) - 1;
   do {
 if(flag && depth>= 0) printf("iter %d:%d\n", depth,iterDep),fflush(stdout);
-    bestScore = -INF; bestMoveNr = 0;
+    iterAlpha = alpha; bestScore = -INF; bestMoveNr = 0;
     for(curMove = firstMove; ; curMove++) { // loop over moves
 if(flag && depth>= 0) printf("phase=%d: first/curr/last = %d / %d / %d\n", phase, firstMove, curMove, msp);fflush(stdout);
       // MOVE SOURCE
@@ -1224,7 +1224,7 @@ if(flag && depth>= 0) printf("phase=%d: first/curr/last = %d / %d / %d\n", phase
 #if 0
 	    if(curEval >= beta) {
 	      stm ^= WHITE;
-	      score = -Search(-beta, -alpha, difEval, depth-3, promoSuppress & SQUARE, ABSENT);
+	      score = -Search(-beta, -iterAlpha, difEval, depth-3, promoSuppress & SQUARE, ABSENT);
 	      stm ^= WHITE;
 	      if(score >= beta) { msp = oldMSP; return score + (score < curEval); }
 	    }
@@ -1263,6 +1263,7 @@ if(flag && depth>= 0) printf("phase=%d: first/curr/last = %d / %d / %d\n", phase
 	    if(depth <= 0) goto cutoff;
 	    phase = 6;
 	  case 6: // non-captures
+	    nonCapts = msp;
 	    nullMove = GenNonCapts(oldPromo);
 	    phase = 7;
 	    sorted = msp; // do not sort noncapts
@@ -1307,7 +1308,7 @@ if(PATH) pmap(attacks, stm);
         if(score == -INF) { moveStack[curMove] = 0; goto abortMove; }
       }
 #if 1
-      score = -Search(-beta, -alpha, -difEval - tb.booty, replyDep, promoSuppress & ~PROMOTE, defer);
+      score = -Search(-beta, -iterAlpha, -difEval - tb.booty, replyDep, promoSuppress & ~PROMOTE, defer);
 #else
       score = 0;
 #endif
@@ -1325,8 +1326,8 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curM
       // ALPHA-BETA STUFF
       if(score > bestScore) {
 	bestScore = score; bestMoveNr = curMove;
-	if(score > alpha) {
-	  alpha = score;
+	if(score > iterAlpha) {
+	  iterAlpha = score;
 	  if(curMove < firstMove + 5) { // if not too much work, sort move to front
 	    int i;
 	    for(i=curMove; i>firstMove; i--) {
@@ -1554,11 +1555,11 @@ MapFromScratch(attacks);
       if(!(flags & promoBoard[t] & (CANT_DEFER | LAST_RANK))) { // but change it into a deferral if that is allowed
 	moveStack[i] &= ~PROMOTE;
 	if(p[board[f]].value == 40) p[board[f]].promoFlag &= LAST_RANK; else
-	if(!(flags & promoBoard[t])) moveStack[i] |= DEFER; // came from outside zone, so essential deferral
+	if(!(flags & promoBoard[f])) moveStack[i] |= DEFER; // came from outside zone, so essential deferral
       }
     }
     if(i >= retMSP)
-      for(i=20; i<retMSP; i++) printf("# %d. %08x %08x %s\n", i-20, moveStack[i], ret, MoveToText(moveStack[i], 0));
+      for(i=retFirst; i<retMSP; i++) printf("# %d. %08x %08x %s\n", i-20, moveStack[i], ret, MoveToText(moveStack[i], 0));
   }
   return (i >= retMSP ? INVALID : moveStack[i]);
 }
@@ -1584,7 +1585,7 @@ flag=0;
   if(!cnt) { // no moves from given square
     if(sqr != lastPut) return; // refrain from sending empty FEN
     // we lifted a piece for second leg of move
-    for(i=20; i<retMSP; i++) {
+    for(i=retFirst; i<retMSP; i++) {
       if(lastLift == (moveStack[i]>>SQLEN & SQUARE)) {
 	int e, t = moveStack[i] & SQUARE;
 	if(t < SPECIAL) continue; // only special moves
