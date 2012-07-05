@@ -84,7 +84,7 @@ typedef struct {
   int from, to, piece, victim, new, booty, epSquare, epVictim, ep2Square, ep2Victim, savKeyL, savKeyH;
 } UndoInfo;
 
-int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, retMSP, retFirst, level, chuFlag=1;
+int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, level, chuFlag=1;
 int nodes, startTime, tlim1, tlim2;
 Move retMove, moveStack[10000], path[100];
 
@@ -1470,12 +1470,14 @@ MakeMove2 (int stm, MOVE move)
 {
   sup0 = sup1; sup1 = sup2;
   sup2 = MakeMove(move, &undoInfo);
+  rootEval = -rootEval - undoInfo.booty;
   return stm ^ WHITE;
 }
 
 void
 UnMake2 (MOVE move)
 {
+  rootEval = -rootEval - undoInfo.booty;
   UnMake(&undoInfo);
   sup2 = sup1; sup1 = sup0;
 }
@@ -1485,6 +1487,7 @@ Setup2 (char *fen)
 {
   SetUp(chuArray, chuPieces);
   sup0 = sup1 = sup2 = ABSENT;
+  rootEval = 0;
   return WHITE;
 }
 
@@ -1634,7 +1637,7 @@ SearchBestMove (int stm, int timeLeft, int mps, int timeControl, int inc, int ti
   tlim2 = 1.9*targetTime;
   nodes = 0;
 MapFromScratch(attacks);
-  score = Search(-INF-1, INF+1, 0, 20, sup1, sup2);
+  score = Search(-INF-1, INF+1, rootEval, 20, sup1, sup2);
   *move = retMove;
   *ponderMove = INVALID;
   return score;
