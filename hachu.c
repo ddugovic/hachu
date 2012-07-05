@@ -82,12 +82,12 @@ typedef struct {
 } PieceDesc;
 
 typedef struct {
-  int from, to, piece, victim, new, booty, epSquare, epVictim, ep2Square, ep2Victim, savKeyL, savKeyH;
+  int from, to, piece, victim, new, booty, epSquare, epVictim, ep2Square, ep2Victim, revMoveCount, savKeyL, savKeyH;
 } UndoInfo;
 
-int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, pvPtr, level, chuFlag=1;
+int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, pvPtr, level, cnt50, chuFlag=1;
 int nodes, startTime, tlim1, tlim2;
-Move retMove, moveStack[10000], path[100], pv[1000];
+Move retMove, moveStack[10000], path[100], repStack[300], pv[1000];
 
 #define X 36 /* slider              */
 #define J -1 /* jump                */
@@ -1004,6 +1004,7 @@ MakeMove(Move m, UndoInfo *u)
   u->piece = board[u->from];
   board[u->from] = EMPTY;
   u->booty = 0;
+  u->revMoveCount = cnt50++;
   u->savKeyL = hashKeyL;
   u->savKeyH = hashKeyH;
 
@@ -1015,6 +1016,7 @@ MakeMove(Move m, UndoInfo *u)
       p[u->piece].pos = ABSENT;
       u->new = p[u->piece].promo;
       u->booty = p[u->new].value - p[u->piece].value;
+      cnt50 = 0; // promotion irreversible
     }
   } else u->new = u->piece;
 
@@ -1040,12 +1042,13 @@ MakeMove(Move m, UndoInfo *u)
     hashKeyL ^= p[u->ep2Victim].pieceKey * squareKey[u->ep2Square];
     hashKeyH ^= p[u->ep2Victim].pieceKey * squareKey[u->ep2Square+BH];
     if(p[u->piece].value != 1000 && p[u->epVictim].value == 1000) deferred |= PROMOTE; // flag non-Lion x Lion
+    cnt50 = 0; // double capture irreversible
   } else u->epVictim = EMPTY;
 
   u->victim = board[u->to];
   p[u->victim].pos = ABSENT;
   u->booty += p[u->victim].value + PST[p[u->victim].pst + u->to];
-//  if(p[u->victim].value == 1000 && p[u->piece].value != 1000) deferred |= PROMOTE; // flag non-Lion x Lion
+  if(u->victim != EMPTY) cnt50 = 0; // capture irreversible
 
   p[u->new].pos = u->to;
   board[u->to] = u->new;
@@ -1077,6 +1080,7 @@ UnMake(UndoInfo *u)
   p[u->piece].pos = u->from; // this can be the same as above
   board[u->from] = u->piece;
 
+  cnt50 = u->revMoveCount;
   hashKeyL = u->savKeyL;
   hashKeyH = u->savKeyH;
 }
@@ -1304,10 +1308,18 @@ if(flag & depth >= 0) printf("%2d:%d extract %d/%d\n", depth, iterDep, curMove, 
 	if(move == 0) continue; // skip invalidated move
       }
 if(flag & depth >= 0) printf("%2d:%d found %d/%d\n", depth, iterDep, curMove, msp);
+
       // RECURSION
       stm ^= WHITE;
-      defer = MakeMove(moveStack[curMove], &tb);
-path[level++] = moveStack[curMove];
+      defer = MakeMove(move, &tb);
+
+      for(i=2; i<=cnt50; i+=2) if(repStack[level-i+200] == hashKeyH) {
+	moveStack[curMove] = 0; // erase forbidden move
+	score = -INF; goto repetition;
+      }
+      repStack[level+200] = hashKeyH;
+
+path[level++] = move;
 attacks += 2*BSIZE;
 MapFromScratch(attacks); // for as long as incremental update does not work.
 if(PATH) pmap(attacks, stm);
@@ -1320,7 +1332,7 @@ if(PATH) pmap(attacks, stm);
 	  if(promoSuppress & PROMOTE) score = -INF; // non-Lion captures Lion after opponent did same
 	  defer |= PROMOTE;                         // if we started, flag  he cannot do it in reply
 	}
-        if(score == -INF) { moveStack[curMove] = 0; goto abortMove; }
+        if(score == -INF) { moveStack[curMove] = 0; goto abortMove; } // zap illegal moves
       }
 #if 1
       score = -Search(-beta, -iterAlpha, -difEval - tb.booty, replyDep, promoSuppress & ~PROMOTE, defer);
@@ -1328,14 +1340,14 @@ if(PATH) pmap(attacks, stm);
       score = 0;
 #endif
     abortMove:
-
-
 attacks -= 2*BSIZE;
 level--;
+    repetition:
       UnMake(&tb);
       xstm = stm; stm ^= WHITE;
 #if 1
 if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), score, bestScore);
+
       // ALPHA-BETA STUFF
       if(score > bestScore) {
 	bestScore = score; bestMoveNr = curMove;
@@ -1482,17 +1494,23 @@ int lastLift, lastPut;
 int
 MakeMove2 (int stm, MOVE move)
 {
+  int i;
   sup0 = sup1; sup1 = sup2;
   sup2 = MakeMove(move, &undoInfo);
   rootEval = -rootEval - undoInfo.booty;
+  for(i=0; i<200; i++) repStack[i] = repStack[i+1];
+  repStack[199] = hashKeyH;
+printf("# makemove %08x %c%d %c%d\n", move, sup1%BW+'a', sup1/BW, sup2%BW+'a', sup2/BW);
   return stm ^ WHITE;
 }
 
 void
 UnMake2 (MOVE move)
 {
+  int i;
   rootEval = -rootEval - undoInfo.booty;
   UnMake(&undoInfo);
+  for(i=200; i>0; i--) repStack[i] = repStack[i-1];
   sup2 = sup1; sup1 = sup0;
 }
 
@@ -1501,7 +1519,7 @@ Setup2 (char *fen)
 {
   SetUp(chuArray, chuPieces);
   sup0 = sup1 = sup2 = ABSENT;
-  rootEval = hashKeyH = hashKeyL = 0;
+  rootEval = cnt50 = hashKeyH = hashKeyL = 0;
   return WHITE;
 }
 
