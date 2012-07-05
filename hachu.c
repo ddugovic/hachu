@@ -14,9 +14,25 @@
 
 #define VERSION 0.0
 
-#define PATH level==0 || level==1 && path[0] == 0x55893
+//define PATH level==0 || level==1 && path[0] == 0x55893
+#define PATH 0
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <signal.h>
+#include <time.h>
+
+#ifdef WIN32 
+#    include <windows.h>
+#else
+#    include <sys/time.h>
+     int GetTickCount() // with thanks to Tord
+     {	struct timeval t;
+	gettimeofday(&t, NULL);
+	return t.tv_sec*1000 + t.tv_usec/1000;
+     }
+#endif
 
 #define BW 24
 #define BH 12
@@ -69,6 +85,7 @@ typedef struct {
 } UndoInfo;
 
 int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, retMSP, retFirst, level, chuFlag=1;
+int nodes, startTime, tlim1, tlim2;
 Move retMove, moveStack[10000], path[100];
 
 #define X 36 /* slider              */
@@ -1331,6 +1348,9 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curM
 #endif
     } // next move
   cutoff:
+    if(!level) { // root node
+      if(GetTickCount() - startTime > tlim1) break; // do not start iteration we can (most likely) not finish
+    }
     replyDep = iterDep;
   } while(++iterDep <= depth); // next depth
   retMSP = msp;
@@ -1599,9 +1619,16 @@ flag=0;
 int
 SearchBestMove (int stm, int timeLeft, int mps, int timeControl, int inc, int timePerMove, MOVE *move, MOVE *ponderMove)
 {
-  int score;
+  int score, targetTime, movesLeft = 50;
+  if(mps) movesLeft = mps - (moveNr>>1)%mps;
+  targetTime = timeLeft*10 / (movesLeft + 1) + 1000 * inc;
+  if(timePerMove > 0) targetTime = timeLeft * 5;
+  startTime = GetTickCount();
+  tlim1 = 0.3*targetTime;
+  tlim2 = 1.9*targetTime;
+  nodes = 0;
 MapFromScratch(attacks);
-  score = Search(-INF-1, INF+1, 0, 3, sup1, sup2);
+  score = Search(-INF-1, INF+1, 0, 20, sup1, sup2);
   *move = retMove;
   *ponderMove = INVALID;
   return score;
