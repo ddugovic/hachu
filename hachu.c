@@ -675,10 +675,13 @@ AddMove (int i, int x, int y)
 }
 #endif
 
+int flag;
+
 inline int
 NewNonCapture (int x, int y, int promoFlags)
 {
   if(board[y] != EMPTY) return 1; // edge, capture or own piece
+//if(flag) printf("# add %c%d%c%d, pf=%d\n", x%BW+'a',x/BW,y%BW+'a',y/BW, promoFlags);
   if( (promoBoard[x] | promoBoard[y]) & promoFlags) { // piece can promote with this move
     moveStack[msp++] = moveStack[nonCapts];           // create space for promotion
     moveStack[nonCapts++] = x<<SQLEN | y | PROMOTE;   // push promotion
@@ -690,6 +693,7 @@ NewNonCapture (int x, int y, int promoFlags)
     }
   } else
     moveStack[msp++] = x<<SQLEN | y; // push normal move
+//if(flag) printf("msp=%d nc=%d\n", msp, nonCapts);	
   return 0;
 }
 
@@ -1182,8 +1186,6 @@ Evaluate ()
   return 0;
 }
 
-int flag;
-
 int
 Search (int alpha, int beta, int difEval, int depth, int oldPromo, int promoSuppress)
 {
@@ -1553,6 +1555,7 @@ MapFromScratch(attacks);
   if(i>=retMSP) {  // no exact match
     if(deferred) { // but maybe non-sensical deferral
       int flags = p[board[f]].promoFlag;
+printf("# deferral of %d\n", deferred);
       i = deferred; // in any case we take that move
       if(!(flags & promoBoard[t] & (CANT_DEFER | LAST_RANK))) { // but change it into a deferral if that is allowed
 	moveStack[i] &= ~PROMOTE;
