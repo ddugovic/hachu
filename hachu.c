@@ -84,9 +84,9 @@ typedef struct {
   int from, to, piece, victim, new, booty, epSquare, epVictim, ep2Square, ep2Victim, savKeyL, savKeyH;
 } UndoInfo;
 
-int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, level, chuFlag=1;
+int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, pvPtr, level, chuFlag=1;
 int nodes, startTime, tlim1, tlim2;
-Move retMove, moveStack[10000], path[100];
+Move retMove, moveStack[10000], path[100], pv[1000];
 
 #define X 36 /* slider              */
 #define J -1 /* jump                */
@@ -1190,6 +1190,7 @@ int
 Search (int alpha, int beta, int difEval, int depth, int oldPromo, int promoSuppress)
 {
   int i, j, k, firstMove, oldMSP = msp, curMove, sorted, bad, phase, king, iterDep, replyDep, nextVictim, to, defer, dubious, bestMoveNr;
+  int myPV = pvPtr;
   int score, bestScore, curEval, iterAlpha;
   Move move, nullMove;
   UndoInfo tb;
@@ -1211,6 +1212,9 @@ if(PATH) printf("search(%d) %d-%d eval=%d, stm=%d\n",depth,alpha,beta,difEval,st
   curEval = difEval + Evaluate();
   alpha -= (alpha < curEval);
   beta  -= (beta <= curEval);
+
+  nodes++;
+  pv[pvPtr++] = 0; // start empty PV, directly behind PV of parent
 
   firstMove = curMove = sorted = msp += 20; // leave 20 empty slots in front of move list
   phase = 0; iterDep=1; replyDep = (depth < 1 ? depth : 1) - 1;
@@ -1347,6 +1351,10 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curM
 	    // update killer
 	    goto cutoff;
 	  }
+	  { int i=pvPtr;
+	    for(pvPtr = myPV+1; pv[pvPtr++] = pv[i++]; ); // copy daughter PV
+	    pv[myPV] = move;                              // behind our move (pvPtr left at end of copy)
+	  }
 	}
 
       }
@@ -1360,7 +1368,8 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curM
   } while(++iterDep <= depth); // next depth
   retMSP = msp;
   retFirst = firstMove;
-  msp = oldMSP;
+  msp = oldMSP; // pop move list
+  pvPtr = myPV; // pop PV
   retMove = bestMoveNr ? moveStack[bestMoveNr] : 0;
 if(flag && depth >= 0) printf("return %d: %d %d\n", depth, bestScore, curEval);
   return bestScore + (bestScore < curEval);
