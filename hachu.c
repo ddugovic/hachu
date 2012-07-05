@@ -78,6 +78,7 @@ typedef struct {
   char *name, *promoted;
   int value;
   signed char range[8];
+  int whiteKey, blackKey;
 } PieceDesc;
 
 typedef struct {
@@ -420,11 +421,12 @@ signed char PST[2*BSIZE];
 #define board (rawBoard + 6*BW + 3)
 #define dist  (distance + BSIZE)
 
-int LookUp(char *name, PieceDesc *list)
+PieceDesc *
+LookUp (char *name, PieceDesc *list)
 { // find piece of given name in list of descriptors
   int i=0;
   while(list->name && strcmp(name, list->name)) i++, list++;
-  return (list->name == NULL ? -1 : i);
+  return (list->name == NULL ? NULL : list);
 }
 
 void
@@ -507,21 +509,24 @@ Compactify (int stm)
 }
 
 int
-AddPiece (int stm, int n, PieceDesc *list)
+AddPiece (int stm, PieceDesc *list)
 {
-  int i, j;
+  int i, j, *key;
   for(i=stm+2; i<=last[stm]; i += 2) {
-    if(p[i].value < 10*list[n].value || p[i].value == 10*list[n].value && (p[i].promo < 0)) break;
+    if(p[i].value < 10*list->value || p[i].value == 10*list->value && (p[i].promo < 0)) break;
   }
   last[stm] += 2;
   for(j=last[stm]; j>i; j-= 2) p[j] = p[j-2];
-  p[i].value = 10*list[n].value;
-  for(j=0; j<8; j++) p[i].range[j] = list[n].range[j^4*(WHITE-stm)];
+  p[i].value = 10*list->value;
+  for(j=0; j<8; j++) p[i].range[j] = list->range[j^4*(WHITE-stm)];
   switch(Range(p[i].range)) {
     case 1:  p[i].pst = BH; break;
     case 2:  p[i].pst = BSIZE; break;
     default: p[i].pst = BSIZE + BH; break;
   }
+  key = (stm == WHITE ? &list->whiteKey : &list->blackKey);
+  if(!*key) *key = ~(myRandom()*myRandom());
+  p[i].pieceKey = *key;
   p[i].promoFlag = 0;
   for(j=stm+2; j<= last[stm]; j+=2) {
     if(p[j].promo >= i) p[j].promo += 2;
@@ -534,8 +539,9 @@ AddPiece (int stm, int n, PieceDesc *list)
 void
 SetUp(char *array, PieceDesc *list)
 {
-  int i, j, k, k2, n, m, nr, color;
+  int i, j, n, m, nr, color;
   char c, *q, name[3];
+  PieceDesc *p1, *p2;
   last[WHITE] = 1; last[BLACK] = 0;
   for(i=0; ; i++) {
 //printf("next rank: %s\n", array);
@@ -551,17 +557,17 @@ SetUp(char *array, PieceDesc *list)
 	name[0] += 'A' - 'a';
 	if(name[1]) name[1] += 'A' - 'a';
       } else color = WHITE;
-      k = LookUp(name, list);
-      n = AddPiece(color, k, list);
+      p1 = LookUp(name, list);
+      n = AddPiece(color, p1);
       p[n].pos = j;
-      if(list[k].promoted[0]) {
-	k2 = LookUp(list[k].promoted, list);
-        m = AddPiece(color, k2, list);
+      if(p1->promoted[0]) {
+	p2 = LookUp(p1->promoted, list);
+        m = AddPiece(color, p2);
 	if(m <= n) n += 2;
 	p[n].promo = m;
-	p[n].promoFlag = IsUpwardCompatible(list[k2].range, list[k].range) * DONT_DEFER + CAN_PROMOTE;
-	if(Forward(list[k].range)) p[n].promoFlag |= LAST_RANK; // Pieces that only move forward can't defer on last rank
-	if(!strcmp(list[k].name, "N")) p[n].promoFlag |= CANT_DEFER; // Knights can't defer on last 2 ranks
+	p[n].promoFlag = IsUpwardCompatible(p2->range, p1->range) * DONT_DEFER + CAN_PROMOTE;
+	if(Forward(p1->range)) p[n].promoFlag |= LAST_RANK; // Pieces that only move forward can't defer on last rank
+	if(!strcmp(p1->name, "N")) p[n].promoFlag |= CANT_DEFER; // Knights can't defer on last 2 ranks
 	p[n].promoFlag &= n&1 ? P_WHITE : P_BLACK;
 	p[m].promo = -1;
 	p[m].pos = ABSENT;
@@ -616,7 +622,6 @@ Init()
 
   // hash key tables
   for(i=0; i<BSIZE; i++) squareKey[i] = ~(myRandom()*myRandom());
-  for(i=0; i<NPIECES; i++) p[i].pieceKey = ~(myRandom()*myRandom());
 
   // board edge
   for(i=0; i<BSIZE + 11*BW + 6; i++) rawBoard[i] = EDGE;
@@ -1496,7 +1501,7 @@ Setup2 (char *fen)
 {
   SetUp(chuArray, chuPieces);
   sup0 = sup1 = sup2 = ABSENT;
-  rootEval = 0;
+  rootEval = hashKeyH = hashKeyL = 0;
   return WHITE;
 }
 
