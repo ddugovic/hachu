@@ -1295,6 +1295,8 @@ if(PATH) pmap(attacks, stm);
       score = 0;
 #endif
     abortMove:
+
+
 attacks -= 2*BSIZE;
 level--;
       UnMake(&tb);
@@ -1642,7 +1644,7 @@ printf("# setup done");fflush(stdout);
       int maxDepth;                            // used by search
       MOVE move, ponderMove;
       int i, score;
-      char inBuf[80], command[80];
+      char inBuf[8000], command[80];
 
   Init();
   SetUp(chuArray, chuPieces);
@@ -1714,7 +1716,7 @@ printf("in: %s\n", command);
           continue;
         }
         if(!strcmp(command, "protover")){
-          printf("feature ping=1 setboard=1 colors=0 usermove=1 memory=1 debug=1\n");
+          printf("feature ping=1 setboard=1 colors=0 usermove=1 memory=1 debug=1 sigint=0 sigterm=0\n");
           printf("feature variants=\"chu,12x12+0_fairy\"\n");
           printf("feature highlight=1\n");
           printf("feature option=\"Resign -check 0\"\n");           // example of an engine-defined option
