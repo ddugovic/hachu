@@ -857,8 +857,8 @@ MapFromScratch (int *map)
 
 void
 Connect (int sqr, int piece, int dir)
-{
-  int x, step = kStep[dir], r1 = p[piece].range[dir], r2 = p[piece].range[dir+1], piece1, piece2;
+{ // scan to both sides along ray to elongate attacks from there, and remove our own attacks on there, if needed
+  int x, step = kStep[dir], r1 = p[piece].range[dir], r2 = p[piece].range[dir+4], piece1, piece2;
   int d1, d2, r, y, c;
 
   if((attacks[2*sqr] + attacks[2*sqr+1]) & attackMask[dir]) {         // there are incoming attack(s) from 'behind'
@@ -877,15 +877,17 @@ Connect (int sqr, int piece, int dir)
 	attacks[2*y + (piece1 & WHITE)] += one[dir];                  // count attack
 	UPDATE_MOBILITY(piece1, d2);
       } else UPDATE_MOBILITY(piece1, r1 - d1);                        // does not connect, but could still gain mobility
-      if(d1 + d2 <= (r2 = p[piece2].range[dir])) {                    // 2 hits 1
+      if(d1 + d2 <= (r2 = p[piece2].range[dir+4])) {                  // 2 hits 1
 	attacks[2*x + (piece2 & WHITE)] += one[dir+4];                // count attack
 	UPDATE_MOBILITY(piece2, d1);
       } else UPDATE_MOBILITY(piece2, r2 - d2);                        // does not connect, but could still gain mobility
+      // if r1 or r2<0, moves typically jump, and thus cannot be unblocked. Exceptions are FF and BS distant moves.
+      // test for d1+d2 > 2 && rN == F && d== 3 or rN == S
 
     } else { // we were only attacked from behind
 
       r = (r2 = p[piece1].range[dir]) - d1;
-      if(r < 0 || c > one[dir+1]) { // Oops! This was not our attacker, or not the only one. There must be a jump attack from even further behind!
+      if(r < 0 || c > one[dir+4]) { // Oops! This was not our attacker, or not the only one. There must be a jump attack from even further behind!
 	// for now, forget jumpers
       }
       y = sqr; 
@@ -901,7 +903,7 @@ Connect (int sqr, int piece, int dir)
 	}
       // we hit nothing with the extended move of the attacker behind us.
       UPDATE_MOBILITY(piece1, r2 - d1);
-      r = r1 - r2;                                            // extra squares covered by mover
+      r = r1 - r2 + d1;                                       // extra squares covered by mover
       while(r-- > 0)
 	if(board[y+=step] != EMPTY) {
 	  d2 = dist[y-sqr]; piece2 = board[y];
@@ -911,6 +913,7 @@ Connect (int sqr, int piece, int dir)
 	  return;
 	}
     }
+    // if r2<0 we should again test for F and S moves
 
   } else // no incoming attack from behind
   if(c = (attacks[2*sqr] + attacks[2*sqr+1]) & attackMask[dir+4]) { // but incoming attack(s) from 'ahead'
@@ -935,7 +938,7 @@ Connect (int sqr, int piece, int dir)
 	}
       // we hit nothing with the extended move of the attacker behind us.
       UPDATE_MOBILITY(piece2, r2 - d1);
-      r = r2 - r1;                                                  // extra squares covered by mover
+      r = r2 - r1 + d2;                                             // extra squares covered by mover
       while(r-- > 0)
 	if(board[x-=step] != EMPTY) {
 	  d1 = dist[x-sqr]; piece1 = board[x];
@@ -964,25 +967,64 @@ Connect (int sqr, int piece, int dir)
   }
 }
 
+inline int
+Hit (int r, int d)
+{ // test if move with range r reaches over (un-obstructed) distance d
+  if(r < 0) switch(r) {
+    case J: return (d == 2);
+    case D:
+    case L: return (d <= 2);
+    case T:
+    case F: return (d <= 3);
+    case S: return 1;
+    default: return 0;
+  } else return (d <= r);
+  return 0; // not reached
+}
+
 void
-Disconnect (int sqr, int dir)
+Disconnect (int sqr, int piece, int dir)
 {
-  int x = sqr, step = kStep[dir], piece1, piece2, y;
+  int x = sqr, step = kStep[dir], piece1, piece2, d1, d2, r1, r2, y;
   while( board[x+=step] == EMPTY );
-  if(board[x] != EDGE) { // x has hit a piece
-    piece1 = board[x];
+  piece1 = board[x];
+  if(piece1 != EDGE) { // x has hit a piece
+    d1 = dist[x-sqr];
+    r1 = p[piece1].range[dir+4];
     y = sqr; while( board[y-=step] == EMPTY );
-    if(board[y] != EDGE) { // both ends of the ray hit a piece
-      piece2 = board[y];
-      
+    piece2 = board[y];
+    if(piece2 != EDGE) { // both ends of the ray hit a piece
+      d2 = dist[y-sqr];
+      r2 = p[piece2].range[dir];
+      if(r1 >= d1) {      // piece1 hits us
+	attacks[2*sqr + (piece1 & WHITE)] += one[dir+4];
+	if(r1 >= d1 + d2) // was hitting piece2 before, now blocked
+	  attacks[2*y + (piece1 & WHITE)] -= one[dir+4];
+      }
+      if(r2 >= d2) {      // piece2 hits us
+	attacks[2*sqr + (piece2 & WHITE)] += one[dir];
+	if(r2 >= d1 + d2) // was hitting piece1 before, now blocked
+	  attacks[2*x + (piece2 & WHITE)] -= one[dir];
+      }
+      if( Hit(p[piece].range[dir], d1) )
+	attacks[2*sqr + stm] += one[dir];
+      if( Hit(p[piece].range[dir+4], d2) )
+	attacks[2*sqr + stm] += one[dir+4];
       return;
     }
   } else {
     x = sqr; while( board[x-=step] == EMPTY );
-    if(board[x] == EDGE) return; // ray empty on both sides
+    piece1 = board[x];
+    if(piece1 == EDGE) return; // ray empty on both sides
+    d1 = dist[x-sqr];
+    r1 = p[piece1].range[dir];
+    dir += 4;
   }
-  // we only get here if one side hits a 
-  
+  // we only get here if one side looks to the board edge
+  if(r1 >= d1) // piece1 hits us
+    attacks[2*sqr + (piece1 & WHITE)] += one[dir^4];
+  if( Hit(p[piece].range[dir], d1) )
+    attacks[2*sqr + stm] += one[dir];
 }
 
 void
@@ -990,7 +1032,7 @@ Occupy (int sqr)
 { // determines attacks on square and blocking when a piece lands on an empty square
   int i;
   for(i=0; i<4; i++) {
-    Disconnect(sqr, i);
+    Disconnect(sqr, board[sqr], i);
   }
 }
 
