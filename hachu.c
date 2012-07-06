@@ -409,6 +409,13 @@ typedef struct {
   char age;
 } HashEntry; // hash-table entry
 
+    // Some global variables that control your engine's behavior
+    int ponder;
+    int randomize;
+    int postThinking;
+    int resign;         // engine-defined option
+    int contemptFactor; // likewise
+
 int squareKey[BSIZE];
 
 int rawBoard[BSIZE + 11*BW + 6];
@@ -1384,6 +1391,12 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curM
     } // next move
   cutoff:
     if(!level) { // root node
+      if(postThinking > 0) {
+        int i;   // WB thinking output
+	printf("%d %d %d %d", iterDep, bestScore, (GetTickCount() - startTime)/10, nodes);
+	for(i=0; pv[i]; i++) printf(" %s", MoveToText(pv[i], 0));
+	printf("\n"); fflush(stdout);
+      }
       if(GetTickCount() - startTime > tlim1) break; // do not start iteration we can (most likely) not finish
     }
     replyDep = iterDep;
@@ -1590,7 +1603,9 @@ ParseMove (char *moveText)
   if(*moveText == '+') ret |= PROMOTE;
 printf("# suppress = %c%d\n", sup1%BW+'a', sup1/BW);
 MapFromScratch(attacks);
+  postThinking--;
   Search(-INF-1, INF+1, 0, 1, sup1, sup2);
+  postThinking++;
   for(i=retFirst; i<retMSP; i++) {
     if(moveStack[i] == INVALID) continue;
     if(c == '@' && (moveStack[i] & SQUARE) == (moveStack[i] >> SQLEN & SQUARE)) break; // any null move matches @@@@
@@ -1623,7 +1638,9 @@ Highlight(char *coords)
   ReadSquare(coords, &sqr);
 MapFromScratch(attacks);
 flag=1;
+  postThinking--;
   Search(-INF-1, INF+1, 0, 1, sup1, sup2);
+  postThinking++;
 flag=0;
   for(i=retFirst; i<retMSP; i++) {
     if(sqr == (moveStack[i]>>SQLEN & SQUARE)) {
@@ -1689,13 +1706,6 @@ void
 PonderUntilInput (int stm)
 {
 }
-
-    // Some global variables that control your engine's behavior
-    int ponder;
-    int randomize;
-    int postThinking;
-    int resign;         // engine-defined option
-    int contemptFactor; // likewise
 
     int TakeBack(int n)
     { // reset the game and then replay it to the desired point
