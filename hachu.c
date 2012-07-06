@@ -1848,6 +1848,7 @@ printf("in: %s\n", command);
         if(!strcmp(command, "ics"))     { continue; }
         if(!strcmp(command, "accepted")){ continue; }
         if(!strcmp(command, "rejected")){ continue; }
+        if(!strcmp(command, "result"))  { continue; }
         if(!strcmp(command, "hover"))   {  continue; }
         if(!strcmp(command, ""))  {  continue; }
         if(!strcmp(command, "usermove")){
