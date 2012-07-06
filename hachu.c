@@ -46,7 +46,7 @@
 #define EMPTY      0
 #define EDGE   (1<<11)
 #define TYPE   (WHITE|BLACK|EDGE)
-#define ABSENT  4095
+#define ABSENT  2047
 #define INF     8000
 #define NPIECES 2000               /* length of piece list    */
 
@@ -1289,6 +1289,11 @@ if(flag && depth>= 0) printf("phase=%d: first/curr/last = %d / %d / %d\n", phase
 	    break;
 	  case 7: // bad captures
 	  case 8: // PV null move
+	    phase = 9;
+	    if(nullMove != ABSENT) {
+	      moveStack[msp++] = nullMove + (nullMove << SQLEN) | DEFER; // kludge: setting DEFER guarantees != 0, and has no effect
+	    }
+printf("# %d. sqr = %08x null = %08x\n", msp, nullMove, moveStack[msp-1]);
 	  case 9:
 	    goto cutoff;
 	}
@@ -1533,6 +1538,7 @@ MoveToText (MOVE move, int multiLine)
 {
   static char buf[50];
   int f = move>>SQLEN & SQUARE, g = f, t = move & SQUARE;
+  if(f == t) { sprintf(buf, "@@@@"); return buf; } // null-move notation in WB protocol
   buf[0] = '\0';
   if(t >= SPECIAL) { // kludgy! Print as side effect non-standard WB command to remove victims from double-capture (breaks hint command!)
     int e = f + epList[t - SPECIAL];
@@ -1565,6 +1571,7 @@ MOVE
 ParseMove (char *moveText)
 {
   int i, j, f, t, t2, e, ret, deferred=0;
+  char c = moveText[0];
   moveText += ReadSquare(moveText, &f);
   moveText += ReadSquare(moveText, &t); t2 = t;
   if(*moveText == ',') {
@@ -1581,9 +1588,12 @@ ParseMove (char *moveText)
   }
   ret = f<<SQLEN | t2;
   if(*moveText == '+') ret |= PROMOTE;
+printf("# suppress = %c%d\n", sup1%BW+'a', sup1/BW);
 MapFromScratch(attacks);
   Search(-INF-1, INF+1, 0, 1, sup1, sup2);
   for(i=retFirst; i<retMSP; i++) {
+    if(moveStack[i] == INVALID) continue;
+    if(c == '@' && (moveStack[i] & SQUARE) == (moveStack[i] >> SQLEN & SQUARE)) break; // any null move matches @@@@
     if((moveStack[i] & (PROMOTE | DEFER-1)) == ret) break;
     if((moveStack[i] & DEFER-1) == ret) deferred = i; // promoted version of entered non-promotion is legal
   }
