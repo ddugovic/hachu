@@ -12,7 +12,7 @@
 // promotions by pieces with Lion power stepping in & out the zone in same turn
 // promotion on capture
 
-#define VERSION 0.0
+#define VERSION "0.0"
 
 //define PATH level==0 || level==1 && path[0] == 0x55893
 #define PATH 0
@@ -1848,7 +1848,7 @@ printf("in: %s\n", command);
         if(!strcmp(command, "protover")){
           printf("feature ping=1 setboard=1 colors=0 usermove=1 memory=1 debug=1 sigint=0 sigterm=0\n");
           printf("feature variants=\"chu,12x12+0_fairy\"\n");
-          printf("feature highlight=1\n");
+          printf("feature myname=\"HaChu " VERSION "\" highlight=1\n");
           printf("feature option=\"Resign -check 0\"\n");           // example of an engine-defined option
           printf("feature option=\"Contempt -spin 0 -200 200\"\n"); // and another one
           printf("feature done=1\n");
