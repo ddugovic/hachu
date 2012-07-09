@@ -8,11 +8,10 @@
 
 // TODO:
 // in GenCapts we do not generate jumps of more than two squares yet
-// Chu rules for Lion capture
 // promotions by pieces with Lion power stepping in & out the zone in same turn
 // promotion on capture
 
-#define VERSION "0.0"
+#define VERSION "0.1beta"
 
 //define PATH level==0 || level==1 && path[0] == 0x55893
 #define PATH 0
@@ -34,10 +33,12 @@
      }
 #endif
 
-#define BW 24
-#define BH 12
-#define BSIZE BW*BH*2
-#define ZONE 4
+#define BW bWidth
+#define BH bHeight
+#define BHMAX 15
+#define BWMAX (2*BHMAX)
+#define BSIZE BWMAX*BHMAX
+#define ZONE  zone
 
 #define ONE 0
 
@@ -85,13 +86,14 @@ typedef struct {
   int from, to, piece, victim, new, booty, epSquare, epVictim, ep2Square, ep2Victim, revMoveCount, savKeyL, savKeyH;
 } UndoInfo;
 
+int bWidth, bHeight, bsize, zone, currentVariant;
 int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, pvPtr, level, cnt50, chuFlag=1;
 int nodes, startTime, tlim1, tlim2;
 Move retMove, moveStack[10000], path[100], repStack[300], pv[1000];
 
 #define X 36 /* slider              */
-#define J -1 /* jump                */
-#define N -2 /* Knight              */
+#define N -1 /* Knight              */
+#define J -2 /* jump                */
 #define D -3 /* linear double move  */
 #define T -4 /* linear triple move  */
 #define L -5 /* true Lion move      */
@@ -268,7 +270,7 @@ char daiArray[] = "LN:STICSGKGSCI:STNL/:RV.:CS.:FL.:BT:DE:BT.:FL.:CS.:RV/.:VO.:A
 		  "r:fd:sm:vmb:dh:dk:fk:dk:dhb:vm:sm:fdr/.:vo.:ab.:ew:ph:ln:kn:ew.:ab.:vo./:rv.:cs.:fl.:bt:de:bt.:fl.:cs.:rv/ln:sticsgkgsci:stnl";
 
 typedef struct {
-  int boardWidth, boardFiles, zoneDepth, boardRanks; // board sizes
+  int boardWidth, boardFiles, boardRanks, zoneDepth; // board sizes
   char *name;  // WinBoard name
   char *array; // initial position
 } VariantDesc;
@@ -418,22 +420,35 @@ typedef struct {
 
 int squareKey[BSIZE];
 
-int rawBoard[BSIZE + 11*BW + 6];
+int rawBoard[BSIZE + 11*BHMAX + 6];
 //int attacks[2*BSIZE];   // attack map
 int attackMaps[200*BSIZE], *attacks = attackMaps;
 char distance[2*BSIZE]; // distance table
 char promoBoard[BSIZE];
 signed char PST[2*BSIZE];
 
-#define board (rawBoard + 6*BW + 3)
+#define board (rawBoard + 6*BHMAX + 3)
 #define dist  (distance + BSIZE)
 
 PieceDesc *
-LookUp (char *name, PieceDesc *list)
+ListLookUp (char *name, PieceDesc *list)
 { // find piece of given name in list of descriptors
   int i=0;
   while(list->name && strcmp(name, list->name)) i++, list++;
   return (list->name == NULL ? NULL : list);
+}
+
+PieceDesc *
+LookUp (char *name, int var)
+{ // search piece of given name in all lists relevant for given variant
+  PieceDesc *desc;
+  switch(var) {
+    case 1: // Dai
+      desc = ListLookUp(name, daiPieces);
+      if(desc) return desc;
+    case 0: // Chu
+      return ListLookUp(name, chuPieces);
+  }
 }
 
 void
@@ -528,8 +543,8 @@ AddPiece (int stm, PieceDesc *list)
   for(j=0; j<8; j++) p[i].range[j] = list->range[j^4*(WHITE-stm)];
   switch(Range(p[i].range)) {
     case 1:  p[i].pst = BH; break;
-    case 2:  p[i].pst = BSIZE; break;
-    default: p[i].pst = BSIZE + BH; break;
+    case 2:  p[i].pst = bsize; break;
+    default: p[i].pst = bsize + BH; break;
   }
   key = (stm == WHITE ? &list->whiteKey : &list->blackKey);
   if(!*key) *key = ~(myRandom()*myRandom());
@@ -544,7 +559,7 @@ AddPiece (int stm, PieceDesc *list)
 }
 
 void
-SetUp(char *array, PieceDesc *list)
+SetUp(char *array, int var)
 {
   int i, j, n, m, nr, color;
   char c, *q, name[3];
@@ -564,11 +579,11 @@ SetUp(char *array, PieceDesc *list)
 	name[0] += 'A' - 'a';
 	if(name[1]) name[1] += 'A' - 'a';
       } else color = WHITE;
-      p1 = LookUp(name, list);
+      p1 = LookUp(name, var);
       n = AddPiece(color, p1);
       p[n].pos = j;
       if(p1->promoted[0]) {
-	p2 = LookUp(p1->promoted, list);
+	p2 = LookUp(p1->promoted, var);
         m = AddPiece(color, p2);
 	if(m <= n) n += 2;
 	p[n].promo = m;
@@ -595,9 +610,16 @@ int myRandom()
 }
 
 void
-Init()
+Init (int var)
 {
   int i, j, k;
+
+  currentVariant = var;
+  bWidth  = variants[var].boardWidth;
+  bHeight = variants[var].boardRanks;
+  zone    = variants[var].zoneDepth;
+  bsize = bWidth*bHeight;
+  chuFlag = (var == 0);
 
   for(i= -1; i<9; i++) { // board steps in linear coordinates
     kStep[i] = STEP(direction[i&7].x,   direction[i&7].y);       // King
@@ -620,7 +642,7 @@ Init()
   }
 
   // fill distance table
-  for(i=0; i<BSIZE; i++) {
+  for(i=0; i<2*BSIZE; i++) {
     distance[i] = 0;
   }
   for(i=0; i<8; i++)
@@ -628,10 +650,10 @@ Init()
       dist[j * kStep[i]] = j;
 
   // hash key tables
-  for(i=0; i<BSIZE; i++) squareKey[i] = ~(myRandom()*myRandom());
+  for(i=0; i<bsize; i++) squareKey[i] = ~(myRandom()*myRandom());
 
   // board edge
-  for(i=0; i<BSIZE + 11*BW + 6; i++) rawBoard[i] = EDGE;
+  for(i=0; i<BSIZE + 11*BHMAX + 6; i++) rawBoard[i] = EDGE;
 
   // promotion zones
   for(i=0; i<BH; i++) for(j=0; j<BH; j++) {
@@ -649,8 +671,8 @@ Init()
   for(i=0; i<BH; i++) for(j=0; j<BH; j++) {
     int s = BW*i + j, d = BH*(BH-2) - (2*i - BH + 1)*(2*i - BH + 1) - (2*j - BH + 1)*(2*j - BH + 1);
     PST[BH+s] = d/4 - (i == 0 || i == BH-1 ? 15 : 0) - (j == 0 || j == BH-1 ? 15 : 0);
-    PST[BSIZE+s] = d/6;
-    PST[BSIZE+BH+s] = d/12;
+    PST[BH*BW+s] = d/6;
+    PST[BH*BW+BH+s] = d/12;
   }  
 }
 
@@ -768,13 +790,16 @@ GenNonCapts (int promoSuppress)
   for(i=stm+2; i<=last[stm]; i+=2) {
     int x = p[i].pos, pFlag = p[i].promoFlag;
     if(x == ABSENT) continue;
-    if(x == promoSuppress) pFlag = 0;
+    if(x == promoSuppress && chuFlag) pFlag = 0;
     for(j=0; j<8; j++) {
       int y, v = kStep[j], r = p[i].range[j];
       if(r < 0) { // jumping piece, special treatment
+	if(r == N) { // pure Knightm do off-ray jump
+	  NewNonCapture(x, x + nStep[j], pFlag);
+	} else
 	if(r >= S) { // in any case, do a jump of 2
 	  NewNonCapture(x, x + 2*v, pFlag);
-	  if(r < N) { // Lion power, also single step
+	  if(r < J) { // Lion power, also single step
 	    if(!NewNonCapture(x, x + v, pFlag)) nullMove = x;
 	    if(r == L) { // true Lion, also Knight jump
 	      v = nStep[j];
@@ -806,6 +831,11 @@ MapOneColor (int start, int last, int *map)
     for(j=0; j<8; j++) {
       int x = p[i].pos, v = kStep[j], r = p[i].range[j];
       if(r < 0) { // jumping piece, special treatment
+	if(r == N) {
+	  x += nStep[j];
+	  if(board[x] != EMPTY && board[x] != EDGE)
+	    map[2*x + start] += one[8];
+	} else
 	if(r >= S) { // in any case, do a jump of 2
 	  if(board[x + 2*v] != EMPTY && board[x + 2*v] != EDGE)
 	    map[2*(x + 2*v) + start] += one[j];
@@ -850,7 +880,7 @@ void
 MapFromScratch (int *map)
 {
   int i;
-  for(i=0; i<2*BSIZE; i++) map[i] = 0;
+  for(i=0; i<2*bsize; i++) map[i] = 0;
   MapOneColor(0, last[BLACK], map);
   MapOneColor(1, last[WHITE], map);
 }
@@ -1374,7 +1404,7 @@ if(flag & depth >= 0) printf("%2d:%d found %d/%d\n", depth, iterDep, curMove, ms
       repStack[level+200] = hashKeyH;
 
 path[level++] = move;
-attacks += 2*BSIZE;
+attacks += 2*bsize;
 MapFromScratch(attacks); // for as long as incremental update does not work.
 if(PATH) pmap(attacks, stm);
       if(chuFlag && p[tb.victim].value == 1000) {    // verify legality of Lion capture in Chu Shogi
@@ -1394,7 +1424,7 @@ if(PATH) pmap(attacks, stm);
       score = 0;
 #endif
     abortMove:
-attacks -= 2*BSIZE;
+attacks -= 2*bsize;
 level--;
     repetition:
       UnMake(&tb);
@@ -1577,7 +1607,7 @@ UnMake2 (MOVE move)
 int
 Setup2 (char *fen)
 {
-  SetUp(chuArray, chuPieces);
+  SetUp(variants[currentVariant].array, currentVariant);
   sup0 = sup1 = sup2 = ABSENT;
   rootEval = cnt50 = hashKeyH = hashKeyL = 0;
   return WHITE;
@@ -1676,7 +1706,7 @@ Highlight(char *coords)
 {
   int i, j, n, sqr, cnt=0;
   char b[BSIZE], buf[2000], *q;
-  for(i=0; i<BSIZE; i++) b[i] = 0;
+  for(i=0; i<bsize; i++) b[i] = 0;
   ReadSquare(coords, &sqr);
 MapFromScratch(attacks);
 flag=1;
@@ -1776,8 +1806,8 @@ printf("# setup done");fflush(stdout);
       int i, score;
       char inBuf[8000], command[80];
 
-  Init();
-  SetUp(chuArray, chuPieces);
+  Init(0); // Chu
+  SetUp(chuArray, 0);
 //  pplist();
 //  pboard(board);
 //  pbytes(promoBoard);
@@ -1847,7 +1877,7 @@ printf("in: %s\n", command);
         }
         if(!strcmp(command, "protover")){
           printf("feature ping=1 setboard=1 colors=0 usermove=1 memory=1 debug=1 sigint=0 sigterm=0\n");
-          printf("feature variants=\"chu,12x12+0_fairy\"\n");
+          printf("feature variants=\"chu,dai,12x12+0_fairy\"\n");
           printf("feature myname=\"HaChu " VERSION "\" highlight=1\n");
           printf("feature option=\"Resign -check 0\"\n");           // example of an engine-defined option
           printf("feature option=\"Contempt -spin 0 -200 200\"\n"); // and another one
@@ -1857,6 +1887,15 @@ printf("in: %s\n", command);
         if(!strcmp(command, "option")) { // setting of engine-define option; find out which
           if(sscanf(inBuf+7, "Resign=%d",   &resign)         == 1) continue;
           if(sscanf(inBuf+7, "Contempt=%d", &contemptFactor) == 1) continue;
+          continue;
+        }
+        if(!strcmp(command, "variant")) {
+          for(i=0; i<2; i++) {
+            sscanf(inBuf+8, "%s", command);
+            if(!strcmp(variants[i].name, command)) {
+              Init(i); stm = Setup2(NULL); break;
+            }
+	  }
           continue;
         }
         if(!strcmp(command, "sd"))      { sscanf(inBuf, "sd %d", &maxDepth);    continue; }
@@ -1878,7 +1917,6 @@ printf("in: %s\n", command);
         if(!strcmp(command, "lift"))    { Highlight(inBuf+5); continue; }
         if(!strcmp(command, "put"))     { ReadSquare(inBuf+4, &lastPut); continue; }
         if(!strcmp(command, "book"))    {  continue; }
-        if(!strcmp(command, "variant")) { continue; }
 	// non-standard commands
         if(!strcmp(command, "p"))       { pboard(board); continue; }
         if(!strcmp(command, "w"))       { pmap(attacks, WHITE); continue; }
