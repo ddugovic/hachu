@@ -87,7 +87,7 @@ typedef struct {
 } UndoInfo;
 
 int bWidth, bHeight, bsize, zone, currentVariant;
-int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, pvPtr, level, cnt50, chuFlag=1;
+int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, pvPtr, level, cnt50, chuFlag=1, mobilityScore;
 int nodes, startTime, tlim1, tlim2;
 Move retMove, moveStack[10000], path[100], repStack[300], pv[1000];
 
@@ -533,13 +533,13 @@ Compactify (int stm)
 int
 AddPiece (int stm, PieceDesc *list)
 {
-  int i, j, *key;
+  int i, j, *key, v;
   for(i=stm+2; i<=last[stm]; i += 2) {
     if(p[i].value < 10*list->value || p[i].value == 10*list->value && (p[i].promo < 0)) break;
   }
   last[stm] += 2;
   for(j=last[stm]; j>i; j-= 2) p[j] = p[j-2];
-  p[i].value = 10*list->value;
+  p[i].value = v = 10*list->value;
   for(j=0; j<8; j++) p[i].range[j] = list->range[j^4*(WHITE-stm)];
   switch(Range(p[i].range)) {
     case 1:  p[i].pst = BH; break;
@@ -550,6 +550,7 @@ AddPiece (int stm, PieceDesc *list)
   if(!*key) *key = ~(myRandom()*myRandom());
   p[i].pieceKey = *key;
   p[i].promoFlag = 0;
+  p[i].mobWeight = v > 600 ? 0 : v >= 400 ? 1 : v >= 300 ? 2 : v > 150 ? 3 : v >= 100 ? 2 : 0;
   for(j=stm+2; j<= last[stm]; j+=2) {
     if(p[j].promo >= i) p[j].promo += 2;
   }
@@ -753,11 +754,12 @@ report (int x, int y, int i)
 {
 }
 
-void
+int
 MapOneColor (int start, int last, int *map)
 {
-  int i, j, k;
+  int i, j, k, totMob = 0;
   for(i=start+2; i<=last; i+=2) {
+    int mob = 0;
     if(p[i].pos == ABSENT) continue;
     for(j=0; j<8; j++) {
       int x = p[i].pos, v = kStep[j], r = p[i].range[j];
@@ -769,7 +771,7 @@ MapOneColor (int start, int last, int *map)
 	} else
 	if(r >= S) { // in any case, do a jump of 2
 	  if(board[x + 2*v] != EMPTY && board[x + 2*v] != EDGE)
-	    map[2*(x + 2*v) + start] += one[j];
+	    map[2*(x + 2*v) + start] += one[j], mob += (board[x + 2*v] ^ start) & 1;
 	  if(r < J) { // Lion power, also single step
 	    if(board[x + v] != EMPTY && board[x + v] != EDGE)
 	      map[2*(x + v) + start] += one[j];
@@ -799,12 +801,16 @@ MapOneColor (int start, int last, int *map)
       }
       while(r-- > 0) {
         if(board[x+=v] != EMPTY) {
-	  if(board[x] != EDGE) map[2*x + start] += one[j];
+	  mob += dist[x-v-p[i].pos];
+	  if(board[x] != EDGE) map[2*x + start] += one[j], mob += (board[x] ^ start) & 1;
 	  break;
 	}
       }
     }
+    totMob += mob * p[i].mobWeight;
   }
+if(!level) printf("# mobility %d = %d\n", start, totMob);
+  return totMob;
 }
 
 void
@@ -812,8 +818,8 @@ MapFromScratch (int *map)
 {
   int i;
   for(i=0; i<2*bsize; i++) map[i] = 0;
-  MapOneColor(0, last[BLACK], map);
-  MapOneColor(1, last[WHITE], map);
+  mobilityScore  = MapOneColor(1, last[WHITE], map);
+  mobilityScore -= MapOneColor(0, last[BLACK], map);
 }
 
 void
@@ -1202,7 +1208,7 @@ GenCapts(int sqr, int victimValue)
 int
 Evaluate ()
 {
-  return 0;
+  return (stm ? mobilityScore : -mobilityScore);
 }
 
 int
