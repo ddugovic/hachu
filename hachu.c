@@ -1692,10 +1692,10 @@ SearchBestMove (int stm, int timeLeft, int mps, int timeControl, int inc, int ti
 {
   int score, targetTime, movesLeft = 50;
   if(mps) movesLeft = mps - (moveNr>>1)%mps;
-  targetTime = timeLeft*10 / (movesLeft + 1) + 1000 * inc;
+  targetTime = timeLeft*10 / (movesLeft + 2) + 1000 * inc;
   if(timePerMove > 0) targetTime = timeLeft * 5;
   startTime = GetTickCount();
-  tlim1 = 0.3*targetTime;
+  tlim1 = 0.2*targetTime;
   tlim2 = 1.9*targetTime;
   nodes = 0;
 MapFromScratch(attacks);
