@@ -262,6 +262,16 @@ PieceDesc taikyokuPieces[] = {
   { NULL }  // sentinel
 };
 
+PieceDesc chessPieces[] = {
+  {"Q", "",  95, { X,X,X,X,X,X,X,X } },
+  {"R", "",  50, { X,0,X,0,X,0,X,0 } },
+  {"B", "",  33, { 0,X,0,X,0,X,0,X } },
+  {"N", "",  30, { N,N,N,N,N,N,N,N } },
+  {"K", "",  28, { 1,1,1,1,1,1,1,1 } },
+  {"P", "Q",  8, { 0,1,0,0,0,0,0,1 } },
+  { NULL }  // sentinel
+};
+
 char chuArray[] = "L:FLCSGK:DEGSC:FLL/:RV.B.:BT:KN:PH:BT.B.:RV/:SM:VMR:DH:DK:LN:FK:DK:DHR:VM:SM/PPPPPPPPPPPP/...:GB....:GB..."
 		  "/............/............/"
 		  "...:gb....:gb.../pppppppppppp/:sm:vmr:dh:dk:fk:ln:dk:dhr:vm:sm/:rv.b.:bt:ph:kn:bt.b.:rv/l:flcsg:dekgsc:fll";
