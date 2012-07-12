@@ -676,39 +676,6 @@ Init (int var)
   }  
 }
 
-#if 0
-inline int
-AddMove (int i, int x, int y)
-{
-  if(board[y] == EDGE) return 1;
-	if(board[y] == EMPTY) {           // non-capt
-	  if((flagBoard[x] | flagBoard[y]) & p[i].flags) { // promotion possible
-	    moveStack[msp++] = moveStack[nonCapts];
-	    moveStack[nonCapts++] |= PROMOTE | p[i].flags << 24;
-	    if(!(p[i].flags & ALWAYS_PROMOTE))
-	       moveStack[msp++] = x << SQLEN | y; // push deferral as well
-	  else moveStack[msp++] = x << SQLEN | y; // normal move
-	  }
-	} else { // capture
-	  if(((board[y] ^ i) & 1) return 1; // own
-	  moveStack[msp++] = moveStack[nonCapts];
-	  moveStack[nonCapts++] = moveStack[promotions];
-	  moveStack[promotions++] = x << SQLEN | y;
-	  if((flagBoard[x] | flagBoard[y]) & p[i].flags) { // promotion possible
-	    int p = promotions;
-	    if(!(p[i].flags & ALWAYS_PROMOTE)) {
-	      moveStack[msp++] = moveStack[nonCapts];
-	      moveStack[nonCapts++] = moveStack[promotions];
-	      moveStack[promotions++] = moveStack[p-1];
-	    }
-	    moveStack[p-1] += PROMOTE | p[i].flags<<24;
-	  }
-	  return 1; // capture ends ray scan
-	}
-	return 0;
-}
-#endif
-
 int flag;
 
 inline int
@@ -746,42 +713,6 @@ NewCapture (int x, int y, int promoFlags)
     moveStack[msp++] = x<<SQLEN | y; // push normal move
   return 0;
 }
-
-#if 0
-void
-GenAllMoves ()
-{
-  int i, j, k;
-  promotions = nonCapts = msp;
-  for(i=stm+2; i<=last[stm]; i+=2) {
-    int x = p[i].pos;
-    if(x == ABSENT) continue;
-    for(j=0; j<8; j++) {
-      int y, v = kStep[j], r = p[i].range[j];
-      if(r < 0) { // jumping piece, special treatment
-	if(r >= -3) { // in any case, do a jump of 2
-	  if(board[x + 2*v] == EMPTY)
-	    ADDMOVE(x, x+2*v);
-	  if(r < -1) { // Lion power, also single step
-	    if(board[x + v] == EMPTY)
-	      ADDMOVE(x, x+v);
-	    if(r == -3) { // true Lion, also Knight jump
-	      v = nStep[j];
-	      if(board[x + v] == EMPTY)
-		ADDMOVE(x, x+v);
-	    }
-	  }
-	}
-	continue;
-      }
-      y = x;
-      while(r-- > 0) {
-	if(board[y+=v] == GUARD) break;    // off board
-	if((board[y] + i & 1) == 0) break; // same color
-    }
-  }
-}
-#endif
 
 int
 GenNonCapts (int promoSuppress)
