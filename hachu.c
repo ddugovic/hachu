@@ -825,7 +825,7 @@ MapFromScratch (int *map)
 void
 Connect (int sqr, int piece, int dir)
 { // scan to both sides along ray to elongate attacks from there, and remove our own attacks on there, if needed
-  int x, step = kStep[dir], r1 = p[piece].range[dir], r2 = p[piece].range[dir+4], piece1, piece2;
+  int x, step = kStep[dir], r1 = p[piece].range[dir], r2 = p[piece].range[dir+4], r3, r4, piece1, piece2;
   int d1, d2, r, y, c;
 
   if((attacks[2*sqr] + attacks[2*sqr+1]) & attackMask[dir]) {         // there are incoming attack(s) from 'behind'
@@ -840,16 +840,27 @@ Connect (int sqr, int piece, int dir)
       d2 = dist[y-sqr]; piece2 = board[y];
       attacks[2*y+stm] -= -(d2 <= r1) & one[dir];                     // remove our attack on it if in-range
       // we have two pieces now shooting at each other. See how far they get.
-      if(d1 + d2 <= (r1 = p[piece1].range[dir])) {                    // 1 hits 2
+      if(d1 + d2 <= (r3 = p[piece1].range[dir])) {                    // 1 hits 2
 	attacks[2*y + (piece1 & WHITE)] += one[dir];                  // count attack
 	UPDATE_MOBILITY(piece1, d2);
-      } else UPDATE_MOBILITY(piece1, r1 - d1);                        // does not connect, but could still gain mobility
-      if(d1 + d2 <= (r2 = p[piece2].range[dir+4])) {                  // 2 hits 1
+      } else UPDATE_MOBILITY(piece1, r3 - d1);                        // does not connect, but could still gain mobility
+      if(d1 + d2 <= (r4 = p[piece2].range[dir+4])) {                  // 2 hits 1
 	attacks[2*x + (piece2 & WHITE)] += one[dir+4];                // count attack
 	UPDATE_MOBILITY(piece2, d1);
-      } else UPDATE_MOBILITY(piece2, r2 - d2);                        // does not connect, but could still gain mobility
+      } else UPDATE_MOBILITY(piece2, r4 - d2);                        // does not connect, but could still gain mobility
       // if r1 or r2<0, moves typically jump, and thus cannot be unblocked. Exceptions are FF and BS distant moves.
       // test for d1+d2 > 2 && rN == F && d== 3 or rN == S
+      if(d1 <= 2) { // could be jump interactions
+	if(d1 == 2) {
+	  if(r2 <= J) attacks[2*x + stm] -= one[dir+4];
+	  if(r1 <= J) attacks[2*y + stm] -= one[dir];
+	} else { // d1 == 1
+	  if(r2 < J) attacks[2*x + stm] -= one[dir+4];
+	  if(r1 < J) attacks[2*y + stm] -= one[dir];
+	  if(board[x-step] != EMPTY && board[x-step] != EDGE)
+	    attacks[2*(x-step) + stm] -= one[dir+4];
+	}
+      }
 
     } else { // we were only attacked from behind
 
