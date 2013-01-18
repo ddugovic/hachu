@@ -97,6 +97,8 @@ int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, retMSP, re
 int nodes, startTime, tlim1, tlim2, repCnt, comp;
 Move retMove, moveStack[10000], path[100], repStack[300], pv[1000], repeatMove[300];
 
+      int maxDepth;                            // used by search
+
 #define X 36 /* slider              */
 #define R 37 /* jump capture        */
 #define N -1 /* Knight              */
@@ -1814,8 +1816,8 @@ pmoves(int start, int end)
     #define INVALID 0
 
     // some parameter of your engine
-    #define MAXMOVES 500  /* maximum game length  */
-    #define MAXPLY   60   /* maximum search depth */
+    #define MAXMOVES 2000 /* maximum game length  */
+    #define MAXPLY   20   /* maximum search depth */
 
     #define OFF 0
     #define ON  1
@@ -2085,7 +2087,7 @@ SearchBestMove (int stm, int timeLeft, int mps, int timeControl, int inc, int ti
   nodes = 0;
 MapFromScratch(attacks);
   retMove = INVALID; repCnt = 0;
-  score = Search(-INF-1, INF+1, rootEval, 20, sup1, sup2);
+  score = Search(-INF-1, INF+1, rootEval, maxDepth, sup1, sup2);
   *move = retMove;
   *ponderMove = INVALID;
   return score;
@@ -2120,7 +2122,6 @@ printf("# setup done");fflush(stdout);
       int engineSide=NONE;                     // side played by engine
       int timeLeft;                            // timeleft on engine's clock
       int mps, timeControl, inc, timePerMove;  // time-control parameters, to be used by Search
-      int maxDepth;                            // used by search
       MOVE move, ponderMove;
       int i, score;
       char inBuf[8000], command[80];
