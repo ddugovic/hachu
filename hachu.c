@@ -789,7 +789,8 @@ Init (int var)
 
   // piece-square tables
   for(i=0; i<BH; i++) for(j=0; j<BH; j++) {
-    int s = BW*i + j, d = BH*(BH-2) - (2*i - BH + 1)*(2*i - BH + 1) - (2*j - BH + 1)*(2*j - BH + 1);
+    int s = BW*i + j, d = BH*(BH-2) - abs(2*i - BH + 1)*(BH-1) - (2*j - BH + 1)*(2*j - BH + 1);
+    PST[s] = 0;
     PST[BH+s] = d/4 - (i == 0 || i == BH-1 ? 15 : 0) - (j == 0 || j == BH-1 ? 15 : 0);
     PST[BH*BW+s] = d/6;
     PST[BH*BW+BH+s] = d/12;
