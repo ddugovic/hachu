@@ -799,6 +799,20 @@ Init (int var)
   p[EDGE].qval = 5; // tenjiku jump-capturer sentinel
 }
 
+int
+PSTest ()
+{
+  int r, f, score, tot=0;
+  for(r=0; r<BH; r++) for(f=0; f<BH; f++) {
+    int s = BW*r+f;
+    int piece = board[s];
+    if(!piece) continue;
+    score = p[piece].value + PST[p[piece].pst + s];
+    if(piece & 1) tot += score; else tot -= score;
+  }
+  return tot;
+}
+
 int flag;
 
 inline int
@@ -1704,7 +1718,9 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curM
         int i;   // WB thinking output
 	printf("%d %d %d %d", iterDep, bestScore, (GetTickCount() - startTime)/10, nodes);
 	for(i=0; pv[i]; i++) printf(" %s", MoveToText(pv[i], 0));
-	printf("\n"); fflush(stdout);
+        if(iterDep == 1) printf(" { root eval = %4.2f dif = %4.2f; abs = %4.2f}", curEval/100., difEval/100., PSTest()/100.);
+	printf("\n");
+        fflush(stdout);
       }
       if(GetTickCount() - startTime > tlim1) break; // do not start iteration we can (most likely) not finish
     }
