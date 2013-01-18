@@ -1665,7 +1665,11 @@ MapFromScratch(attacks); // for as long as incremental update does not work.
 	  if(promoSuppress & PROMOTE) score = -INF; // non-Lion captures Lion after opponent did same
 	  defer |= PROMOTE;                         // if we started, flag  he cannot do it in reply
 	}
-        if(score == -INF) { moveStack[curMove] = 0; goto abortMove; } // zap illegal moves
+        if(score == -INF) {
+          if(level == 1) repeatMove[repCnt++] = move & 0xFFFFFF | (p[tb.piece].value == 10*LVAL ? 3<<24 : 1 << 24);
+          moveStack[curMove] = 0; // zap illegal moves
+          goto abortMove;
+        }
       }
 #if 1
       score = -Search(-beta, -iterAlpha, -difEval - tb.booty, replyDep, promoSuppress & ~PROMOTE, defer);
@@ -1954,7 +1958,8 @@ printf("# deferral of %d\n", deferred);
       for(i=retFirst; i<retMSP; i++) printf("# %d. %08x %08x %s\n", i-50, moveStack[i], ret, MoveToText(moveStack[i], 0));
       reason = NULL;
       for(i=0; i<repCnt; i++) {if((repeatMove[i] & 0xFFFFFF) == ret) {
-        reason = "Repeats earlier position";
+        if(repeatMove[i] & 1<<24) reason = (repeatMove[i] & 1<<25 ? "Distant capture of protected Lion" : "Counterstrike against Lion");
+        else reason = "Repeats earlier position";
         break;
       }
  printf("# %d. %08x %08x %s\n", i, repeatMove[i], ret, MoveToText(repeatMove[i], 0));
