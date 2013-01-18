@@ -1523,7 +1523,7 @@ if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("search(%d) {%d,%d} eval=
   nodes++;
   pv[pvPtr++] = 0; // start empty PV, directly behind PV of parent
 
-  firstMove = curMove = sorted = msp += 20; // leave 20 empty slots in front of move list
+  firstMove = curMove = sorted = msp += 50; // leave 50 empty slots in front of move list
   tb.fireMask = phase = 0; iterDep=1; replyDep = (depth < 1 ? depth : 1) - 1;
   do {
 if(flag && depth>= 0) printf("iter %d:%d\n", depth,iterDep),fflush(stdout);
