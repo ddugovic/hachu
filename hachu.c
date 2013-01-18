@@ -2029,9 +2029,10 @@ flag=0;
 int
 SearchBestMove (int stm, int timeLeft, int mps, int timeControl, int inc, int timePerMove, MOVE *move, MOVE *ponderMove)
 {
-  int score, targetTime, movesLeft = 50;
+  int score, targetTime, movesLeft = BW*BH/4 + 20;
   if(mps) movesLeft = mps - (moveNr>>1)%mps;
   targetTime = timeLeft*10 / (movesLeft + 2) + 1000 * inc;
+  if(moveNr < 30) targetTime *= 0.5 + moveNr/60.; // speedup in opening
   if(timePerMove > 0) targetTime = timeLeft * 5;
   startTime = GetTickCount();
   tlim1 = 0.2*targetTime;
