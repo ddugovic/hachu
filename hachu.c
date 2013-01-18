@@ -94,7 +94,7 @@ typedef struct {
 char *array, *reason;
 int bWidth, bHeight, bsize, zone, currentVariant;
 int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, retDep, pvPtr, level, cnt50, chuFlag=1, tenFlag, mobilityScore;
-int nodes, startTime, tlim1, tlim2, repCnt;
+int nodes, startTime, tlim1, tlim2, repCnt, comp;
 Move retMove, moveStack[10000], path[100], repStack[300], pv[1000], repeatMove[300];
 
 #define X 36 /* slider              */
@@ -2161,7 +2161,10 @@ printf("var %d\n",i);
         if(!strcmp(command, "memory"))  { SetMemorySize(atoi(inBuf+7)); continue; }
         if(!strcmp(command, "ping"))    { printf("pong%s", inBuf+4); continue; }
     //  if(!strcmp(command, ""))        { sscanf(inBuf, " %d", &); continue; }
-        if(!strcmp(command, "new"))     { engineSide = BLACK; Init(V_CHESS); stm = Setup2(DEFAULT_FEN); maxDepth = MAXPLY; randomize = OFF; continue; }
+        if(!strcmp(command, "new"))     {
+          engineSide = BLACK; Init(V_CHESS); stm = Setup2(DEFAULT_FEN); maxDepth = MAXPLY; randomize = OFF; comp = 0;
+          continue;
+        }
         if(!strcmp(command, "setboard")){ engineSide = NONE;  stm = Setup2(inBuf+9); continue; }
         if(!strcmp(command, "easy"))    { ponder = OFF; continue; }
         if(!strcmp(command, "hard"))    { ponder = ON;  continue; }
@@ -2183,7 +2186,7 @@ printf("var %d\n",i);
         if(!strcmp(command, "l"))       { pplist(); continue; }
         // ignored commands:
         if(!strcmp(command, "xboard"))  { continue; }
-        if(!strcmp(command, "computer")){ continue; }
+        if(!strcmp(command, "computer")){ comp = 1; continue; }
         if(!strcmp(command, "name"))    { continue; }
         if(!strcmp(command, "ics"))     { continue; }
         if(!strcmp(command, "accepted")){ continue; }
@@ -2195,6 +2198,7 @@ printf("var %d\n",i);
           int move = ParseMove(inBuf+9);
           if(move == INVALID) {
             if(reason) printf("Illegal move {%s}\n", reason); else printf("%s\n", reason="Illegal move");
+            if(comp) PrintResult(stm, -INF); // against computer: claim
           } else {
             stm = MakeMove2(stm, move);
             ponderMove = INVALID;
