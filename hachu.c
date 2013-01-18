@@ -1612,7 +1612,7 @@ if(PATH) printf("%d:%2d:%2d msp=%d\n",level,depth,iterDep,msp);
       // MOVE EXTRACTION
     extractMove:
 if(flag & depth >= 0) printf("%2d:%d extract %d/%d\n", depth, iterDep, curMove, msp);
-      if(curMove < sorted) {
+      if(curMove > sorted) {
 	move = moveStack[sorted=j=curMove];
 	for(i=curMove+1; i<msp; i++)
 	  if(moveStack[i] > move) move = moveStack[j=i]; // search move with highest priority
