@@ -2007,6 +2007,7 @@ SearchBestMove (int stm, int timeLeft, int mps, int timeControl, int inc, int ti
   tlim2 = 1.9*targetTime;
   nodes = 0;
 MapFromScratch(attacks);
+  retMove = INVALID;
   score = Search(-INF-1, INF+1, rootEval, 20, sup1, sup2);
   *move = retMove;
   *ponderMove = INVALID;
@@ -2056,6 +2057,19 @@ printf("# setup done");fflush(stdout);
           score = SearchBestMove(stm, timeLeft, mps, timeControl, inc, timePerMove, &move, &ponderMove);
 
           if(move == INVALID) {         // game apparently ended
+            int kcapt = 0, xstm = stm ^ WHITE, king, k = p[king=royal[xstm]].pos;
+            if( k != ABSENT) { // test if King capture possible
+              if(attacks[2*k + stm]) {
+                if( p[king + 2].pos == ABSENT ) kcapt = 1; // we have an attack on his only King
+              }
+            } else { // he has no king! Test for attacks on Crown Prince
+              k = p[king + 2].pos;
+              if(attacks[2*k + stm]) kcapt = 1; // we have attack on Crown Prince
+            }
+            if(kcapt) { // print King capture before claiming
+              GenCapts(k, 0);
+              printf("move %s\n", MoveToText(moveStack[msp-1], 1));
+            }
             engineSide = NONE;          // so stop playing
             PrintResult(stm, score);
           } else {
