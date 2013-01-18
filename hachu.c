@@ -1541,7 +1541,7 @@ if(flag && depth>= 0) printf("phase=%d: first/curr/last = %d / %d / %d\n", phase
 #if 0
 	    if(curEval >= beta) {
 	      stm ^= WHITE;
-	      score = -Search(-beta, -iterAlpha, difEval, depth-3, promoSuppress & SQUARE, ABSENT);
+	      score = -Search(-beta, -iterAlpha, -difEval, depth-3, promoSuppress & SQUARE, ABSENT);
 	      stm ^= WHITE;
 	      if(score >= beta) { msp = oldMSP; retDep += 3; return score + (score < curEval); }
 	    }
