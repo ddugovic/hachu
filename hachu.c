@@ -91,7 +91,7 @@ typedef struct {
   char fireMask;
 } UndoInfo;
 
-char *array, *reason;
+char *array, fenArray[4000], *reason;
 int bWidth, bHeight, bsize, zone, currentVariant;
 int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, retDep, pvPtr, level, cnt50, chuFlag=1, tenFlag, mobilityScore;
 int nodes, startTime, tlim1, tlim2, repCnt, comp;
@@ -675,6 +675,8 @@ SetUp(char *array, int var)
   for(i=0; ; i++) {
 //printf("next rank: %s\n", array);
     for(j = BW*i; ; j++) {
+      int pflag=0;
+      if(*array == '+') pflag++, array++;
       c = name[0] = *array++;
       if(!c) goto eos;
       if(c == '.') continue;
@@ -687,9 +689,10 @@ SetUp(char *array, int var)
 	if(name[1]) name[1] += 'A' - 'a';
       } else color = WHITE;
       p1 = LookUp(name, var);
+      if(pflag && p1->promoted) p1 = LookUp(p1->promoted, var); // use promoted piece instead
       n = AddPiece(color, p1);
       p[n].pos = j;
-      if(p1->promoted[0]) {
+      if(p1->promoted[0] && !pflag) {
 	p2 = LookUp(p1->promoted, var);
         m = AddPiece(color, p2);
 	if(m <= n) n += 2;
@@ -1863,13 +1866,55 @@ UnMake2 (MOVE move)
   sup2 = sup1; sup1 = sup0;
 }
 
+char fenNames[] = "RV....DKDEFL..DHGB......SMLNKN..FK....BT..VM..PH...."; // pairs of char
+char fenPromo[] = "WLDHSMSECPB R HFDE....WHFB..LNG ..DKVMFS..FO..FK...."; // pairs of char
+
+char *
+Convert (char *fen)
+{
+  char *p = fenArray, *q, *rows[36], tmp[4000];
+  int n=0;
+  printf("# convert FEN '%s'\n", fen);
+  q = strchr(fen, ' '); if(q) *q = 0; q = fen;
+  do { rows[n++] = q; q = strchr(q, '/'); if(!q) break; *q++ = 0; } while(1);
+  *tmp = 0;
+  while(--n >= 0) { strcat(tmp, rows[n]); if(n) strcat(tmp, "/"); }
+  fen = tmp;
+  printf("# flipped FEN '%s'\n", fen);
+  while(*fen) {
+    if(*fen == ' ') { *p = 0; break; }
+    if(n=atoi(fen)) fen++; // digits read
+    if(n > 9) fen++; // double digit
+    while(n-- > 0) *p++ = '.'; // expand to empty squares
+    if(isalpha(*fen)) {
+      char *table = fenNames;
+      n = *fen > 'Z' ? 'a' - 'A' : 0;
+      if(table[2* (*fen - 'A' - n)] == '.') *p++ = *fen; else {
+        *p++ = ':';
+        *p++ = table[2* (*fen - 'A' - n)] + n;
+        *p++ = table[2* (*fen - 'A' - n)+1] + n;
+      }
+    } else *p++ = *fen;
+    fen++;
+  }
+  printf("# converted FEN '%s'\n", fenArray);
+  return fenArray;
+}
+
 int
 Setup2 (char *fen)
 {
+  int stm = WHITE;
+  if(fen) {
+    char *q = strchr(fen, '\n');
+    if(q) *q = 0;
+    if(q = strchr(fen, ' ')) stm = (q[1] == 'b' ? BLACK : WHITE); // fen contains color field
+    if(strchr(fen, '.') || strchr(fen, ':')) array = fen; else array = Convert(fen);
+  }
   SetUp(array, currentVariant);
   sup0 = sup1 = sup2 = ABSENT;
-  rootEval = cnt50 = hashKeyH = hashKeyL = 0;
-  return WHITE;
+  rootEval = cnt50 = hashKeyH = hashKeyL = moveNr = 0;
+  return stm;
 }
 
 void
