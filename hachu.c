@@ -1356,7 +1356,7 @@ void
 GenCapts(int sqr, int victimValue)
 { // generate all moves that capture the piece on the given square
   int i, range, att = attacks[2*sqr + stm];
-//printf("GenCapts(%d,%d)\n",sqr,victimValue);
+//printf("GenCapts(%c%d,%d) %08x\n",sqr%BW+'a',sqr/BW,victimValue,att);
   if(!att) return; // no attackers at all!
   for(i=0; i<8; i++) {               // try all rays
     int x, v, jumper, jcapt=0;
