@@ -91,11 +91,11 @@ typedef struct {
   char fireMask;
 } UndoInfo;
 
-char *array;
+char *array, *reason;
 int bWidth, bHeight, bsize, zone, currentVariant;
 int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, retDep, pvPtr, level, cnt50, chuFlag=1, tenFlag, mobilityScore;
-int nodes, startTime, tlim1, tlim2;
-Move retMove, moveStack[10000], path[100], repStack[300], pv[1000];
+int nodes, startTime, tlim1, tlim2, repCnt;
+Move retMove, moveStack[10000], path[100], repStack[300], pv[1000], repeatMove[300];
 
 #define X 36 /* slider              */
 #define R 37 /* jump capture        */
@@ -1630,7 +1630,8 @@ if(flag & depth >= 0) printf("%2d:%d found %d/%d %08x %s\n", depth, iterDep, cur
 if(flag & depth >= 0) printf("%2d:%d made %d/%d %s\n", depth, iterDep, curMove, msp, MoveToText(moveStack[curMove], 0));
       for(i=2; i<=cnt50; i+=2) if(repStack[level-i+200] == hashKeyH) {
 	moveStack[curMove] = 0; // erase forbidden move
-	score = -INF; goto repetition;
+	if(!level) repeatMove[repCnt++] = move & 0xFFFFFF; // remember outlawed move
+	score = -INF; moveStack[curMove] = 0; goto repetition;
       }
       repStack[level+200] = hashKeyH;
 
@@ -1912,7 +1913,7 @@ ParseMove (char *moveText)
   if(*moveText == '+') ret |= PROMOTE;
 printf("# suppress = %c%d\n", sup1%BW+'a', sup1/BW);
 MapFromScratch(attacks);
-  postThinking--;
+  postThinking--; repCnt = 0;
   Search(-INF-1, INF+1, 0, 1, sup1 & ~PROMOTE, sup2);
   postThinking++;
   for(i=retFirst; i<retMSP; i++) {
@@ -1932,8 +1933,16 @@ printf("# deferral of %d\n", deferred);
 	if(!(flags & promoBoard[f])) moveStack[i] |= DEFER; // came from outside zone, so essential deferral
       }
     }
-    if(i >= retMSP)
-      for(i=retFirst; i<retMSP; i++) printf("# %d. %08x %08x %s\n", i-20, moveStack[i], ret, MoveToText(moveStack[i], 0));
+    if(i >= retMSP) {
+      for(i=retFirst; i<retMSP; i++) printf("# %d. %08x %08x %s\n", i-50, moveStack[i], ret, MoveToText(moveStack[i], 0));
+      reason = NULL;
+      for(i=0; i<repCnt; i++) {if((repeatMove[i] & 0xFFFFFF) == ret) {
+        reason = "Repeats earlier position";
+        break;
+      }
+ printf("# %d. %08x %08x %s\n", i, repeatMove[i], ret, MoveToText(repeatMove[i], 0));
+}
+    }
   }
   return (i >= retMSP ? INVALID : moveStack[i]);
 }
@@ -1949,7 +1958,7 @@ MapFromScratch(attacks);
 //pmap(attacks, WHITE);
 //pmap(attacks, BLACK);
 //flag=1;
-  postThinking--;
+  postThinking--; repCnt = 0;
   Search(-INF-1, INF+1, 0, 1, sup1 & ~PROMOTE, sup2);
   postThinking++;
 flag=0;
@@ -2007,7 +2016,7 @@ SearchBestMove (int stm, int timeLeft, int mps, int timeControl, int inc, int ti
   tlim2 = 1.9*targetTime;
   nodes = 0;
 MapFromScratch(attacks);
-  retMove = INVALID;
+  retMove = INVALID; repCnt = 0;
   score = Search(-INF-1, INF+1, rootEval, 20, sup1, sup2);
   *move = retMove;
   *ponderMove = INVALID;
@@ -2031,9 +2040,11 @@ printf("# setup done");fflush(stdout);
 
     void PrintResult(int stm, int score)
     {
-      if(score == 0) printf("1/2-1/2\n");
-      if(score > 0 && stm == WHITE || score < 0 && stm == BLACK) printf("1-0\n");
-      else printf("0-1\n");
+      char tail[100];
+      if(reason) sprintf(tail, " {%s}", reason); else *tail = 0;
+      if(score == 0) printf("1/2-1/2%s\n", tail);
+      if(score > 0 && stm == WHITE || score < 0 && stm == BLACK) printf("1-0%s\n", tail);
+      else printf("0-1%s\n", tail);
     }
 
     main()
@@ -2069,7 +2080,8 @@ printf("# setup done");fflush(stdout);
             if(kcapt) { // print King capture before claiming
               GenCapts(k, 0);
               printf("move %s\n", MoveToText(moveStack[msp-1], 1));
-            }
+              reason = "king capture";
+            } else reason = "resign";
             engineSide = NONE;          // so stop playing
             PrintResult(stm, score);
           } else {
@@ -2181,8 +2193,9 @@ printf("var %d\n",i);
         if(!strcmp(command, ""))  {  continue; }
         if(!strcmp(command, "usermove")){
           int move = ParseMove(inBuf+9);
-          if(move == INVALID) printf("Illegal move\n");
-          else {
+          if(move == INVALID) {
+            if(reason) printf("Illegal move {%s}\n", reason); else printf("%s\n", reason="Illegal move");
+          } else {
             stm = MakeMove2(stm, move);
             ponderMove = INVALID;
             gameMove[moveNr++] = move;  // remember game
