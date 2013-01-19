@@ -2134,6 +2134,7 @@ printf("# setup done");fflush(stdout);
 
         if(stm == engineSide) {         // if it is the engine's turn to move, set it thinking, and let it move
      
+pboard(board);
           score = SearchBestMove(stm, timeLeft, mps, timeControl, inc, timePerMove, &move, &ponderMove);
 
           if(move == INVALID) {         // game apparently ended
@@ -2180,8 +2181,6 @@ printf("# setup done");fflush(stdout);
         // wait for input, and read it until we have collected a complete line
         for(i = 0; (inBuf[i] = getchar()) != '\n'; i++);
         inBuf[i+1] = 0;
-pboard(board);
-pmoves(retFirst, retMSP);
 
         // extract the first word
         sscanf(inBuf, "%s", command);
@@ -2219,7 +2218,6 @@ printf("in: %s\n", command);
           for(i=0; i<5; i++) {
             sscanf(inBuf+8, "%s", command);
             if(!strcmp(variants[i].name, command)) {
-printf("var %d\n",i);
               Init(i); stm = Setup2(NULL); break;
             }
 	  }
@@ -2265,6 +2263,7 @@ printf("var %d\n",i);
         if(!strcmp(command, ""))  {  continue; }
         if(!strcmp(command, "usermove")){
           int move = ParseMove(inBuf+9);
+pboard(board);
           if(move == INVALID) {
             if(reason) printf("Illegal move {%s}\n", reason); else printf("%s\n", reason="Illegal move");
             if(comp) PrintResult(stm, -INF); // against computer: claim
