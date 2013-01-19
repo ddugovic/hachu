@@ -1990,6 +1990,7 @@ MapFromScratch(attacks);
     if((moveStack[i] & (PROMOTE | DEFER-1)) == ret) break;
     if((moveStack[i] & DEFER-1) == ret) deferred = i; // promoted version of entered non-promotion is legal
   }
+printf("# moveNr = %d in {%d,%d}\n", i, retFirst, retMSP);
   if(i>=retMSP) {  // no exact match
     if(deferred) { // but maybe non-sensical deferral
       int flags = p[board[f]].promoFlag;
