@@ -691,6 +691,7 @@ SetUp(char *array, int var)
 	if(name[1]) name[1] += 'A' - 'a';
       } else color = WHITE;
       p1 = LookUp(name, var);
+      if(!p1) printf("tellusererror Unknown piece '%s' in setup\n", name), exit(-1);
       if(pflag && p1->promoted) p1 = LookUp(p1->promoted, var); // use promoted piece instead
       n = AddPiece(color, p1);
       p[n].pos = j;
@@ -1822,8 +1823,6 @@ pmoves(int start, int end)
     #define OFF 0
     #define ON  1
 
-#define DEFAULT_FEN ""
-
 typedef Move MOVE;
 
     int moveNr;              // part of game state; incremented by MakeMove
@@ -1891,7 +1890,8 @@ Convert (char *fen)
     if(isalpha(*fen)) {
       char *table = fenNames;
       n = *fen > 'Z' ? 'a' - 'A' : 0;
-      if(table[2* (*fen - 'A' - n)] == '.') *p++ = *fen; else {
+      if(currentVariant == V_CHESS && *fen - 'A' - n == 'N' // In Chess N is Knight, not Lion
+           || table[2* (*fen - 'A' - n)] == '.') *p++ = *fen; else {
         *p++ = ':';
         *p++ = table[2* (*fen - 'A' - n)] + n;
         *p++ = table[2* (*fen - 'A' - n)+1] + n;
@@ -2101,7 +2101,7 @@ PonderUntilInput (int stm)
     int TakeBack(int n)
     { // reset the game and then replay it to the desired point
       int last, stm;
-      stm = Setup2(NULL);
+      Init(currentVariant); stm = Setup2(NULL);
 printf("# setup done");fflush(stdout);
       last = moveNr - n; if(last < 0) last = 0;
       for(moveNr=0; moveNr<last; moveNr++) stm = MakeMove2(stm, gameMove[moveNr]),printf("make %2d: %x\n", moveNr, gameMove[moveNr]);
@@ -2231,10 +2231,10 @@ printf("var %d\n",i);
         if(!strcmp(command, "ping"))    { printf("pong%s", inBuf+4); continue; }
     //  if(!strcmp(command, ""))        { sscanf(inBuf, " %d", &); continue; }
         if(!strcmp(command, "new"))     {
-          engineSide = BLACK; Init(V_CHESS); stm = Setup2(DEFAULT_FEN); maxDepth = MAXPLY; randomize = OFF; comp = 0;
+          engineSide = BLACK; Init(V_CHESS); stm = Setup2(NULL); maxDepth = MAXPLY; randomize = OFF; comp = 0;
           continue;
         }
-        if(!strcmp(command, "setboard")){ engineSide = NONE;  stm = Setup2(inBuf+9); continue; }
+        if(!strcmp(command, "setboard")){ engineSide = NONE;  Init(currentVariant); stm = Setup2(inBuf+9); continue; }
         if(!strcmp(command, "easy"))    { ponder = OFF; continue; }
         if(!strcmp(command, "hard"))    { ponder = ON;  continue; }
         if(!strcmp(command, "undo"))    { stm = TakeBack(1); continue; }
