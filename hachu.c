@@ -2233,7 +2233,7 @@ printf("in: %s\n", command);
           continue;
         }
         if(!strcmp(command, "variant")) {
-          for(i=0; i<5; i++) {
+          for(i=0; i<6; i++) {
             sscanf(inBuf+8, "%s", command);
             if(!strcmp(variants[i].name, command)) {
               Init(i); stm = Setup2(NULL); break;
