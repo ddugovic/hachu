@@ -676,7 +676,7 @@ AddPiece (int stm, PieceDesc *list)
     if(p[j].promo >= i) p[j].promo += 2;
   }
   if(royal[stm] >= i) royal[stm] += 2;
-  if(p[i].value == (currentVariant == V_SHO ? 410 : 280) ) royal[stm] = i;
+  if(p[i].value == (currentVariant == V_SHO ? 410 : 280) ) royal[stm] = i, p[i].pst = 0;
   p[i].qval = (currentVariant == V_TENJIKU ? list->ranking : 0); // jump-capture hierarchy
   return i;
 }
