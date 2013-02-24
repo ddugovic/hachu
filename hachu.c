@@ -92,7 +92,7 @@ typedef struct {
 } UndoInfo;
 
 char *array, fenArray[4000], *reason;
-int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag;
+int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws;
 int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
 int nodes, startTime, tlim1, tlim2, repCnt, comp;
 Move retMove, moveStack[10000], path[100], repStack[300], pv[1000], repeatMove[300];
@@ -761,6 +761,7 @@ Init (int var)
   chuFlag = (currentVariant == V_CHU);
   tenFlag = (currentVariant == V_TENJIKU);
   chessFlag = (currentVariant == V_CHESS);
+  repDraws  = (currentVariant == V_CHESS || currentVariant == V_SHATRANJ);
 
   for(i= -1; i<9; i++) { // board steps in linear coordinates
     kStep[i] = STEP(direction[i&7].x,   direction[i&7].y);       // King
@@ -1667,6 +1668,7 @@ if(flag & depth >= 0) printf("%2d:%d found %d/%d %08x %s\n", depth, iterDep, cur
 
 if(flag & depth >= 0) printf("%2d:%d made %d/%d %s\n", depth, iterDep, curMove, msp, MoveToText(moveStack[curMove], 0));
       for(i=2; i<=cnt50; i+=2) if(repStack[level-i+200] == hashKeyH) {
+	if(repDraws) { score = 0; goto repetition; }
 	moveStack[curMove] = 0; // erase forbidden move
 	if(!level) repeatMove[repCnt++] = move & 0xFFFFFF; // remember outlawed move
 	score = -INF; moveStack[curMove] = 0; goto repetition;
