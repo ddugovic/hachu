@@ -40,7 +40,7 @@
 #define BSIZE BWMAX*BHMAX
 #define ZONE  zone
 
-#define ONE (currentVariant == V_SHO || currentVariant == V_CHESS)
+#define ONE (currentVariant == V_SHO || currentVariant == V_CHESS || currentVariant == V_SHATRANJ)
 
 #define BLACK      0
 #define WHITE      1
@@ -326,6 +326,16 @@ PieceDesc chessPieces[] = {
   { NULL }  // sentinel
 };
 
+PieceDesc shatranjPieces[] = {
+  {"Q", "",  15, { 0,1,0,1,0,1,0,1 } },
+  {"R", "",  50, { X,0,X,0,X,0,X,0 } },
+  {"B", "",   9, { 0,J,0,J,0,J,0,J } },
+  {"N", "",  30, { N,N,N,N,N,N,N,N } },
+  {"K", "",  28, { 1,1,1,1,1,1,1,1 } },
+  {"P", "Q",  8, { M,C,0,0,0,0,0,C } },
+  { NULL }  // sentinel
+};
+
 char chuArray[] = "L:FLCSGK:DEGSC:FLL/:RV.B.:BT:KN:PH:BT.B.:RV/:SM:VMR:DH:DK:LN:FK:DK:DHR:VM:SM/PPPPPPPPPPPP/...:GB....:GB..."
 		  "/............/............/"
 		  "...:gb....:gb.../pppppppppppp/:sm:vmr:dh:dk:fk:ln:dk:dhr:vm:sm/:rv.b.:bt:ph:kn:bt.b.:rv/l:flcsg:dekgsc:fll";
@@ -339,6 +349,7 @@ char tenArray[] = "LN:FLICSGK:DEGSCI:FLNL/:RV.:CS:CS.:BT:KN:LN:FK:PH:BT.:CS:CS.:
 		  ":ss:vsb:dh:dk:wb:fi:fe:lh:fi:wb:dk:dhb:vs:ss/:rv.:cs:cs.:bt:ph:fk:ln:kn:bt.:cs:cs.:rv/ln:flicsg:dekgsci:flnl";
 char shoArray[] = "LNSGKGSNL/.B..:DE..R./PPPPPPPPP/........./........./........./ppppppppp/.r..:de..b./lnsgkgsnl";
 char chessArray[] = "RNBQKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnbqkbnr";
+char shatArray[]= "RNBKQBNR/PPPPPPPP/......../......../......../......../pppppppp/rnbkqbnr";
 
 typedef struct {
   int boardWidth, boardFiles, boardRanks, zoneDepth, varNr; // board sizes
@@ -346,7 +357,7 @@ typedef struct {
   char *array; // initial position
 } VariantDesc;
 
-typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_TENJIKU, V_DADA, V_MAKA, V_TAI, V_KYOKU } Variant;
+typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_TENJIKU, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_SHATRANJ } Variant;
 
 VariantDesc variants[] = {
   { 16,  8,  8, 1, V_CHESS,  "normal", chessArray }, // FIDE
@@ -354,6 +365,8 @@ VariantDesc variants[] = {
   { 24, 12, 12, 4, V_CHU,     "chu",     chuArray }, // Chu
   { 30, 15, 15, 5, V_DAI,     "dai",     daiArray }, // Dai
   { 32, 16, 16, 5, V_TENJIKU, "tenjiku", tenArray }, // Tenjiku
+  { 16,  8,  8, 1, V_SHATRANJ,"shatranj",shatArray}, // Shatranj
+
 //  { 0, 0, 0, 0, 0 }, // sentinel
   { 34, 17, 17, 0, V_DADA,    "dada",    chuArray }, // Dai Dai
   { 38, 19, 19, 0, V_MAKA,    "maka",    chuArray }, // Maka Dai Dai
@@ -534,6 +547,8 @@ LookUp (char *name, int var)
       return ListLookUp(name, chuPieces);
     case V_CHESS: // FIDE
       return ListLookUp(name, chessPieces);
+    case V_SHATRANJ: // Shatranj
+      return ListLookUp(name, shatranjPieces);
   }
   return NULL;
 }
@@ -628,6 +643,7 @@ Compactify (int stm)
     }
   }
   for(i=stm+2; i<last[stm]; i+=2) { // second pass: promoted pieces
+
     if((k = p[i].promo) == -2 && p[i].pos == ABSENT) { // orphaned promoted piece not present
       SqueezeOut(i);
     }
@@ -672,7 +688,7 @@ SetUp(char *array, int var)
   char c, *q, name[3];
   PieceDesc *p1, *p2;
   last[WHITE] = 1; last[BLACK] = 0;
-  if(var == V_CHESS) // add dummy Crown Princes
+  if(var == V_CHESS || var == V_SHATRANJ) // add dummy Crown Princes
     p[AddPiece(WHITE, LookUp("CP", V_CHU))].pos =  p[AddPiece(BLACK, LookUp("CP", V_CHU))].pos = ABSENT;
   for(i=0; ; i++) {
 //printf("next rank: %s\n", array);
@@ -1890,7 +1906,7 @@ Convert (char *fen)
     if(isalpha(*fen)) {
       char *table = fenNames;
       n = *fen > 'Z' ? 'a' - 'A' : 0;
-      if(currentVariant == V_CHESS && *fen - 'A' - n == 'N' // In Chess N is Knight, not Lion
+      if((currentVariant == V_CHESS || currentVariant == V_SHATRANJ) && *fen - 'A' - n == 'N' // In Chess N is Knight, not Lion
            || table[2* (*fen - 'A' - n)] == '.') *p++ = *fen; else {
         *p++ = ':';
         *p++ = table[2* (*fen - 'A' - n)] + n;
@@ -2203,7 +2219,7 @@ printf("in: %s\n", command);
         }
         if(!strcmp(command, "protover")){
           printf("feature ping=1 setboard=1 colors=0 usermove=1 memory=1 debug=1 sigint=0 sigterm=0\n");
-          printf("feature variants=\"normal,chu,dai,tenjiku,12x12+0_fairy,9x9+0_shogi\"\n");
+          printf("feature variants=\"normal,shatranj,chu,dai,tenjiku,12x12+0_fairy,9x9+0_shogi\"\n");
           printf("feature myname=\"HaChu " VERSION "\" highlight=1\n");
           printf("feature option=\"Resign -check 0\"\n");           // example of an engine-defined option
           printf("feature option=\"Contempt -spin 0 -200 200\"\n"); // and another one
