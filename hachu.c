@@ -92,8 +92,8 @@ typedef struct {
 } UndoInfo;
 
 char *array, fenArray[4000], *reason;
-int bWidth, bHeight, bsize, zone, currentVariant;
-int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, retDep, pvPtr, level, cnt50, chuFlag=1, tenFlag, mobilityScore;
+int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag;
+int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
 int nodes, startTime, tlim1, tlim2, repCnt, comp;
 Move retMove, moveStack[10000], path[100], repStack[300], pv[1000], repeatMove[300];
 
@@ -760,6 +760,7 @@ Init (int var)
   bsize = bWidth*bHeight;
   chuFlag = (currentVariant == V_CHU);
   tenFlag = (currentVariant == V_TENJIKU);
+  chessFlag = (currentVariant == V_CHESS);
 
   for(i= -1; i<9; i++) { // board steps in linear coordinates
     kStep[i] = STEP(direction[i&7].x,   direction[i&7].y);       // King
@@ -945,8 +946,8 @@ GenNonCapts (int promoSuppress)
 	  }
 	} else
 	if(r == M) { // FIDE Pawn; check double-move
-	  if(!NewNonCapture(x, x+v, pFlag) && promoBoard[x-v])
-	    NewNonCapture(x, x+2*v+DEFER, pFlag); // use promoSuppress flag as e.p. flag
+	  if(!NewNonCapture(x, x+v, pFlag) && chessFlag && promoBoard[x-v])
+	    NewNonCapture(x, x+2*v, pFlag), moveStack[msp-1] |= DEFER; // use promoSuppress flag as e.p. flag
 	}
 	continue;
       }
