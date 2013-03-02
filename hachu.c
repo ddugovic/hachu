@@ -11,7 +11,7 @@
 // promotions by pieces with Lion power stepping in & out the zone in same turn
 // promotion on capture
 
-#define VERSION "0.4beta"
+#define VERSION "0.5beta"
 
 #define PATH level==0 || path[0] == 0xc4028 &&  (level==1 /*|| path[1] == 0x75967 && (level == 2 || path[2] == 0x3400b && (level == 3))*/)
 //define PATH 0
@@ -327,12 +327,12 @@ PieceDesc chessPieces[] = {
 };
 
 PieceDesc shatranjPieces[] = {
-  {"Q", "",  15, { 0,1,0,1,0,1,0,1 } },
+  {"FK", "", 15, { 0,1,0,1,0,1,0,1 } },
   {"R", "",  50, { X,0,X,0,X,0,X,0 } },
   {"B", "",   9, { 0,J,0,J,0,J,0,J } },
   {"N", "",  30, { N,N,N,N,N,N,N,N } },
   {"K", "",  28, { 1,1,1,1,1,1,1,1 } },
-  {"P", "Q",  8, { M,C,0,0,0,0,0,C } },
+  {"P", "FK", 8, { M,C,0,0,0,0,0,C } },
   { NULL }  // sentinel
 };
 
@@ -349,7 +349,7 @@ char tenArray[] = "LN:FLICSGK:DEGSCI:FLNL/:RV.:CS:CS.:BT:KN:LN:FK:PH:BT.:CS:CS.:
 		  ":ss:vsb:dh:dk:wb:fi:fe:lh:fi:wb:dk:dhb:vs:ss/:rv.:cs:cs.:bt:ph:fk:ln:kn:bt.:cs:cs.:rv/ln:flicsg:dekgsci:flnl";
 char shoArray[] = "LNSGKGSNL/.B..:DE..R./PPPPPPPPP/........./........./........./ppppppppp/.r..:de..b./lnsgkgsnl";
 char chessArray[] = "RNBQKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnbqkbnr";
-char shatArray[]= "RNBKQBNR/PPPPPPPP/......../......../......../......../pppppppp/rnbkqbnr";
+char shatArray[]= "RNBK:FKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnbk:fkbnr";
 
 typedef struct {
   int boardWidth, boardFiles, boardRanks, zoneDepth, varNr; // board sizes
@@ -1909,7 +1909,7 @@ Convert (char *fen)
     if(isalpha(*fen)) {
       char *table = fenNames;
       n = *fen > 'Z' ? 'a' - 'A' : 0;
-      if((currentVariant == V_CHESS || currentVariant == V_SHATRANJ) && *fen - 'A' - n == 'N' // In Chess N is Knight, not Lion
+      if((currentVariant == V_CHESS || currentVariant == V_SHATRANJ) && *fen - n == 'N' // In Chess N is Knight, not Lion
            || table[2* (*fen - 'A' - n)] == '.') *p++ = *fen; else {
         *p++ = ':';
         *p++ = table[2* (*fen - 'A' - n)] + n;
@@ -2143,7 +2143,7 @@ printf("# setup done");fflush(stdout);
       int timeLeft;                            // timeleft on engine's clock
       int mps, timeControl, inc, timePerMove;  // time-control parameters, to be used by Search
       MOVE move, ponderMove;
-      int i, score;
+      int i, score, curVarNr;
       char inBuf[8000], command[80];
 
   Init(V_CHU); // Chu
@@ -2238,7 +2238,7 @@ printf("in: %s\n", command);
           for(i=0; i<6; i++) {
             sscanf(inBuf+8, "%s", command);
             if(!strcmp(variants[i].name, command)) {
-              Init(i); stm = Setup2(NULL); break;
+              Init(curVarNr = i); stm = Setup2(NULL); break;
             }
 	  }
           continue;
@@ -2249,10 +2249,10 @@ printf("in: %s\n", command);
         if(!strcmp(command, "ping"))    { printf("pong%s", inBuf+4); continue; }
     //  if(!strcmp(command, ""))        { sscanf(inBuf, " %d", &); continue; }
         if(!strcmp(command, "new"))     {
-          engineSide = BLACK; Init(V_CHESS); stm = Setup2(NULL); maxDepth = MAXPLY; randomize = OFF; comp = 0;
+          engineSide = BLACK; Init(V_CHESS); stm = Setup2(NULL); maxDepth = MAXPLY; randomize = OFF; curVarNr = comp = 0;
           continue;
         }
-        if(!strcmp(command, "setboard")){ engineSide = NONE;  Init(currentVariant); stm = Setup2(inBuf+9); continue; }
+        if(!strcmp(command, "setboard")){ engineSide = NONE;  Init(curVarNr); stm = Setup2(inBuf+9); continue; }
         if(!strcmp(command, "easy"))    { ponder = OFF; continue; }
         if(!strcmp(command, "hard"))    { ponder = ON;  continue; }
         if(!strcmp(command, "undo"))    { stm = TakeBack(1); continue; }
