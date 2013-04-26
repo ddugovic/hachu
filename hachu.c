@@ -11,7 +11,7 @@
 // promotions by pieces with Lion power stepping in & out the zone in same turn
 // promotion on capture
 
-#define VERSION "0.6beta"
+#define VERSION "0.7beta"
 
 #define PATH level==0 || path[0] == 0xc4028 &&  (level==1 /*|| path[1] == 0x75967 && (level == 2 || path[2] == 0x3400b && (level == 3))*/)
 //define PATH 0
@@ -699,11 +699,9 @@ void
 SetUp(char *array, int var)
 {
   int i, j, n, m, nr, color;
-  char c, *q, name[3];
+  char c, *q, name[3], prince = 0;
   PieceDesc *p1, *p2;
   last[WHITE] = 1; last[BLACK] = 0;
-  if(var == V_CHESS || var == V_SHATRANJ || var == V_MAKRUK) // add dummy Crown Princes
-    p[AddPiece(WHITE, LookUp("CP", V_CHU))].pos =  p[AddPiece(BLACK, LookUp("CP", V_CHU))].pos = ABSENT;
   for(i=0; ; i++) {
 //printf("next rank: %s\n", array);
     for(j = BW*i; ; j++) {
@@ -720,12 +718,14 @@ SetUp(char *array, int var)
 	name[0] += 'A' - 'a';
 	if(name[1]) name[1] += 'A' - 'a';
       } else color = WHITE;
+      if(!strcmp(name, "CP")) prince |= color+1; // remember if we added Crown Prince
       p1 = LookUp(name, var);
       if(!p1) printf("tellusererror Unknown piece '%s' in setup\n", name), exit(-1);
       if(pflag && p1->promoted) p1 = LookUp(p1->promoted, var); // use promoted piece instead
       n = AddPiece(color, p1);
       p[n].pos = j;
       if(p1->promoted[0] && !pflag) {
+        if(!strcmp(p1->promoted, "CP")) prince |= color+1; // remember if we added Crown Prince
 	p2 = LookUp(p1->promoted, var);
         m = AddPiece(color, p2);
 	if(m <= n) n += 2;
@@ -741,6 +741,9 @@ SetUp(char *array, int var)
     }
   }
  eos:
+  // add dummy Crown Princes if not yet added
+  if(!(prince & WHITE+1)) p[AddPiece(WHITE, LookUp("CP", V_CHU))].pos = ABSENT;
+  if(!(prince & BLACK+1)) p[AddPiece(BLACK, LookUp("CP", V_CHU))].pos = ABSENT;
   for(i=0; i<8; i++)  fireFlags[i] = 0;
   for(i=2, n=1; i<10; i++) if(p[i].value == 10*FVAL) {
     int x = p[i].pos; // mark all burn zones
