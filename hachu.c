@@ -18,6 +18,7 @@
 
 #define HASH
 #define KILLERS
+#define NULLMOVE
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1633,10 +1634,10 @@ if(flag && depth>= 0) printf("phase=%d: first/curr/last = %d / %d / %d\n", phase
 	      bestScore = curEval; resDep = QSdepth;
 	      if(bestScore >= beta || depth < -1) goto cutoff;
 	    }
-#if 0
-	    if(curEval >= beta) {
+#ifdef NULLMOVE
+	    else if(curEval >= beta) {
 	      stm ^= WHITE;
-	      score = -Search(-beta, -iterAlpha, -difEval, depth-3, promoSuppress & SQUARE, ABSENT);
+	      score = -Search(-beta, 1-beta, -difEval, depth > 3 ? depth-3 : 0, promoSuppress & SQUARE, ABSENT);
 	      stm ^= WHITE;
 	      if(score >= beta) { msp = oldMSP; retDep += 3; return score + (score < curEval); }
 	    }
