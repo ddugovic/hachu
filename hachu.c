@@ -17,6 +17,7 @@
 //define PATH 0
 
 #define HASH
+#define KILLERS
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -113,7 +114,7 @@ char *array, fenArray[4000], *reason;
 int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws;
 int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
 int nodes, startTime, tlim1, tlim2, repCnt, comp;
-Move retMove, moveStack[10000], path[100], repStack[300], pv[1000], repeatMove[300];
+Move retMove, moveStack[10000], path[100], repStack[300], pv[1000], repeatMove[300], killer[100][2];
 
       int maxDepth;                            // used by search
 
@@ -1694,6 +1695,14 @@ if(PATH) printf("%d:%2d:%2d msp=%d\n",level,depth,iterDep,msp);
 	  case 6: // non-captures
 	    nonCapts = msp;
 	    nullMove = GenNonCapts(oldPromo);
+#ifdef KILLERS
+	    { // swap killers to front
+	      Move h = killer[level][0]; int j = curMove;
+	      for(i=curMove; i<msp; i++) if(moveStack[i] == h) { moveStack[i] = moveStack[j]; moveStack[j++] = h; break; }
+	      h = killer[level][1];
+	      for(i=curMove; i<msp; i++) if(moveStack[i] == h) { moveStack[i] = moveStack[j]; moveStack[j++] = h; break; }
+	    }
+#endif
 	    phase = 7;
 	    sorted = msp; // do not sort noncapts
 	    break;
@@ -1789,7 +1798,12 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curM
 	  }
 	  bestMoveNr = firstMove;
 	  if(score >= beta) { // beta cutoff
-	    // update killer
+#ifdef KILLERS
+	    if(iterDep == depth && move != killer[level][0]) {
+	      // update killer
+	      killer[level][1] = killer[level][0]; killer[level][0] = move;
+	    }
+#endif
 	    resDep = retDep;
 	    goto cutoff;
 	  }
