@@ -16,11 +16,14 @@
 #define PATH level==0 || path[0] == 0xc4028 &&  (level==1 /*|| path[1] == 0x75967 && (level == 2 || path[2] == 0x3400b && (level == 3))*/)
 //define PATH 0
 
+#define HASH
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
 #include <time.h>
+#include <stdint.h>
 
 #ifdef WIN32 
 #    include <windows.h>
@@ -77,6 +80,21 @@ char *MoveToText(Move move, int m);     // from WB driver
 void pmap(int *m, int col);
 void pboard(int *b);
 void pbytes(unsigned char *b);
+
+typedef struct {
+  int lock[5];
+  int move[5];
+  short int score[5];
+  char depth[5];
+  char flag[5];
+  char age[4];
+} HashBucket;
+
+HashBucket *hashTable;
+int hashMask;
+
+#define H_UPPER 2
+#define H_LOWER 1
 
 typedef struct {
   char *name, *promoted;
@@ -1556,6 +1574,9 @@ Search (int alpha, int beta, int difEval, int depth, int oldPromo, int promoSupp
   int score, bestScore, curEval, iterAlpha;
   Move move, nullMove;
   UndoInfo tb;
+#ifdef HASH
+  Move hashMove; int index, nr, hit;
+#endif
 if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("search(%d) {%d,%d} eval=%d, stm=%d\n",depth,alpha,beta,difEval,stm),fflush(stdout);
   xstm = stm ^ WHITE;
 //printf("map made\n");fflush(stdout);
@@ -1578,9 +1599,27 @@ if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("search(%d) {%d,%d} eval=
   nodes++;
   pv[pvPtr++] = 0; // start empty PV, directly behind PV of parent
 
+
   firstMove = curMove = sorted = msp += 50; // leave 50 empty slots in front of move list
-  tb.fireMask = phase = 0; iterDep=1; replyDep = (depth < 1 ? depth : 1) - 1;
-  do {
+  iterDep = 0; tb.fireMask = phase = 0;
+
+#ifdef HASH
+  index = hashKeyL & hashMask; nr = hashKeyL >> 30; hit = -1;
+  if(hashTable[index].lock[nr] == hashKeyH) hit = nr; else
+  if(hashTable[index].lock[4]  == hashKeyH) hit = 4;
+  if(hit >= 0) {
+    bestScore = hashTable[index].score[hit];
+    if((bestScore <= alpha || hashTable[index].flag[hit] & H_LOWER) &&
+       (bestScore >= beta  || hashTable[index].flag[hit] & H_UPPER)   ) {
+      iterDep = hashTable[index].depth[hit];
+    }
+  } else { // decide on replacement
+    if(depth >= hashTable[index].depth[nr]) hit = nr; else hit = 4;
+  }
+#endif
+
+  replyDep = (depth < 1 ? depth : iterDep < 1 ? 1 : iterDep);
+  while(++iterDep <= depth) {
 if(flag && depth>= 0) printf("iter %d:%d\n", depth,iterDep),fflush(stdout);
     iterAlpha = alpha; bestScore = -INF; bestMoveNr = 0; resDep = 60;
     for(curMove = firstMove; ; curMove++) { // loop over moves
@@ -1605,6 +1644,12 @@ if(flag && depth>= 0) printf("phase=%d: first/curr/last = %d / %d / %d\n", phase
 //if(PATH) printf("mask=%x\n",tb.fireMask),pbytes(fireBoard);
 	    phase = 1;
 	  case 1: // hash move
+#ifdef HASH
+	    if(hashMove) {
+	      moveStack[sorted = msp++] = hashMove;
+	      goto extractMove;
+	    }
+#endif
 	    phase = 2;
 	  case 2: // capture-gen init
 	    nextVictim = xstm;
@@ -1771,7 +1816,17 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curM
       if(GetTickCount() - startTime > tlim1) break; // do not start iteration we can (most likely) not finish
     }
     replyDep = iterDep;
-  } while(++iterDep <= depth); // next depth
+#ifdef HASH
+    // hash store
+    hashTable[index].lock[hit]  = hashKeyH;
+    hashTable[index].depth[hit] = iterDep;
+    hashTable[index].flag[hit]  = (bestScore < beta) * H_UPPER;
+    if(bestScore > alpha) {
+      hashTable[index].flag[hit] |= H_LOWER;
+      hashTable[index].move[hit]  = bestMoveNr ? moveStack[bestMoveNr] : 0;
+    } else hashTable[index].move[hit] = 0;
+#endif
+  } // next depth
   retMSP = msp;
   retFirst = firstMove;
   msp = oldMSP; // pop move list
@@ -1958,6 +2013,19 @@ Setup2 (char *fen)
 void
 SetMemorySize (int n)
 {
+#ifdef HASH
+  static HashBucket *realHash;
+  static int oldSize;
+  int m = 1;
+  intptr_t l;
+  if(n != oldSize) {
+    if(oldSize) free(realHash);
+    while(m*sizeof(HashBucket) <= n*512) m <<= 1;
+    m *= 1024; hashMask = m - 1;
+    realHash = calloc(m + 1, sizeof(HashBucket));
+    l = (intptr_t) realHash; hashTable = (HashBucket*) (l & ~63); // align with cache line
+  }
+#endif
 }
 
 char *
