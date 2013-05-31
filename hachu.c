@@ -2341,29 +2341,13 @@ printf("in: %s\n", command);
           if(sscanf(inBuf+7, "Contempt=%d", &contemptFactor) == 1) continue;
           continue;
         }
-        if(!strcmp(command, "variant")) {
-          for(i=0; i<7; i++) {
-            sscanf(inBuf+8, "%s", command);
-            if(!strcmp(variants[i].name, command)) {
-              Init(curVarNr = i); stm = Setup2(NULL); break;
-            }
-	  }
-          continue;
-        }
         if(!strcmp(command, "sd"))      { sscanf(inBuf, "sd %d", &maxDepth);    continue; }
         if(!strcmp(command, "st"))      { sscanf(inBuf, "st %d", &timePerMove); continue; }
         if(!strcmp(command, "memory"))  { SetMemorySize(atoi(inBuf+7)); continue; }
         if(!strcmp(command, "ping"))    { printf("pong%s", inBuf+4); continue; }
     //  if(!strcmp(command, ""))        { sscanf(inBuf, " %d", &); continue; }
-        if(!strcmp(command, "new"))     {
-          engineSide = BLACK; Init(V_CHESS); stm = Setup2(NULL); maxDepth = MAXPLY; randomize = OFF; curVarNr = comp = 0;
-          continue;
-        }
-        if(!strcmp(command, "setboard")){ engineSide = NONE;  Init(curVarNr); stm = Setup2(inBuf+9); continue; }
         if(!strcmp(command, "easy"))    { ponder = OFF; continue; }
         if(!strcmp(command, "hard"))    { ponder = ON;  continue; }
-        if(!strcmp(command, "undo"))    { stm = TakeBack(1); continue; }
-        if(!strcmp(command, "remove"))  { stm = TakeBack(2); continue; }
         if(!strcmp(command, "go"))      { engineSide = stm;  continue; }
         if(!strcmp(command, "post"))    { postThinking = ON; continue; }
         if(!strcmp(command, "nopost"))  { postThinking = OFF;continue; }
@@ -2386,7 +2370,7 @@ printf("in: %s\n", command);
         if(!strcmp(command, "accepted")){ continue; }
         if(!strcmp(command, "rejected")){ continue; }
         if(!strcmp(command, "result"))  { continue; }
-        if(!strcmp(command, "hover"))   {  continue; }
+        if(!strcmp(command, "hover"))   { continue; }
         if(!strcmp(command, ""))  {  continue; }
         if(!strcmp(command, "usermove")){
           int move = ParseMove(inBuf+9);
@@ -2401,6 +2385,22 @@ pboard(board);
           }
           continue;
         }
+        if(!strcmp(command, "new"))     {
+          engineSide = BLACK; Init(V_CHESS); stm = Setup2(NULL); maxDepth = MAXPLY; randomize = OFF; curVarNr = comp = 0;
+          continue;
+        }
+        if(!strcmp(command, "variant")) {
+          for(i=0; i<7; i++) {
+            sscanf(inBuf+8, "%s", command);
+            if(!strcmp(variants[i].name, command)) {
+              Init(curVarNr = i); stm = Setup2(NULL); break;
+            }
+	  }
+          continue;
+        }
+        if(!strcmp(command, "setboard")){ engineSide = NONE;  Init(curVarNr); stm = Setup2(inBuf+9); continue; }
+        if(!strcmp(command, "undo"))    { stm = TakeBack(1); continue; }
+        if(!strcmp(command, "remove"))  { stm = TakeBack(2); continue; }
         printf("Error: unknown command\n");
       }
     }
