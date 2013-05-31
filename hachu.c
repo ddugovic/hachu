@@ -1941,7 +1941,7 @@ typedef Move MOVE;
     void SetMemorySize(int n);              // if n is different from last time, resize all tables to make memory usage below n MB
     char *MoveToText(MOVE move, int m);     // converts the move from your internal format to text like e2e2, e1g1, a7a8q.
     MOVE ParseMove(char *moveText);         // converts a long-algebraic text move to your internal move format
-    int  SearchBestMove(int stm, int timeLeft, int mps, int timeControl, int inc, int timePerMove, MOVE *move, MOVE *ponderMove);
+    int  SearchBestMove(MOVE *move, MOVE *ponderMove);
     void PonderUntilInput(int stm);         // Search current position for stm, deepening forever until there is input.
 
 UndoInfo undoInfo;
@@ -2200,31 +2200,42 @@ Highlight(char *coords)
   printf("highlight %s\n", buf);
 }
 
-int
-SearchBestMove (int stm, int timeLeft, int mps, int timeControl, int inc, int timePerMove, MOVE *move, MOVE *ponderMove)
+int timeLeft;                            // timeleft on engine's clock
+int mps, timeControl, inc, timePerMove;  // time-control parameters, to be used by Search
+char inBuf[8000], command[80], ponderMoveText[20];
+
+void
+SetSearchTimes (int timeLeft)
 {
-  int score, targetTime, movesLeft = BW*BH/4 + 20;
+  int targetTime, movesLeft = BW*BH/4 + 20;
   if(mps) movesLeft = mps - (moveNr>>1)%mps;
-  targetTime = timeLeft*10 / (movesLeft + 2) + 1000 * inc;
+  targetTime = (timeLeft - 1000*inc) / (movesLeft + 2) + 1000 * inc;
   if(moveNr < 30) targetTime *= 0.5 + moveNr/60.; // speedup in opening
-  if(timePerMove > 0) targetTime = timeLeft * 5;
-  startTime = GetTickCount();
+  if(timePerMove > 0) targetTime = 0.5*timeLeft, movesLeft = 1;
   tlim1 = 0.2*targetTime;
   tlim2 = 1.9*targetTime;
+}
+
+int
+SearchBestMove (MOVE *move, MOVE *ponderMove)
+{
+  int score;
+  startTime = GetTickCount();
   nodes = 0;
 MapFromScratch(attacks);
   retMove = INVALID; repCnt = 0;
   score = Search(-INF-1, INF+1, rootEval, maxDepth, sup1, sup2);
   *move = retMove;
-  *ponderMove = INVALID;
+  *ponderMove = pv[1];
   return score;
 }
+
 
 void
 PonderUntilInput (int stm)
 {
 }
-
+ 
     int TakeBack(int n)
     { // reset the game and then replay it to the desired point
       int last, stm;
@@ -2266,11 +2277,8 @@ printf("# setup done");fflush(stdout);
     main()
     {
       int engineSide=NONE;                     // side played by engine
-      int timeLeft;                            // timeleft on engine's clock
-      int mps, timeControl, inc, timePerMove;  // time-control parameters, to be used by Search
-      MOVE move, ponderMove;
+      MOVE move;
       int i, score, curVarNr;
-      char inBuf[8000], command[80];
 
   Init(V_CHU); // Chu
 
@@ -2283,7 +2291,7 @@ printf("# setup done");fflush(stdout);
         if(stm == engineSide) {         // if it is the engine's turn to move, set it thinking, and let it move
      
 pboard(board);
-          score = SearchBestMove(stm, timeLeft, mps, timeControl, inc, timePerMove, &move, &ponderMove);
+          score = SearchBestMove(&move, &ponderMove);
 
           if(move == INVALID) {         // game apparently ended
             int kcapt = 0, xstm = stm ^ WHITE, king, k = p[king=royal[xstm]].pos;
