@@ -2244,6 +2244,25 @@ printf("# setup done");fflush(stdout);
       else printf("0-1%s\n", tail);
     }
 
+    void GetLine(int root)
+    {
+      int i, c;
+      while(1) {
+        // wait for input, and read it until we have collected a complete line
+        for(i = 0; (inBuf[i] = c = getchar()) != '\n'; i++) if(c == EOF || i>7997) exit(0);
+        inBuf[i+1] = 0;
+
+        // extract the first word
+        sscanf(inBuf, "%s", command);
+        if(!strcmp(command, "otim"))    { continue; } // do not start pondering after receiving time commands, as move will follow immediately
+        if(!strcmp(command, "time"))    { sscanf(inBuf, "time %d", &timeLeft); continue; }
+        if(!strcmp(command, "put"))     { ReadSquare(inBuf+4, &lastPut); continue; }  // ditto
+        if(!strcmp(command, "."))       { inBuf[0] = 0; return; } // ignore for now
+        if(!strcmp(command, "lift"))    { inBuf[0] = 0; Highlight(inBuf+5); return; } // treat here
+        return;
+      }
+    }
+
     main()
     {
       int engineSide=NONE;                     // side played by engine
@@ -2307,22 +2326,14 @@ pboard(board);
           }
         }
 
-      noPonder:
-        // wait for input, and read it until we have collected a complete line
-        for(i = 0; (inBuf[i] = getchar()) != '\n'; i++);
-        inBuf[i+1] = 0;
-
-        // extract the first word
-        sscanf(inBuf, "%s", command);
-printf("in: %s\n", command);
+        fflush(stdout);         // make sure everything is printed before we do something that might take time
+        if(!*inBuf) GetLine(1); // takes care of time and otim commands
 
         // recognize the command,and execute it
         if(!strcmp(command, "quit"))    { break; } // breaks out of infinite loop
         if(!strcmp(command, "force"))   { engineSide = NONE;    continue; }
         if(!strcmp(command, "analyze")) { engineSide = ANALYZE; continue; }
         if(!strcmp(command, "exit"))    { engineSide = NONE;    continue; }
-        if(!strcmp(command, "otim"))    { goto noPonder; } // do not start pondering after receiving time commands, as move will follow immediately
-        if(!strcmp(command, "time"))    { sscanf(inBuf, "time %d", &timeLeft); goto noPonder; }
         if(!strcmp(command, "level"))   {
           int min, sec=0;
           sscanf(inBuf, "level %d %d %d", &mps, &min, &inc) == 3 ||  // if this does not work, it must be min:sec format
@@ -2356,8 +2367,6 @@ printf("in: %s\n", command);
         if(!strcmp(command, "nopost"))  { postThinking = OFF;continue; }
         if(!strcmp(command, "random"))  { randomize = ON;    continue; }
         if(!strcmp(command, "hint"))    { if(ponderMove != INVALID) printf("Hint: %s\n", MoveToText(ponderMove, 0)); continue; }
-        if(!strcmp(command, "lift"))    { Highlight(inBuf+5); continue; }
-        if(!strcmp(command, "put"))     { ReadSquare(inBuf+4, &lastPut); continue; }
         if(!strcmp(command, "book"))    {  continue; }
 	// non-standard commands
         if(!strcmp(command, "p"))       { pboard(board); continue; }
