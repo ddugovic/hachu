@@ -2091,7 +2091,7 @@ MapFromScratch(attacks);
   postThinking--; repCnt = 0; tlim1 = tlim2 = 1e8; msp = 0;
   Search(-INF-1, INF+1, 0, 1, sup1 & ~PROMOTE, sup2);
   postThinking++;
-  listStart = retFirst; listEnd = retMSP;
+  listStart = retFirst; listEnd = msp = retMSP;
 }
 
 MOVE
@@ -2116,7 +2116,7 @@ ParseMove (char *moveText)
   ret = f<<SQLEN | t2;
   if(*moveText != '\n' && *moveText != '=') ret |= PROMOTE;
 printf("# suppress = %c%d\n", sup1%BW+'a', sup1/BW);
-  ListMoves();
+//  ListMoves();
   for(i=listStart; i<listEnd; i++) {
     if(moveStack[i] == INVALID) continue;
     if(c == '@' && (moveStack[i] & SQUARE) == (moveStack[i] >> SQLEN & SQUARE)) break; // any null move matches @@@@
@@ -2157,7 +2157,7 @@ Highlight(char *coords)
   char b[BSIZE], buf[2000], *q;
   for(i=0; i<bsize; i++) b[i] = 0;
   ReadSquare(coords, &sqr);
-  ListMoves();
+//  ListMoves();
   for(i=listStart; i<listEnd; i++) {
     if(sqr == (moveStack[i]>>SQLEN & SQUARE)) {
       int t = moveStack[i] & SQUARE;
@@ -2259,6 +2259,8 @@ printf("# setup done");fflush(stdout);
 
         fflush(stdout);                 // make sure everything is printed before we do something that might take time
 
+        if(listEnd == 0) ListMoves();   // always maintain a list of legal moves in root position
+
         if(stm == engineSide) {         // if it is the engine's turn to move, set it thinking, and let it move
      
 pboard(board);
@@ -2285,6 +2287,7 @@ pboard(board);
             stm = MakeMove2(stm, move);  // assumes MakeMove returns new side to move
             gameMove[moveNr++] = move;  // remember game
             printf("move %s\n", MoveToText(move, 1));
+            listEnd = 0;
           }
         }
 
@@ -2380,11 +2383,12 @@ pboard(board);
             if(comp) PrintResult(stm, -INF); // against computer: claim
           } else {
             stm = MakeMove2(stm, move);
-            ponderMove = INVALID;
+            ponderMove = INVALID; listEnd = 0;
             gameMove[moveNr++] = move;  // remember game
           }
           continue;
         }
+        listEnd = 0;
         if(!strcmp(command, "new"))     {
           engineSide = BLACK; Init(V_CHESS); stm = Setup2(NULL); maxDepth = MAXPLY; randomize = OFF; curVarNr = comp = 0;
           continue;
