@@ -2079,6 +2079,21 @@ ReadSquare (char *p, int *sqr)
   return 2 + (r + ONE > 9);
 }
 
+int listStart, listEnd;
+char boardCopy[BSIZE];
+
+void
+ListMoves ()
+{ // create move list on move stack
+  int i;
+  for(i=0; i< BSIZE; i++) boardCopy[i] = !!board[i];
+MapFromScratch(attacks);
+  postThinking--; repCnt = 0; tlim1 = tlim2 = 1e8; msp = 0;
+  Search(-INF-1, INF+1, 0, 1, sup1 & ~PROMOTE, sup2);
+  postThinking++;
+  listStart = retFirst; listEnd = retMSP;
+}
+
 MOVE
 ParseMove (char *moveText)
 {
@@ -2101,18 +2116,15 @@ ParseMove (char *moveText)
   ret = f<<SQLEN | t2;
   if(*moveText != '\n' && *moveText != '=') ret |= PROMOTE;
 printf("# suppress = %c%d\n", sup1%BW+'a', sup1/BW);
-MapFromScratch(attacks);
-  postThinking--; repCnt = 0;
-  Search(-INF-1, INF+1, 0, 1, sup1 & ~PROMOTE, sup2);
-  postThinking++;
-  for(i=retFirst; i<retMSP; i++) {
+  ListMoves();
+  for(i=listStart; i<listEnd; i++) {
     if(moveStack[i] == INVALID) continue;
     if(c == '@' && (moveStack[i] & SQUARE) == (moveStack[i] >> SQLEN & SQUARE)) break; // any null move matches @@@@
     if((moveStack[i] & (PROMOTE | DEFER-1)) == ret) break;
     if((moveStack[i] & DEFER-1) == ret) deferred = i; // promoted version of entered non-promotion is legal
   }
-printf("# moveNr = %d in {%d,%d}\n", i, retFirst, retMSP);
-  if(i>=retMSP) {  // no exact match
+printf("# moveNr = %d in {%d,%d}\n", i, listStart, listEnd);
+  if(i>=listEnd) { // no exact match
     if(deferred) { // but maybe non-sensical deferral
       int flags = p[board[f]].promoFlag;
 printf("# deferral of %d\n", deferred);
@@ -2123,8 +2135,8 @@ printf("# deferral of %d\n", deferred);
 	if(!(flags & promoBoard[f])) moveStack[i] |= DEFER; // came from outside zone, so essential deferral
       }
     }
-    if(i >= retMSP) {
-      for(i=retFirst; i<retMSP; i++) printf("# %d. %08x %08x %s\n", i-50, moveStack[i], ret, MoveToText(moveStack[i], 0));
+    if(i >= listEnd) {
+      for(i=listStart; i<listEnd; i++) printf("# %d. %08x %08x %s\n", i-50, moveStack[i], ret, MoveToText(moveStack[i], 0));
       reason = NULL;
       for(i=0; i<repCnt; i++) {if((repeatMove[i] & 0xFFFFFF) == ret) {
         if(repeatMove[i] & 1<<24) reason = (repeatMove[i] & 1<<25 ? "Distant capture of protected Lion" : "Counterstrike against Lion");
@@ -2135,7 +2147,7 @@ printf("# deferral of %d\n", deferred);
 }
     }
   }
-  return (i >= retMSP ? INVALID : moveStack[i]);
+  return (i >= listEnd ? INVALID : moveStack[i]);
 }
 
 void
@@ -2145,32 +2157,25 @@ Highlight(char *coords)
   char b[BSIZE], buf[2000], *q;
   for(i=0; i<bsize; i++) b[i] = 0;
   ReadSquare(coords, &sqr);
-MapFromScratch(attacks);
-//pmap(attacks, WHITE);
-//pmap(attacks, BLACK);
-//flag=1;
-  postThinking--; repCnt = 0;
-  Search(-INF-1, INF+1, 0, 1, sup1 & ~PROMOTE, sup2);
-  postThinking++;
-flag=0;
-  for(i=retFirst; i<retMSP; i++) {
+  ListMoves();
+  for(i=listStart; i<listEnd; i++) {
     if(sqr == (moveStack[i]>>SQLEN & SQUARE)) {
       int t = moveStack[i] & SQUARE;
       if(t >= SPECIAL) continue;
-      b[t] = (board[t] == EMPTY ? 'Y' : 'R'); cnt++;
+      b[t] = (!boardCopy[t] ? 'Y' : 'R'); cnt++;
     }
   }
   if(!cnt) { // no moves from given square
     if(sqr != lastPut) return; // refrain from sending empty FEN
     // we lifted a piece for second leg of move
-    for(i=retFirst; i<retMSP; i++) {
+    for(i=listStart; i<listEnd; i++) {
       if(lastLift == (moveStack[i]>>SQLEN & SQUARE)) {
 	int e, t = moveStack[i] & SQUARE;
 	if(t < SPECIAL) continue; // only special moves
 	e = lastLift + epList[t - SPECIAL]; // decode
 	t = lastLift + toList[t - SPECIAL];
 	if(e != sqr) continue;
-	b[t] = (board[t] == EMPTY ? 'Y' : 'R'); cnt++;
+	b[t] = (!boardCopy[t] ? 'Y' : 'R'); cnt++;
       }
     }
     if(!cnt) return;
