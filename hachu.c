@@ -2454,6 +2454,7 @@ pboard(board);
           }
           continue;
         }
+        ponderMove = INVALID; // the following commands change the position, invalidating ponder move
         listEnd = 0;
         if(!strcmp(command, "new"))     {
           engineSide = BLACK; Init(V_CHESS); stm = Setup2(NULL); maxDepth = MAXPLY; randomize = OFF; curVarNr = comp = 0;
