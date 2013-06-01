@@ -2306,6 +2306,15 @@ printf("# in (mode = %d,%d): %s\n", root, abortFlag, command);
         if(!strcmp(command, "put"))     { ReadSquare(inBuf+4, &lastPut); continue; }  // ditto
         if(!strcmp(command, "."))       { inBuf[0] = 0; return; } // ignore for now
         if(!strcmp(command, "lift"))    { inBuf[0] = 0; Highlight(inBuf+5); return; } // treat here
+        if(!root && !strcmp(command, "usermove")) {
+          abortFlag = !!strcmp(inBuf+9, ponderMoveText);
+          if(!abortFlag) { // ponder hit, continue as time-based search
+            SetSearchTimes(10*timeLeft + GetTickCount() - startTime); // add time we already have been pondering to total
+            if(lastRootIter > tlim1) abortFlag = 2; // abort instantly if we are in iteration we should not have started
+            inBuf[0] = 0; ponderMove = INVALID;
+            return;
+          }
+        }
         abortFlag = 1;
         return;
       }
