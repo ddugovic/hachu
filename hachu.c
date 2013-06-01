@@ -16,9 +16,9 @@
 #define PATH level==0 || path[0] == 0xc4028 &&  (level==1 /*|| path[1] == 0x75967 && (level == 2 || path[2] == 0x3400b && (level == 3))*/)
 //define PATH 0
 
-#define HASH
-#define KILLERS
-#define NULLMOVE
+#define XHASH
+#define XKILLERS
+#define XNULLMOVE
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1500,6 +1500,7 @@ GenCapts(int sqr, int victimValue)
 		    NewCapture(x, SPECIAL + 8*(i-1&7) + (i+1&7) + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
 		  v = kStep[i+1];
 		  if((board[x+v] & TYPE) == xstm && board[x+v] > board[sqr])
+
 		    NewCapture(x, SPECIAL + 8*(i+1&7) + (i-1&7) + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
 		}
 	      } else { // primary victim on first ring
@@ -1640,8 +1641,8 @@ if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("search(%d) {%d,%d} eval=
   }
 #endif
 
-  replyDep = (depth < 1 ? depth : iterDep < 1 ? 1 : iterDep);
-  while(++iterDep <= depth) {
+  replyDep = (depth < 1 ? depth-1 : iterDep);
+  while(++iterDep <= depth || iterDep == 1) {
 if(flag && depth>= 0) printf("iter %d:%d\n", depth,iterDep),fflush(stdout);
     iterAlpha = alpha; bestScore = -INF; bestMoveNr = 0; resDep = 60;
     for(curMove = firstMove; ; curMove++) { // loop over moves
