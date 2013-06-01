@@ -2360,7 +2360,7 @@ pboard(board);
             PrintResult(stm, score);
           } else {
             stm = MakeMove2(stm, move);  // assumes MakeMove returns new side to move
-            gameMove[moveNr++] = move;  // remember game
+            gameMove[moveNr++] = move;   // remember game
             printf("move %s\n", MoveToText(move, 1));
             listEnd = 0;
             continue;
