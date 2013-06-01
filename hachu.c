@@ -29,8 +29,25 @@
 
 #ifdef WIN32 
 #    include <windows.h>
+     int InputWaiting()
+     {  // checks for waiting input in pipe
+	static int pipe, init;
+	static HANDLE inp;
+	DWORD cnt;
+
+	if(!init) inp = GetStdHandle(STD_INPUT_HANDLE);
+	if(!PeekNamedPipe(inp, NULL, 0, NULL, &cnt, NULL)) return 1;
+	return cnt;
+    }
 #else
 #    include <sys/time.h>
+#    include <sys/ioctl.h>
+     int InputWaiting()
+     {
+	int cnt;
+	if(ioctl(0, FIONREAD, &cnt)) return 1;
+	return cnt;
+     }
      int GetTickCount() // with thanks to Tord
      {	struct timeval t;
 	gettimeofday(&t, NULL);
