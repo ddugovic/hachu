@@ -1854,6 +1854,7 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curM
 	printf("\n");
         fflush(stdout);
       }
+printf("# s=%d t=%d 1=%d 3=%d f=%d\n",startTime,GetTickCount(),tlim1,tlim3,abortFlag);
       if(!(abortFlag & 1) && GetTickCount() - startTime > tlim1) break; // do not start iteration we can (most likely) not finish
     }
     replyDep = iterDep;
@@ -2337,6 +2338,7 @@ printf("# in (mode = %d,%d): %s\n", root, abortFlag, command);
         if(stm == engineSide) {         // if it is the engine's turn to move, set it thinking, and let it move
      
 pboard(board);
+          SetSearchTimes(10*timeLeft);
           score = SearchBestMove(&move, &ponderMove);
 
           if(move == INVALID) {         // game apparently ended
