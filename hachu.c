@@ -2363,6 +2363,7 @@ pboard(board);
             gameMove[moveNr++] = move;  // remember game
             printf("move %s\n", MoveToText(move, 1));
             listEnd = 0;
+            continue;
           }
         }
 
