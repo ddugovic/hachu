@@ -131,7 +131,7 @@ typedef struct {
 char *array, fenArray[4000], *reason;
 int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws;
 int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
-int nodes, startTime, tlim1, tlim2, tlim3, repCnt, comp, abortFlag;
+int nodes, startTime, lastRootMove, lastRootIter, tlim1, tlim2, tlim3, repCnt, comp, abortFlag;
 Move ponderMove;
 Move retMove, moveStack[10000], path[100], repStack[300], pv[1000], repeatMove[300], killer[100][2];
 
@@ -1847,9 +1847,10 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curM
     } // next move
   cutoff:
     if(!level) { // root node
+      lastRootIter = GetTickCount() - startTime;
       if(postThinking > 0) {
         int i;   // WB thinking output
-	printf("%d %d %d %d", iterDep, bestScore, (GetTickCount() - startTime)/10, nodes);
+	printf("%d %d %d %d", iterDep, bestScore, lastRootIter/10, nodes);
         if(ponderMove) printf(" (%s)", MoveToText(ponderMove, 0));
 	for(i=0; pv[i]; i++) printf(" %s", MoveToText(pv[i], 0));
         if(iterDep == 1) printf(" { root eval = %4.2f dif = %4.2f; abs = %4.2f}", curEval/100., difEval/100., PSTest()/100.);
