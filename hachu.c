@@ -2295,6 +2295,7 @@ printf("# setup done");fflush(stdout);
 
         // extract the first word
         sscanf(inBuf, "%s", command);
+printf("# in (mode = %d,%d): %s\n", root, abortFlag, command);
         if(!strcmp(command, "otim"))    { continue; } // do not start pondering after receiving time commands, as move will follow immediately
         if(!strcmp(command, "time"))    { sscanf(inBuf, "time %d", &timeLeft); continue; }
         if(!strcmp(command, "put"))     { ReadSquare(inBuf+4, &lastPut); continue; }  // ditto
@@ -2322,10 +2323,12 @@ printf("# setup done");fflush(stdout);
       int i, score, curVarNr;
 
   Init(V_CHU); // Chu
+      listEnd = 1;
 
       while(1) { // infinite loop
 
         fflush(stdout);                 // make sure everything is printed before we do something that might take time
+        *inBuf = 0;
 
         if(listEnd == 0) ListMoves();   // always maintain a list of legal moves in root position
 
