@@ -1853,7 +1853,7 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curM
 	printf("\n");
         fflush(stdout);
       }
-      if(GetTickCount() - startTime > tlim1) break; // do not start iteration we can (most likely) not finish
+      if(!(abortFlag & 1) && GetTickCount() - startTime > tlim1) break; // do not start iteration we can (most likely) not finish
     }
     replyDep = iterDep;
 #ifdef HASH
@@ -2261,6 +2261,9 @@ MapFromScratch(attacks);
 void
 PonderUntilInput (int stm)
 {
+MapFromScratch(attacks);
+  repCnt = 0; abortFlag = -1;
+  Search(-INF-1, INF+1, rootEval, maxDepth, sup1, sup2);
 }
  
     int TakeBack(int n)
@@ -2297,6 +2300,7 @@ printf("# setup done");fflush(stdout);
         if(!strcmp(command, "put"))     { ReadSquare(inBuf+4, &lastPut); continue; }  // ditto
         if(!strcmp(command, "."))       { inBuf[0] = 0; return; } // ignore for now
         if(!strcmp(command, "lift"))    { inBuf[0] = 0; Highlight(inBuf+5); return; } // treat here
+        abortFlag = 1;
         return;
       }
     }
@@ -2304,7 +2308,11 @@ printf("# setup done");fflush(stdout);
     void
     TerminationCheck()
     {
+      if(abortFlag < 0) { // check for input
+        if(InputWaiting()) GetLine(0); // read & examine input command
+      } else {        // check for time
         if(GetTickCount() - startTime > tlim3) abortFlag = 2;
+      }
     }
 
     main()
