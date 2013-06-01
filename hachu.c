@@ -2263,14 +2263,6 @@ MapFromScratch(attacks);
 }
 
 
-void
-PonderUntilInput (int stm)
-{
-MapFromScratch(attacks);
-  repCnt = 0; abortFlag = -1;
-  Search(-INF-1, INF+1, rootEval, maxDepth, sup1, sup2);
-}
- 
     int TakeBack(int n)
     { // reset the game and then replay it to the desired point
       int last, stm;
@@ -2345,14 +2337,19 @@ printf("# in (mode = %d,%d): %s\n", root, abortFlag, command);
         *inBuf = 0;
 
         if(listEnd == 0) ListMoves();   // always maintain a list of legal moves in root position
-
-        abortFlag = 0;
-        if(stm == engineSide) {         // if it is the engine's turn to move, set it thinking, and let it move
-     
+        abortFlag = -(ponder && WHITE+BLACK-stm == engineSide && moveNr); // pondering and opponent on move
+        if(stm == engineSide || abortFlag && ponderMove) {      // if it is the engine's turn to move, set it thinking, and let it move
+          if(abortFlag) {
+            stm = MakeMove2(stm, ponderMove);                           // for pondering, play speculative move
+            gameMove[moveNr++] = ponderMove;                            // remember in game
+            sprintf(ponderMoveText, "%s\n", MoveToText(ponderMove, 0)); // for detecting ponder hits
+          } else SetSearchTimes(10*timeLeft);                           // for thinking, schedule end time
 pboard(board);
-          SetSearchTimes(10*timeLeft);
           score = SearchBestMove(&move, &ponderMove);
-
+          if(abortFlag == 1) { // ponder search was interrupted (and no hit)
+            UnMake2(INVALID); moveNr--; stm ^= WHITE;    // take ponder move back if we made one
+            abortFlag = 0;
+          } else
           if(move == INVALID) {         // game apparently ended
             int kcapt = 0, xstm = stm ^ WHITE, king, k = p[king=royal[xstm]].pos;
             if( k != ABSENT) { // test if King capture possible
@@ -2375,24 +2372,15 @@ pboard(board);
             gameMove[moveNr++] = move;   // remember game
             printf("move %s\n", MoveToText(move, 1));
             listEnd = 0;
-            continue;
+            continue;                    // go check if we should ponder
           }
-        }
-
-        fflush(stdout); // make sure everything is printed before we do something that might take time
-
-        // now it is not our turn (anymore)
-        if(engineSide == ANALYZE) {       // in analysis, we always ponder the position
-            PonderUntilInput(stm);
         } else
-        if(engineSide != NONE && ponder == ON && moveNr != 0) { // ponder while waiting for input
-          if(ponderMove == INVALID) {     // if we have no move to ponder on, ponder the position
-            PonderUntilInput(stm);
-          } else {
-            int newStm = MakeMove2(stm, ponderMove);
-            PonderUntilInput(newStm);
-            UnMake2(ponderMove);
-          }
+        if(engineSide == ANALYZE || abortFlag) { // in analysis, we always ponder the position
+            Move dummy;
+            *ponderMoveText = 0; // forces miss on any move
+            abortFlag = -1;      // set pondering
+            SearchBestMove(&dummy, &dummy);
+            abortFlag = 0;       //
         }
 
         fflush(stdout);         // make sure everything is printed before we do something that might take time
