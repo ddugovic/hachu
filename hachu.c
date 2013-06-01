@@ -114,7 +114,8 @@ typedef struct {
 char *array, fenArray[4000], *reason;
 int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws;
 int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
-int nodes, startTime, tlim1, tlim2, repCnt, comp;
+int nodes, startTime, tlim1, tlim2, tlim3, repCnt, comp, abortFlag;
+Move ponderMove;
 Move retMove, moveStack[10000], path[100], repStack[300], pv[1000], repeatMove[300], killer[100][2];
 
       int maxDepth;                            // used by search
@@ -1565,6 +1566,8 @@ FireSet (UndoInfo *tb)
     if(p[i].pos != ABSENT) tb->fireMask |= fireFlags[i-2];
 }
 
+void TerminationCheck();
+
 #define QSdepth 0
 
 int
@@ -1573,7 +1576,7 @@ Search (int alpha, int beta, int difEval, int depth, int oldPromo, int promoSupp
   int i, j, k, firstMove, oldMSP = msp, curMove, sorted, bad, phase, king, iterDep, replyDep, nextVictim, to, defer, dubious, bestMoveNr;
   int resDep;
   int myPV = pvPtr;
-  int score, bestScore, curEval, iterAlpha;
+  int score, bestScore, oldBest, curEval, iterAlpha;
   Move move, nullMove;
   UndoInfo tb;
 #ifdef HASH
@@ -1598,7 +1601,7 @@ if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("search(%d) {%d,%d} eval=
   alpha -= (alpha < curEval);
   beta  -= (beta <= curEval);
 
-  nodes++;
+  if(!(nodes++ & 4095)) TerminationCheck();
   pv[pvPtr++] = 0; // start empty PV, directly behind PV of parent
 
 
@@ -1779,6 +1782,11 @@ level--;
     repetition:
       UnMake(&tb);
       xstm = stm; stm ^= WHITE;
+      if(abortFlag > 0) { // unwind search
+printf("# abort (%d) @ %d\n", abortFlag, level);
+        if(curMove == firstMove) bestScore = oldBest, bestMoveNr = firstMove; // none searched yet
+        goto leave;
+      }
 #if 1
 if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), score, bestScore);
 
@@ -1842,6 +1850,7 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curM
     } else hashTable[index].move[hit] = 0;
 #endif
   } // next depth
+leave:
   retMSP = msp;
   retFirst = firstMove;
   msp = oldMSP; // pop move list
@@ -2088,7 +2097,7 @@ ListMoves ()
   int i;
   for(i=0; i< BSIZE; i++) boardCopy[i] = !!board[i];
 MapFromScratch(attacks);
-  postThinking--; repCnt = 0; tlim1 = tlim2 = 1e8; msp = 0;
+  postThinking--; repCnt = 0; tlim1 = tlim2 = tlim3 = 1e8; abortFlag = msp = 0;
   Search(-INF-1, INF+1, 0, 1, sup1 & ~PROMOTE, sup2);
   postThinking++;
   listStart = retFirst; listEnd = msp = retMSP;
@@ -2214,6 +2223,7 @@ SetSearchTimes (int timeLeft)
   if(timePerMove > 0) targetTime = 0.5*timeLeft, movesLeft = 1;
   tlim1 = 0.2*targetTime;
   tlim2 = 1.9*targetTime;
+  tlim3 = 5*timeLeft / (movesLeft + 4.1);
 }
 
 int
@@ -2274,6 +2284,12 @@ printf("# setup done");fflush(stdout);
       }
     }
 
+    void
+    TerminationCheck()
+    {
+        if(GetTickCount() - startTime > tlim3) abortFlag = 2;
+    }
+
     main()
     {
       int engineSide=NONE;                     // side played by engine
@@ -2288,6 +2304,7 @@ printf("# setup done");fflush(stdout);
 
         if(listEnd == 0) ListMoves();   // always maintain a list of legal moves in root position
 
+        abortFlag = 0;
         if(stm == engineSide) {         // if it is the engine's turn to move, set it thinking, and let it move
      
 pboard(board);
