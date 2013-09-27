@@ -11,7 +11,7 @@
 // promotions by pieces with Lion power stepping in & out the zone in same turn
 // promotion on capture
 
-#define VERSION "0.7beta"
+#define VERSION "0.8beta"
 
 #define PATH level==0 || path[0] == 0xc4028 &&  (level==1 /*|| path[1] == 0x75967 && (level == 2 || path[2] == 0x3400b && (level == 3))*/)
 //define PATH 0
@@ -230,6 +230,7 @@ PieceDesc ddPieces[] = {
   {"WB", "FT", 1, { 2,X,X,X,2,X,X,X } }, // Water Buffalo
   {"RB", "FR", 1, { X,X,X,X,0,X,X,X } }, // Rushing Bird
   {"SB", "",   1, { X,X,2,2,2,2,2,X } }, // Standard Bearer
+
   {"FH", "FK", 1, { 1,2,1,0,1,0,1,2 } }, // Flying Horse
   {"NK", "SB", 1, { 1,1,1,1,1,1,1,1 } }, // Neighbor King
   {"BM", "MW", 1, { 0,1,1,1,0,1,1,1 } }, // Blind Monkey
@@ -1500,7 +1501,6 @@ GenCapts(int sqr, int victimValue)
 		    NewCapture(x, SPECIAL + 8*(i-1&7) + (i+1&7) + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
 		  v = kStep[i+1];
 		  if((board[x+v] & TYPE) == xstm && board[x+v] > board[sqr])
-
 		    NewCapture(x, SPECIAL + 8*(i+1&7) + (i-1&7) + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
 		}
 	      } else { // primary victim on first ring
@@ -1600,7 +1600,7 @@ Search (int alpha, int beta, int difEval, int depth, int oldPromo, int promoSupp
 #ifdef HASH
   Move hashMove; int index, nr, hit;
 #endif
-if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("search(%d) {%d,%d} eval=%d, stm=%d\n",depth,alpha,beta,difEval,stm),fflush(stdout);
+if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("search(%d) {%d,%d} eval=%d, stm=%d (flag=%d)\n",depth,alpha,beta,difEval,stm,abortFlag),fflush(stdout);
   xstm = stm ^ WHITE;
 //printf("map made\n");fflush(stdout);
   // KING CAPTURE
@@ -1807,7 +1807,7 @@ printf("# abort (%d) @ %d\n", abortFlag, level);
         goto leave;
       }
 #if 1
-if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), score, bestScore);
+if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d  (%d)\n", level, depth, iterDep, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), score, bestScore, GetTickCount());
 
       // ALPHA-BETA STUFF
       if(score > bestScore) {
@@ -1857,7 +1857,6 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curM
 	printf("\n");
         fflush(stdout);
       }
-printf("# s=%d t=%d 1=%d 3=%d f=%d\n",startTime,GetTickCount(),tlim1,tlim3,abortFlag);
       if(!(abortFlag & 1) && GetTickCount() - startTime > tlim1) break; // do not start iteration we can (most likely) not finish
     }
     replyDep = iterDep;
@@ -1879,7 +1878,7 @@ leave:
   pvPtr = myPV; // pop PV
   retMove = bestMoveNr ? moveStack[bestMoveNr] : 0;
   retDep = resDep + 1;
-if(PATH) printf("return %d: %d %d\n", depth, bestScore, curEval);
+if(PATH) printf("return %d: %d %d (t=%d s=%d lim=%d)\n", depth, bestScore, curEval, GetTickCount(), startTime, tlim1),fflush(stdout);
   return bestScore + (bestScore < curEval);
 }
 
@@ -2246,19 +2245,24 @@ SetSearchTimes (int timeLeft)
   tlim1 = 0.2*targetTime;
   tlim2 = 1.9*targetTime;
   tlim3 = 5*timeLeft / (movesLeft + 4.1);
+printf("# limits %d, %d, %d mode = %d\n", tlim1, tlim2, tlim3, abortFlag);
 }
 
 int
 SearchBestMove (MOVE *move, MOVE *ponderMove)
 {
   int score;
+printf("# SearchBestMove\n");
   startTime = GetTickCount();
   nodes = 0;
+printf("# s=%d\n", startTime);fflush(stdout);
 MapFromScratch(attacks);
   retMove = INVALID; repCnt = 0;
   score = Search(-INF-1, INF+1, rootEval, maxDepth, sup1, sup2);
   *move = retMove;
   *ponderMove = pv[1];
+printf("# best=%s\n", MoveToText(pv[0],0));
+printf("# ponder=%s\n", MoveToText(pv[1],0));
   return score;
 }
 
@@ -2299,8 +2303,10 @@ printf("# in (mode = %d,%d): %s\n", root, abortFlag, command);
         if(!strcmp(command, "."))       { inBuf[0] = 0; return; } // ignore for now
         if(!strcmp(command, "lift"))    { inBuf[0] = 0; Highlight(inBuf+5); return; } // treat here
         if(!root && !strcmp(command, "usermove")) {
+printf("# move = %s#ponder = %s", inBuf+9, ponderMoveText);
           abortFlag = !!strcmp(inBuf+9, ponderMoveText);
           if(!abortFlag) { // ponder hit, continue as time-based search
+printf("# ponder hit\n");
             SetSearchTimes(10*timeLeft + GetTickCount() - startTime); // add time we already have been pondering to total
             if(lastRootIter > tlim1) abortFlag = 2; // abort instantly if we are in iteration we should not have started
             inBuf[0] = 0; ponderMove = INVALID;
@@ -2329,7 +2335,6 @@ printf("# in (mode = %d,%d): %s\n", root, abortFlag, command);
       int i, score, curVarNr;
 
   Init(V_CHU); // Chu
-      listEnd = 1;
 
       while(1) { // infinite loop
 
@@ -2339,10 +2344,12 @@ printf("# in (mode = %d,%d): %s\n", root, abortFlag, command);
         if(listEnd == 0) ListMoves();   // always maintain a list of legal moves in root position
         abortFlag = -(ponder && WHITE+BLACK-stm == engineSide && moveNr); // pondering and opponent on move
         if(stm == engineSide || abortFlag && ponderMove) {      // if it is the engine's turn to move, set it thinking, and let it move
+printf("# start search: stm=%d engine=%d (flag=%d)\n", stm, engineSide, abortFlag);
           if(abortFlag) {
             stm = MakeMove2(stm, ponderMove);                           // for pondering, play speculative move
             gameMove[moveNr++] = ponderMove;                            // remember in game
             sprintf(ponderMoveText, "%s\n", MoveToText(ponderMove, 0)); // for detecting ponder hits
+printf("# ponder move = %s", ponderMoveText);
           } else SetSearchTimes(10*timeLeft);                           // for thinking, schedule end time
 pboard(board);
           score = SearchBestMove(&move, &ponderMove);
