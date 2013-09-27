@@ -11,7 +11,7 @@
 // promotions by pieces with Lion power stepping in & out the zone in same turn
 // promotion on capture
 
-#define VERSION "0.14e"
+#define VERSION "0.15"
 
 #define PATH level==0 /*|| path[0] == 0x3490a &&  (level==1 || path[1] == 0x285b3 && (level == 2 || path[2] == 0x8710f && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5)))))*/
 //define PATH 0
@@ -2349,7 +2349,8 @@ Convert (char *fen)
     if(isalpha(*fen)) {
       char *table = fenNames;
       n = *fen > 'Z' ? 'a' - 'A' : 0;
-      if((currentVariant == V_CHESS || currentVariant == V_SHATRANJ || currentVariant == V_MAKRUK) && *fen - n == 'N' // In Chess N is Knight, not Lion
+      if((currentVariant == V_CHESS || currentVariant == V_SHATRANJ ||
+          currentVariant == V_MAKRUK || currentVariant == V_SHO) && *fen - n == 'N' // In Chess N is Knight, not Lion
            || table[2* (*fen - 'A' - n)] == '.') *p++ = *fen; else {
         *p++ = ':';
         *p++ = table[2* (*fen - 'A' - n)] + n;
@@ -2515,8 +2516,13 @@ Highlight(char *coords)
   for(i=listStart; i<listEnd; i++) {
     if(sqr == (moveStack[i]>>SQLEN & SQUARE)) {
       int t = moveStack[i] & SQUARE;
-      if(t >= SPECIAL) continue;
-      b[t] = (!boardCopy[t] ? 'Y' : 'R'); cnt++;
+      if(t >= SPECIAL) {
+	int e = sqr + epList[t - SPECIAL]; // decode
+	b[e] = 'C';
+	continue;
+      }
+      if(!b[t]) b[t] = (!boardCopy[t] ? 'Y' : 'R'); cnt++;
+      if(moveStack[i] & PROMOTE) b[t] = 'M';
     }
   }
   if(!cnt) { // no moves from given square
@@ -2594,9 +2600,9 @@ printf("# ponder=%s\n", MoveToText(pv[1],0));
     int TakeBack(int n)
     { // reset the game and then replay it to the desired point
       int last, stm;
+      last = moveNr - n; if(last < 0) last = 0;
       Init(currentVariant); stm = Setup2(startPos);
 printf("# setup done");fflush(stdout);
-      last = moveNr - n; if(last < 0) last = 0;
       for(moveNr=0; moveNr<last; moveNr++) stm = MakeMove2(stm, gameMove[moveNr]),printf("make %2d: %x\n", moveNr, gameMove[moveNr]);
       return stm;
     }
