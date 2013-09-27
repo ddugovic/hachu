@@ -1,10 +1,9 @@
-/***********************************************************************/
-/*                               HaChu                                 */
-/* A WinBoard engine for large (dropless) Shogi variants by H.G.Muller */
-/* The engine is based on incremental updating of an attack map and    */
-/* mobility scores, since the effort in this only grows proportional   */
-/* to board edge length, rather than board area.                       */
-/***********************************************************************/
+/**************************************************************************/
+/*                               HaChu                                    */
+/* A WinBoard engine for Chu Shogi (and some related games) by H.G.Muller */
+/**************************************************************************/
+/* This source code is released in the public domain                      */
+/**************************************************************************/
 
 // TODO:
 // in GenCapts we do not generate jumps of more than two squares yet
@@ -1206,205 +1205,6 @@ MapFromScratch (int *map)
   mobilityScore -= MapOneColor(0, last[BLACK], map);
 }
 
-void
-Connect (int sqr, int piece, int dir)
-{ // scan to both sides along ray to elongate attacks from there, and remove our own attacks on there, if needed
-  int x, step = kStep[dir], r1 = p[piece].range[dir], r2 = p[piece].range[dir+4], r3, r4, piece1, piece2;
-  int d1, d2, r, y, c;
-
-  if((attacks[2*sqr] + attacks[2*sqr+1]) & attackMask[dir]) {         // there are incoming attack(s) from 'behind'
-    x = sqr;
-    while(board[x-=step] == EMPTY);                                   // in any case, scan to attacker, to see where / what it is
-    d1 = dist[x-sqr]; piece1 = board[x];
-    attacks[2*x + stm] -= -(d1 <= r2) & one[dir+4];                   // remove our attack on it if in-range
-    if((attacks[2*sqr] + attacks[2*sqr+1]) & attackMask[dir+4]) {     // there are also incoming attack(s) from 'ahead'
-
-      y = sqr;
-      while(board[y+=step] == EMPTY);                                 // also always scan to that one to see what it is
-      d2 = dist[y-sqr]; piece2 = board[y];
-      attacks[2*y+stm] -= -(d2 <= r1) & one[dir];                     // remove our attack on it if in-range
-      // we have two pieces now shooting at each other. See how far they get.
-      if(d1 + d2 <= (r3 = p[piece1].range[dir])) {                    // 1 hits 2
-	attacks[2*y + (piece1 & WHITE)] += one[dir];                  // count attack
-	UPDATE_MOBILITY(piece1, d2);
-      } else UPDATE_MOBILITY(piece1, r3 - d1);                        // does not connect, but could still gain mobility
-      if(d1 + d2 <= (r4 = p[piece2].range[dir+4])) {                  // 2 hits 1
-	attacks[2*x + (piece2 & WHITE)] += one[dir+4];                // count attack
-	UPDATE_MOBILITY(piece2, d1);
-      } else UPDATE_MOBILITY(piece2, r4 - d2);                        // does not connect, but could still gain mobility
-      // if r1 or r2<0, moves typically jump, and thus cannot be unblocked. Exceptions are FF and BS distant moves.
-      // test for d1+d2 > 2 && rN == F && d== 3 or rN == S
-      if(d1 <= 2) { // could be jump interactions
-	if(d1 == 2) {
-	  if(r2 <= J) attacks[2*x + stm] -= one[dir+4];
-	  if(r1 <= J) attacks[2*y + stm] -= one[dir];
-	} else { // d1 == 1
-	  if(r2 < J) attacks[2*x + stm] -= one[dir+4];
-	  if(r1 < J) attacks[2*y + stm] -= one[dir];
-	  if(board[x-step] != EMPTY && board[x-step] != EDGE)
-	    attacks[2*(x-step) + stm] -= one[dir+4];
-	}
-      }
-
-    } else { // we were only attacked from behind
-
-      r = (r2 = p[piece1].range[dir]) - d1;
-      if(r < 0 || c > one[dir+4]) { // Oops! This was not our attacker, or not the only one. There must be a jump attack from even further behind!
-	// for now, forget jumpers
-      }
-      y = sqr; 
-      while(r--)
-	if(board[y+=step] != EMPTY) {
-	  d2 = dist[y-sqr]; piece2 = board[y];
-	  if(piece2 != EDGE) {                                // extended move hits a piece
-	    attacks[2*y + (piece1 & WHITE)] += one[dir];      // count attack
-	    attacks[2*y + stm] -= -(d2 <= r1) & one[dir];     // remove our own attack on it, if in-range
-	  }
-	  UPDATE_MOBILITY(piece1, d2);                        // count extra mobility even if we hit edge
-	  return;
-	}
-      // we hit nothing with the extended move of the attacker behind us.
-      UPDATE_MOBILITY(piece1, r2 - d1);
-      r = r1 - r2 + d1;                                       // extra squares covered by mover
-      while(r-- > 0)
-	if(board[y+=step] != EMPTY) {
-	  d2 = dist[y-sqr]; piece2 = board[y];
-	  if(piece2 != EDGE) {                                // extended move hits a piece
-	    attacks[2*y + stm] -= one[dir];                   // count attack
-	  }
-	  return;
-	}
-    }
-    // if r2<0 we should again test for F and S moves
-
-  } else // no incoming attack from behind
-  if(c = (attacks[2*sqr] + attacks[2*sqr+1]) & attackMask[dir+4]) { // but incoming attack(s) from 'ahead'
-
-      y = sqr; while(board[y+=step]);                               // locate attacker
-      d2 = dist[y-sqr]; piece2 = board[y];
-      attacks[2*y + stm] -= -(d2 <= r1) & one[dir];                 // remove our attack on it if in-range
-      r = (r1 = p[piece1].range[dir]) - d2;
-      if(r < 0 || c > one[dir]) { // Oops! This was not our attacker, or not the only one. There must be a jump attack from even further behind!
-	// for now, forget jumpers
-      }
-      x = sqr;
-      while(r--)
-	if(board[x-=step] != EMPTY) {
-	  d1 = dist[x-sqr]; piece1 = board[x];
-	  if(piece1 != EDGE) {                                      // extended move hits a piece
-	    attacks[2*x + (piece2 & WHITE)] += one[dir+4];          // count attack
-	    attacks[2*x + stm] -= -(d1 <= r2) & one[dir+4];         // remove our own attack on it, if in-range
-	  }
-	  UPDATE_MOBILITY(piece2, d1);                              // count extra mobility even if we hit edge
-	  return;
-	}
-      // we hit nothing with the extended move of the attacker behind us.
-      UPDATE_MOBILITY(piece2, r2 - d1);
-      r = r2 - r1 + d2;                                             // extra squares covered by mover
-      while(r-- > 0)
-	if(board[x-=step] != EMPTY) {
-	  d1 = dist[x-sqr]; piece1 = board[x];
-	  if(piece1 != EDGE) {                                      // extended move hits a piece
-	    attacks[2*x + stm] -= one[dir+4];                       // count attack
-	  }
-	  return;
-	}
-
-  } else { // no incoming attacks from either side. Only delete attacks of mover on others
-
-    x = sqr;
-    while(r1--)
-      if(board[x+=step] != EMPTY) {       // piece found that we attacked
-	attacks[2*x + stm] -= one[dir];   // decrement attacks along that direction
-	break;
-      }
-
-    x = sqr;
-    while(r2--)
-      if(board[x-=step] != EMPTY) {       // piece found that we attacked
-	attacks[2*x + stm] -= one[dir+4]; // decrement attacks along opposite direction
-	break;
-      }
-
-  }
-}
-
-inline int
-Hit (int r, int d)
-{ // test if move with range r reaches over (un-obstructed) distance d
-  if(r < 0) switch(r) {
-    case J: return (d == 2);
-    case D:
-    case L: return (d <= 2);
-    case T:
-    case F: return (d <= 3);
-    case S: return 1;
-    default: return 0;
-  } else return (d <= r);
-  return 0; // not reached
-}
-
-void
-Disconnect (int sqr, int piece, int dir)
-{
-  int x = sqr, step = kStep[dir], piece1, piece2, d1, d2, r1, r2, y;
-  while( board[x+=step] == EMPTY );
-  piece1 = board[x];
-  if(piece1 != EDGE) { // x has hit a piece
-    d1 = dist[x-sqr];
-    r1 = p[piece1].range[dir+4];
-    y = sqr; while( board[y-=step] == EMPTY );
-    piece2 = board[y];
-    if(piece2 != EDGE) { // both ends of the ray hit a piece
-      d2 = dist[y-sqr];
-      r2 = p[piece2].range[dir];
-      if(r1 >= d1) {      // piece1 hits us
-	attacks[2*sqr + (piece1 & WHITE)] += one[dir+4];
-	if(r1 >= d1 + d2) // was hitting piece2 before, now blocked
-	  attacks[2*y + (piece1 & WHITE)] -= one[dir+4];
-      }
-      if(r2 >= d2) {      // piece2 hits us
-	attacks[2*sqr + (piece2 & WHITE)] += one[dir];
-	if(r2 >= d1 + d2) // was hitting piece1 before, now blocked
-	  attacks[2*x + (piece2 & WHITE)] -= one[dir];
-      }
-      if( Hit(p[piece].range[dir], d1) )
-	attacks[2*sqr + stm] += one[dir];
-      if( Hit(p[piece].range[dir+4], d2) )
-	attacks[2*sqr + stm] += one[dir+4];
-      return;
-    }
-  } else {
-    x = sqr; while( board[x-=step] == EMPTY );
-    piece1 = board[x];
-    if(piece1 == EDGE) return; // ray empty on both sides
-    d1 = dist[x-sqr];
-    r1 = p[piece1].range[dir];
-    dir += 4;
-  }
-  // we only get here if one side looks to the board edge
-  if(r1 >= d1) // piece1 hits us
-    attacks[2*sqr + (piece1 & WHITE)] += one[dir^4];
-  if( Hit(p[piece].range[dir], d1) )
-    attacks[2*sqr + stm] += one[dir];
-}
-
-void
-Occupy (int sqr)
-{ // determines attacks on square and blocking when a piece lands on an empty square
-  int i;
-  for(i=0; i<4; i++) {
-    Disconnect(sqr, board[sqr], i);
-  }
-}
-
-void
-Evacuate (int sqr, int piece)
-{ // determines change in attacks on neighbors due to unblocking and mover when the mentioned piece vacates the given square
-  int i;
-  for(i=0; i<4; i++) Connect(sqr, piece, i);
-}
-
 int
 MakeMove(Move m, UndoInfo *u)
 {
@@ -2498,6 +2298,7 @@ MapFromScratch(attacks);
   postThinking--; repCnt = 0; tlim1 = tlim2 = tlim3 = 1e8; abortFlag = msp = 0;
   Search(-INF-1, INF+1, 0, QSdepth+1, 0, sup1 & ~PROMOTE, sup2, INF);
   postThinking++;
+
   listStart = retFirst; listEnd = msp = retMSP;
 }
 
