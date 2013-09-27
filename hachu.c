@@ -11,9 +11,9 @@
 // promotions by pieces with Lion power stepping in & out the zone in same turn
 // promotion on capture
 
-#define VERSION "0.8beta"
+#define VERSION "0.9beta"
 
-#define PATH level==0 || path[0] == 0xc4028 &&  (level==1 /*|| path[1] == 0x75967 && (level == 2 || path[2] == 0x3400b && (level == 3))*/)
+#define PATH level==0 /*|| path[0] == 0x57097 &&  (level==1 || path[1] == 0x3f081 && (level == 2 || path[2] == 0x6f0ac && (level == 3 || path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5)))))*/
 //define PATH 0
 
 #define XHASH
@@ -124,7 +124,7 @@ typedef struct {
 } PieceDesc;
 
 typedef struct {
-  int from, to, piece, victim, new, booty, epSquare, epVictim[8], ep2Square, revMoveCount, savKeyL, savKeyH;
+  int from, to, piece, victim, new, booty, epSquare, epVictim[8], ep2Square, revMoveCount, savKeyL, savKeyH, gain, loss;
   char fireMask;
 } UndoInfo;
 
@@ -871,7 +871,8 @@ Init (int var)
   for(i=0; i<BH; i++) for(j=0; j<BH; j++) {
     int s = BW*i + j, d = BH*(BH-2) - abs(2*i - BH + 1)*(BH-1) - (2*j - BH + 1)*(2*j - BH + 1);
     PST[s] = 0;
-    PST[BH+s] = d/4 - (i == 0 || i == BH-1 ? 15 : 0) - (j == 0 || j == BH-1 ? 15 : 0);
+    PST[BH+s] = d/4 - (i == 0 || i == BH-1 ? 5 : 0) - (j == 0 || j == BH-1 ? 5 : 0)
+                    + 2*(i==zone || i==BH-zone-1);
     PST[BH*BW+s] = d/6;
     PST[BH*BW+BH+s] = d/12;
   }
@@ -1318,6 +1319,8 @@ MakeMove(Move m, UndoInfo *u)
   u->piece = board[u->from];
   board[u->from] = EMPTY;
   u->booty = 0;
+  u->gain  = 0;
+  u->loss  = 0;
   u->revMoveCount = cnt50++;
   u->savKeyL = hashKeyL;
   u->savKeyH = hashKeyH;
@@ -1358,6 +1361,8 @@ MakeMove(Move m, UndoInfo *u)
     u->to       = u->from + toList[u->to - SPECIAL];
     u->booty += p[u->epVictim[1]].value + PST[p[u->epVictim[1]].pst + u->ep2Square];
     u->booty += p[u->epVictim[0]].value + PST[p[u->epVictim[0]].pst + u->epSquare];
+    u->gain  += p[u->epVictim[1]].value;
+    u->gain  += p[u->epVictim[0]].value;
     hashKeyL ^= p[u->epVictim[0]].pieceKey * squareKey[u->epSquare];
     hashKeyH ^= p[u->epVictim[0]].pieceKey * squareKey[u->epSquare+BH];
     hashKeyL ^= p[u->epVictim[1]].pieceKey * squareKey[u->ep2Square];
@@ -1382,6 +1387,7 @@ MakeMove(Move m, UndoInfo *u)
 	  board[x] = EMPTY; // remove it
 	  p[burnVictim].pos = ABSENT;
 	  u->booty += p[burnVictim].value + PST[p[burnVictim].pst + x];
+	  u->gain  += p[burnVictim].value;
 	  hashKeyL ^= p[burnVictim].pieceKey * squareKey[x];
 	  hashKeyH ^= p[burnVictim].pieceKey * squareKey[x + BH];
 	  cnt50 = 0; // actually burning something makes the move irreversible
@@ -1395,7 +1401,11 @@ MakeMove(Move m, UndoInfo *u)
   u->victim = board[u->to];
   p[u->victim].pos = ABSENT;
   u->booty += p[u->victim].value + PST[p[u->victim].pst + u->to];
-  if(u->victim != EMPTY) cnt50 = 0; // capture irreversible
+  u->gain  += p[u->victim].value;
+  if(u->victim != EMPTY) {
+    cnt50 = 0; // capture irreversible
+    if(attacks[2*u->to + xstm]) u->loss = p[u->piece].value; // protected
+  }
 
   p[u->new].pos = u->to;
   board[u->to] = u->new;
@@ -1586,13 +1596,14 @@ FireSet (UndoInfo *tb)
 
 void TerminationCheck();
 
-#define QSdepth 0
+#define QSdepth 4
 
 int
-Search (int alpha, int beta, int difEval, int depth, int oldPromo, int promoSuppress)
+Search (int alpha, int beta, int difEval, int depth, int oldPromo, int promoSuppress, int threshold)
 {
-  int i, j, k, firstMove, oldMSP = msp, curMove, sorted, bad, phase, king, iterDep, replyDep, nextVictim, to, defer, dubious, bestMoveNr;
-  int resDep;
+  int i, j, k, phase, king, nextVictim, to, defer, autoFail=0;
+  int start, firstMove, oldMSP = msp, curMove, sorted, bad, dubious, bestMoveNr;
+  int resDep, iterDep, ext;
   int myPV = pvPtr;
   int score, bestScore, oldBest, curEval, iterAlpha;
   Move move, nullMove;
@@ -1623,8 +1634,8 @@ if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("search(%d) {%d,%d} eval=
   pv[pvPtr++] = 0; // start empty PV, directly behind PV of parent
 
 
-  firstMove = curMove = sorted = msp += 50; // leave 50 empty slots in front of move list
-  iterDep = 0; tb.fireMask = phase = 0;
+  firstMove = curMove = sorted = start = msp += 50; // leave 50 empty slots in front of move list
+  iterDep = -(depth == 0); tb.fireMask = phase = 0;
 
 #ifdef HASH
   index = hashKeyL & hashMask; nr = hashKeyL >> 30; hit = -1;
@@ -1634,32 +1645,40 @@ if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("search(%d) {%d,%d} eval=
     bestScore = hashTable[index].score[hit];
     if((bestScore <= alpha || hashTable[index].flag[hit] & H_LOWER) &&
        (bestScore >= beta  || hashTable[index].flag[hit] & H_UPPER)   ) {
-      iterDep = hashTable[index].depth[hit];
+      iterDep = resDep = hashTable[index].depth[hit];
     }
   } else { // decide on replacement
     if(depth >= hashTable[index].depth[nr]) hit = nr; else hit = 4;
   }
 #endif
 
-  replyDep = (depth < 1 ? depth-1 : iterDep);
-  while(++iterDep <= depth || iterDep == 1) {
+  if(depth > QSdepth && iterDep < QSdepth) iterDep = QSdepth; // full-width: start at least from 1-ply
+if(PATH)printf("iterDep=%d\n", iterDep);
+  while(++iterDep <= depth) {
 if(flag && depth>= 0) printf("iter %d:%d\n", depth,iterDep),fflush(stdout);
     oldBest = bestScore;
     iterAlpha = alpha; bestScore = -INF; bestMoveNr = 0; resDep = 60;
+if(PATH)printf("new iter %d\n", iterDep);
+    if(depth <= QSdepth) {
+      bestScore = curEval; resDep = QSdepth;
+      if(bestScore > alpha) {
+	alpha = bestScore;
+if(PATH)printf("stand pat %d\n", bestScore);
+	if(bestScore >= beta) goto cutoff;
+      }
+    }
     for(curMove = firstMove; ; curMove++) { // loop over moves
 if(flag && depth>= 0) printf("phase=%d: first/curr/last = %d / %d / %d\n", phase, firstMove, curMove, msp);fflush(stdout);
       // MOVE SOURCE
       if(curMove >= msp) { // we ran out of moves; generate some new
+if(PATH)printf("new moves, phase=%d\n", phase);
 	switch(phase) {
 	  case 0: // null move
-	    if(depth <= 0) {
-	      bestScore = curEval; resDep = QSdepth;
-	      if(bestScore >= beta || depth < -1) goto cutoff;
-	    }
 #ifdef NULLMOVE
 	    else if(curEval >= beta) {
+              int nullDep = depth - 3;
 	      stm ^= WHITE;
-	      score = -Search(-beta, 1-beta, -difEval, depth > 3 ? depth-3 : 0, promoSuppress & SQUARE, ABSENT);
+	      score = -Search(-beta, 1-beta, -difEval, nullDep<QSdepth ? QSdepth : nullDep, promoSuppress & SQUARE, ABSENT, INF);
 	      stm ^= WHITE;
 	      if(score >= beta) { msp = oldMSP; retDep += 3; return score + (score < curEval); }
 	    }
@@ -1676,7 +1695,7 @@ if(flag && depth>= 0) printf("phase=%d: first/curr/last = %d / %d / %d\n", phase
 #endif
 	    phase = 2;
 	  case 2: // capture-gen init
-	    nextVictim = xstm;
+	    nextVictim = xstm; autoFail = (depth == 0);
 	    phase = 3;
 	  case 3: // generate captures
 if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp);
@@ -1688,7 +1707,7 @@ if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp
 	      if(iterDep <= QSdepth + 1 && 2*group + curEval + 30 < alpha) { resDep = QSdepth + 1; goto cutoff; }
 if(PATH) printf("%d:%2d:%2d group=%d, to=%c%d\n",level,depth,iterDep,group,to%BW+'a',to/BW+ONE);
 	      GenCapts(to, 0);
-if(PATH) printf("%d:%2d:%2d msp=%d\n",level,depth,iterDep,msp);
+if(PATH) printf("%d:%2d:%2d first=%d msp=%d\n",level,depth,iterDep,firstMove,msp);
 	      while(nextVictim < last[xstm] && p[nextVictim+2].value == group) { // more victims of same value exist
 		to = p[nextVictim += 2].pos;          // take next
 		if(to == ABSENT) continue;            // ignore if absent
@@ -1697,8 +1716,13 @@ if(PATH) printf("%d:%2d:%2d p=%d, to=%c%d\n",level,depth,iterDep,nextVictim,to%B
 		GenCapts(to, 0);
 if(PATH) printf("%d:%2d:%2d msp=%d\n",level,depth,iterDep,msp);
 	      }
-//printf("captures on %d generated, msp=%d\n", nextVictim, msp);
-	      goto extractMove;
+if(PATH) printf("captures on %d generated, msp=%d, group=%d, threshold=%d\n", nextVictim, msp, group, threshold);
+	      goto extractMove; // in auto-fail phase, only search if they might auto-fail-hi
+	    }
+if(PATH) printf("# autofail=%d\n", autoFail);
+	    if(autoFail) { // non-captures cannot auto-fail; flush queued captures first
+if(PATH) printf("# autofail end (%d-%d)\n", firstMove, msp);
+	      autoFail = 0; curMove = firstMove - 1; continue; // release stashed moves for search
 	    }
 //	    if(currentVariant == V_CHESS && promoSuppress != ABSENT) { // e.p.
 //		int n = board[promoSuppress-1];
@@ -1713,7 +1737,7 @@ if(PATH) printf("%d:%2d:%2d msp=%d\n",level,depth,iterDep,msp);
 #endif
 	    phase = 5;
 	  case 5: // killers
-	    if(depth <= QSdepth) { resDep = QSdepth; goto cutoff; }
+	    if(depth <= QSdepth) { if(resDep > QSdepth) resDep = QSdepth; goto cutoff; }
 	    phase = 6;
 	  case 6: // non-captures
 	    nonCapts = msp;
@@ -1743,7 +1767,7 @@ if(PATH) printf("%d:%2d:%2d msp=%d\n",level,depth,iterDep,msp);
 
       // MOVE EXTRACTION
     extractMove:
-if(flag & depth >= 0) printf("%2d:%d extract %d/%d\n", depth, iterDep, curMove, msp);
+if(flag & depth >= 0 || (PATH)) printf("%2d:%d extract %d/%d\n", depth, iterDep, curMove, msp);
       if(curMove > sorted) {
 	move = moveStack[sorted=j=curMove];
 	for(i=curMove+1; i<msp; i++)
@@ -1759,6 +1783,18 @@ if(flag & depth >= 0) printf("%2d:%d found %d/%d %08x %s\n", depth, iterDep, cur
       // RECURSION
       stm ^= WHITE;
       defer = MakeMove(move, &tb);
+      ext = (depth == 0); // when out of depth we extend captures if there was no auto-fail-hi
+
+      if(autoFail) {
+	UnMake(&tb); // never search moves during auto-fail phase
+	xstm = stm; stm ^= WHITE;
+	if(tb.gain <= threshold) { // we got to moves that cannot possibly auto-fail
+	  autoFail = 0; curMove = firstMove-1; continue; // release all for search
+	}
+        if(tb.gain - tb.loss > threshold) {
+          bestScore = INF+1; resDep = 0; goto leave; // auto-fail-hi
+        } else continue; // ignore for now if not obvious refutation
+      }
 
 if(flag & depth >= 0) printf("%2d:%d made %d/%d %s\n", depth, iterDep, curMove, msp, MoveToText(moveStack[curMove], 0));
       for(i=2; i<=cnt50; i+=2) if(repStack[level-i+200] == hashKeyH) {
@@ -1769,7 +1805,7 @@ if(flag & depth >= 0) printf("%2d:%d made %d/%d %s\n", depth, iterDep, curMove, 
       }
       repStack[level+200] = hashKeyH;
 
-if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), score, bestScore);
+if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), score, bestScore),fflush(stdout);
 path[level++] = move;
 attacks += 2*bsize;
 MapFromScratch(attacks); // for as long as incremental update does not work.
@@ -1791,7 +1827,7 @@ MapFromScratch(attacks); // for as long as incremental update does not work.
         }
       }
 #if 1
-      score = -Search(-beta, -iterAlpha, -difEval - tb.booty, replyDep, promoSuppress & ~PROMOTE, defer);
+      score = -Search(-beta, -iterAlpha, -difEval - tb.booty, iterDep-1+ext, promoSuppress & ~PROMOTE, defer, depth ? INF : tb.gain);
 #else
       score = 0;
 #endif
@@ -1807,7 +1843,7 @@ printf("# abort (%d) @ %d\n", abortFlag, level);
         goto leave;
       }
 #if 1
-if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d  (%d)\n", level, depth, iterDep, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), score, bestScore, GetTickCount());
+if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d  (%d)\n", level, depth, iterDep, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), score, bestScore, GetTickCount()),fflush(stdout);
 
       // ALPHA-BETA STUFF
       if(score > bestScore) {
@@ -1832,7 +1868,7 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d  (%d)\n", level, depth, iterDep
 	      killer[level][1] = killer[level][0]; killer[level][0] = move;
 	    }
 #endif
-	    resDep = retDep;
+	    resDep = retDep+1-ext;
 	    goto cutoff;
 	  }
 	  { int i=pvPtr;
@@ -1842,7 +1878,7 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d  (%d)\n", level, depth, iterDep
 	}
 
       }
-      if(retDep < resDep) resDep = retDep;
+      if(retDep+1-ext < resDep) resDep = retDep+1-ext;
 #endif
     } // next move
   cutoff:
@@ -1850,7 +1886,7 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d  (%d)\n", level, depth, iterDep
       lastRootIter = GetTickCount() - startTime;
       if(postThinking > 0) {
         int i;   // WB thinking output
-	printf("%d %d %d %d", iterDep, bestScore, lastRootIter/10, nodes);
+	printf("%d %d %d %d", iterDep-QSdepth, bestScore, lastRootIter/10, nodes);
         if(ponderMove) printf(" (%s)", MoveToText(ponderMove, 0));
 	for(i=0; pv[i]; i++) printf(" %s", MoveToText(pv[i], 0));
         if(iterDep == 1) printf(" { root eval = %4.2f dif = %4.2f; abs = %4.2f}", curEval/100., difEval/100., PSTest()/100.);
@@ -1859,7 +1895,7 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d  (%d)\n", level, depth, iterDep
       }
       if(!(abortFlag & 1) && GetTickCount() - startTime > tlim1) break; // do not start iteration we can (most likely) not finish
     }
-    replyDep = iterDep;
+    if(resDep > iterDep) iterDep = resDep; // skip iterations if we got them for free
 #ifdef HASH
     // hash store
     hashTable[index].lock[hit]  = hashKeyH;
@@ -1877,7 +1913,7 @@ leave:
   msp = oldMSP; // pop move list
   pvPtr = myPV; // pop PV
   retMove = bestMoveNr ? moveStack[bestMoveNr] : 0;
-  retDep = resDep + 1;
+  retDep = resDep;
 if(PATH) printf("return %d: %d %d (t=%d s=%d lim=%d)\n", depth, bestScore, curEval, GetTickCount(), startTime, tlim1),fflush(stdout);
   return bestScore + (bestScore < curEval);
 }
@@ -2119,7 +2155,7 @@ ListMoves ()
   for(i=0; i< BSIZE; i++) boardCopy[i] = !!board[i];
 MapFromScratch(attacks);
   postThinking--; repCnt = 0; tlim1 = tlim2 = tlim3 = 1e8; abortFlag = msp = 0;
-  Search(-INF-1, INF+1, 0, 1, sup1 & ~PROMOTE, sup2);
+  Search(-INF-1, INF+1, 0, QSdepth+1, sup1 & ~PROMOTE, sup2, INF);
   postThinking++;
   listStart = retFirst; listEnd = msp = retMSP;
 }
@@ -2258,7 +2294,7 @@ printf("# SearchBestMove\n");
 printf("# s=%d\n", startTime);fflush(stdout);
 MapFromScratch(attacks);
   retMove = INVALID; repCnt = 0;
-  score = Search(-INF-1, INF+1, rootEval, maxDepth, sup1, sup2);
+  score = Search(-INF-1, INF+1, rootEval, maxDepth, sup1, sup2, INF);
   *move = retMove;
   *ponderMove = pv[1];
 printf("# best=%s\n", MoveToText(pv[0],0));
