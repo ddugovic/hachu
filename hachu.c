@@ -11,15 +11,16 @@
 // promotions by pieces with Lion power stepping in & out the zone in same turn
 // promotion on capture
 
-#define VERSION "0.11 kill"
+#define VERSION "0.12n"
 
 #define PATH level==0 || path[0] == 0x848f1 &&  (level==1 /*|| path[1] == 0x3f081 && (level == 2 || path[2] == 0x6f0ac && (level == 3 || path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5))))*/)
 //define PATH 0
 
 #define HASH
 #define KILLERS
-#define XNULLMOVE
+#define NULLMOVE
 #define LIONTRAP
+#define XKINGSAFETY
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -131,8 +132,8 @@ typedef struct {
   char fireMask;
 } UndoInfo;
 
-char *array, fenArray[4000], *reason;
-int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, tsume;
+char *array, fenArray[4000], startPos[4000], *reason;
+int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, tsume, pvCuts;
 int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
 int retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
 int nodes, startTime, lastRootMove, lastRootIter, tlim1, tlim2, tlim3, repCnt, comp, abortFlag;
@@ -544,7 +545,7 @@ typedef struct {
   char bulk;
 } PieceInfo; // piece-list entry
 
-int last[2], royal[2];
+int last[2], royal[2], kylin[2];
 PieceInfo p[NPIECES]; // piece list
 
 typedef struct {
@@ -562,6 +563,7 @@ typedef struct {
     int ponder;
     int randomize;
     int postThinking;
+    int noCut=1;        // engine-defined option
     int resign;         // engine-defined option
     int contemptFactor; // likewise
     int seed;
@@ -574,7 +576,7 @@ int attackMaps[200*BSIZE], *attacks = attackMaps;
 char distance[2*BSIZE]; // distance table
 char promoBoard[BSIZE]; // flags to indicate promotion zones
 char rawFire[BSIZE+2*BWMAX]; // flags to indicate squares controlled by Fire Demons
-signed char PST[3*BSIZE];
+signed char PST[4*BSIZE];
 
 #define board     (rawBoard + 6*BHMAX + 3)
 #define fireBoard (rawFire + BWMAX + 1)
@@ -622,6 +624,7 @@ SqueezeOut (int n)
   for(i=n; i<last[stm]; i+=2) {
     p[i] = p[i+2];
     if(i+2 == royal[stm]) royal[stm] -= 2; // NB: squeezing out the King moves up Crown Prince to royal[stm]
+    if(i+2 == kylin[stm]) kylin[stm] -= 2;
     if(i < 10) fireFlags[i-2] = fireFlags[i];
   }
   last[stm] -= 2;
@@ -646,7 +649,6 @@ Worse (int a, int b)
   return 0;
 }
 
-#if 0
 int
 Lance (signed char *r)
 { // File-bound forward slider
@@ -654,7 +656,7 @@ Lance (signed char *r)
   for(i=1; i<4; i++) if(r[i] || r[i+4]) return 0;
   return r[0] == X;
 }
-#endif
+
 int
 EasyProm (signed char *r)
 {
@@ -750,11 +752,13 @@ AddPiece (int stm, PieceDesc *list)
   p[i].promoFlag = 0;
   p[i].bulk = list->bulk;
   p[i].mobWeight = v > 600 ? 0 : v >= 400 ? 1 : v >= 300 ? 2 : v > 150 ? 3 : v >= 100 ? 2 : 0;
-//  if(Lance(list->range)) p[i].mobWeight = 5, p[i].pst = 0; // clear path but don't move forward
+  if(Lance(list->range),0)
+    p[i].mobWeight = 5 + 3*(list->range[4]==X), p[i].pst = 0; // clear path but don't move forward
   for(j=stm+2; j<= last[stm]; j+=2) {
     if(p[j].promo >= i) p[j].promo += 2;
   }
   if(royal[stm] >= i) royal[stm] += 2;
+  if(kylin[stm] >= i) kylin[stm] += 2;
   if(p[i].value == (currentVariant == V_SHO ? 410 : 280) ) royal[stm] = i, p[i].pst = 0;
   p[i].qval = (currentVariant == V_TENJIKU ? list->ranking : 0); // jump-capture hierarchy
   return i;
@@ -801,6 +805,7 @@ SetUp(char *array, int var)
 	p[n].promoFlag &= n&1 ? P_WHITE : P_BLACK;
 	p[m].promo = -1;
 	p[m].pos = ABSENT;
+	if(p[m].value == 10*LVAL) kylin[color] = n; // remember piece that promotes to Lion
       } else p[n].promo = -1; // unpromotable piece
 //printf("piece = %c%-2s %d(%d) %d/%d\n", color ? 'w' : 'b', name, n, m, last[color], last[!color]);
     }
@@ -818,18 +823,20 @@ SetUp(char *array, int var)
   }
   for(i=0; i<BH; i++) for(j=0; j<BH; j++) board[BW*i+j] = EMPTY;
   for(i=WHITE+2; i<=last[WHITE]; i+=2) if(p[i].pos != ABSENT) {
-    if(p[i].promoGain && (j = p[i].promo) > 0)
+    if((j = p[i].promo) > 0 && p[i].promoGain)
       p[i].promoGain = (p[j].value - p[i].value - 30)*1.25, p[i].value = p[j].value - 30;
     else p[i].promoGain = 0;
+    if(j > 0 && p[i].pst == BH) p[i].pst = 3*BW*BH;      // use white pre-prom bonus
     board[p[i].pos] = i;
     rootEval += p[i].value + PST[p[i].pst + p[i].pos];
     promoDelta += p[i].promoGain;
     filling += p[i].bulk;
   } else p[i].promoGain = 0;
   for(i=BLACK+2; i<=last[BLACK]; i+=2) if(p[i].pos != ABSENT) {
-    if(p[i].promoGain && (j = p[i].promo) > 0)
+    if((j = p[i].promo) > 0 && p[i].promoGain)
       p[i].promoGain = (p[j].value - p[i].value - 30)*1.25, p[i].value = p[j].value - 30;
     else p[i].promoGain = 0;
+    if(j > 0 && p[i].pst == BH) p[i].pst = 3*BW*BH + BH; // use black pre-prom bonus
     board[p[i].pos] = i;
     rootEval -= p[i].value + PST[p[i].pst + p[i].pos];
     promoDelta -= p[i].promoGain;
@@ -910,14 +917,19 @@ Init (int var)
   }
 
   // piece-square tables
-  for(i=0; i<BH; i++) for(j=0; j<BH; j++) {
+  for(j=0; j<BH; j++) {
+   for(i=0; i<BH; i++) {
     int s = BW*i + j, d = BH*(BH-2) - abs(2*i - BH + 1)*(BH-1) - (2*j - BH + 1)*(2*j - BH + 1);
     PST[s] = 0;
     PST[BH+s] = d/4 - (i == 0 || i == BH-1 ? 5 : 0) - (j == 0 || j == BH-1 ? 5 : 0)
-                    + 2*(i==zone || i==BH-zone-1);
-    PST[BH*BW+s] = d/6;
-    PST[BH*BW+BH+s] = d/12;
+                    + 2*(i==zone || i==BH-zone-1);  // stepper centralization
+    PST[BH*BW+s] = d/6;                             // double-stepper centralization
+    PST[BH*BW+BH+s] = d/12;                         // slider centralization
     PST[2*BH*BW+s] = j < 3 || j > BH-4 ? (i < 3 ? 5 : i == 3 ? 2 : i == 4 ? 1 : 0) : 0;
+    PST[2*BH*BW+BH+s] = ((BH-1)*(BH-1) - (2*i - BH + 1)*(2*i - BH + 1) - (2*j - BH + 1)*(2*j - BH + 1))/6;
+    PST[3*BH*BW+s] = PST[3*BH*BW+BH+s] = PST[BH+s]; // as stepper, but with pre-promotion bonus W/B
+   }
+   if(zone > 1) PST[3*BW*BH+BW*(BH-1-zone) + j] += 10, PST[3*BW*BH+BH + BW*zone + j] += 10;
   }
 
   p[EDGE].qval = 5; // tenjiku jump-capturer sentinel
@@ -1653,7 +1665,7 @@ GenCapts(int sqr, int victimValue)
 int
 Evaluate (int difEval)
 {
-  int wLion, bLion, score=mobilityScore;
+  int wLion, bLion, wKing, bKing, score=mobilityScore;
 
 #ifdef LIONTRAP
 #define lionTrap (PST + 2*BH*BW)
@@ -1663,6 +1675,25 @@ Evaluate (int difEval)
       static int distFac[36] = { 0, 0, 10, 9, 8, 7, 5, 3, 1 };
       score -= ( (1+9*!attacks[2*wLion+WHITE]) * lionTrap[BW*(BH-1)+BH-1-wLion]
                - (1+9*!attacks[2*bLion+BLACK]) * lionTrap[bLion] ) * distFac[dist[wLion - bLion]];
+  }
+#endif
+
+#ifdef KINGSAFETY
+  // basic centralization in end-game (also facilitates bare-King mating)
+  wKing = p[royal[WHITE]].pos; if(wKing == ABSENT) wKing = p[royal[WHITE]+1].pos;
+  bKing = p[royal[BLACK]].pos; if(bKing == ABSENT) bKing = p[royal[BLACK]+1].pos;
+  if(filling < 32) {
+    score += (PST[3*BW*BH+wKing] - PST[3*BW*BH+bKing])*(32 - filling) >> 4;
+  }
+#endif
+
+#ifdef KYLIN
+  // bonus for having Kylin in late end-game, where it could promote to Lion
+  if((filling < 64) {
+    if((wLion = kylin[WHITE]) && p[wLion].pos != ABSENT)
+      score += (64 - filling)*kylinProm[wLion];
+    if((filling < 64 && (bLion = kylin[BLACK]) && p[bLion].pos != ABSENT)
+      score -= (64 - filling)*kylinProm[bLion];
   }
 #endif
 
@@ -1731,7 +1762,8 @@ if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("search(%d) {%d,%d} eval=
   iterDep = -(depth == 0); tb.fireMask = phase = 0;
 
 #ifdef HASH
-  index = (hashKeyL ^ 327*stm ^ oldPromo*(63121 + promoSuppress)) & hashMask;
+  index = hashKeyL ^ 327*stm ^ (oldPromo + 987981)*(63121 + promoSuppress);
+  index = index + (index >> 16) & hashMask;
   nr = (hashKeyL >> 30) & 3; hit = -1;
   if(hashTable[index].lock[nr] == hashKeyH) hit = nr; else
   if(hashTable[index].lock[4]  == hashKeyH) hit = 4;
@@ -1743,9 +1775,12 @@ if(PATH) printf("# probe hash index=%x hit=%d\n", index, hit),fflush(stdout);
        (bestScore >= beta  || hashTable[index].flag[hit] & H_UPPER)   ) {
       iterDep = resDep = hashTable[index].depth[hit]; bestMoveNr = 0;
       if(!level) iterDep = 0; // no hash cutoff in root
+      if(pvCuts && iterDep >= depth && hashMove && bestScore < beta && bestScore > alpha)
+	iterDep = depth - 1; // prevent hash cut in PV node
     }
   } else { // decide on replacement
-    if(depth >= hashTable[index].depth[nr]) hit = nr; else hit = 4;
+    if(depth >= hashTable[index].depth[nr] ||
+       depth+1 == hashTable[index].depth[nr] && !(nodes&3)) hit = nr; else hit = 4;
     hashMove = 0;
   }
 if(PATH) printf("# iterDep = %d score = %d move = %s\n",iterDep,bestScore,MoveToText(hashMove,0)),fflush(stdout);
@@ -1778,7 +1813,7 @@ if(PATH)printf("new moves, phase=%d\n", phase);
               int nullDep = depth - 3;
 	      stm ^= WHITE;
 	      score = -Search(-beta, 1-beta, -difEval, nullDep<QSdepth ? QSdepth : nullDep, promoSuppress & SQUARE, ABSENT, INF);
-	      stm ^= WHITE;
+	      xstm = stm; stm ^= WHITE;
 	      if(score >= beta) { msp = oldMSP; retDep += 3; return score + (score < curEval); }
 	    }
 #endif
@@ -2027,7 +2062,7 @@ pplist()
 {
   int i, j;
   for(i=0; i<182; i++) {
-	printf("%3d. %3d %3d %4d   %02x %d %x %3d ", i, p[i].value, p[i].promo, p[i].pos, p[i].promoFlag&255, p[i].qval, p[i].bulk, p[i].promoGain);
+	printf("%3d. %3d %3d %4d   %02x %d %d %x %3d ", i, p[i].value, p[i].promo, p[i].pos, p[i].promoFlag&255, p[i].mobWeight, p[i].qval, p[i].bulk, p[i].promoGain);
 	for(j=0; j<8; j++) printf("  %2d", p[i].range[j]);
 	if(i<2 || i>11) printf("\n"); else printf("  %02x\n", fireFlags[i-2]&255);
   }
@@ -2191,6 +2226,7 @@ Setup2 (char *fen)
   }
   rootEval = promoDelta = filling = cnt50 = moveNr = 0;
   SetUp(array, currentVariant);
+  strcpy(startPos, array);
   sup0 = sup1 = sup2 = ABSENT;
   hashKeyH = hashKeyL = 87620895*currentVariant;
   return stm;
@@ -2410,7 +2446,7 @@ printf("# ponder=%s\n", MoveToText(pv[1],0));
     int TakeBack(int n)
     { // reset the game and then replay it to the desired point
       int last, stm;
-      Init(currentVariant); stm = Setup2(NULL);
+      Init(currentVariant); stm = Setup2(startPos);
 printf("# setup done");fflush(stdout);
       last = moveNr - n; if(last < 0) last = 0;
       for(moveNr=0; moveNr<last; moveNr++) stm = MakeMove2(stm, gameMove[moveNr]),printf("make %2d: %x\n", moveNr, gameMove[moveNr]);
@@ -2531,8 +2567,9 @@ pboard(board);
             Move dummy;
             *ponderMoveText = 0; // forces miss on any move
             abortFlag = -1;      // set pondering
+	    pvCuts = noCut;
             SearchBestMove(&dummy, &dummy);
-            abortFlag = 0;       //
+            abortFlag = pvCuts = 0;
         }
 
         fflush(stdout);         // make sure everything is printed before we do something that might take time
@@ -2554,13 +2591,15 @@ pboard(board);
           printf("feature ping=1 setboard=1 colors=0 usermove=1 memory=1 debug=1 sigint=0 sigterm=0\n");
           printf("feature variants=\"normal,shatranj,makruk,chu,dai,tenjiku,12x12+0_fairy,9x9+0_shogi\"\n");
           printf("feature myname=\"HaChu " VERSION "\" highlight=1\n");
-          printf("feature option=\"Resign -check 0\"\n");           // example of an engine-defined option
+          printf("feature option=\"Full analysis PV -check 1\"\n"); // example of an engine-defined option
+          printf("feature option=\"Resign -check 0\"\n");           // 
           printf("feature option=\"Contempt -spin 0 -200 200\"\n"); // and another one
           printf("feature option=\"Tsume -combo no /// White Mates /// Black mates\"\n");
           printf("feature done=1\n");
           continue;
         }
         if(!strcmp(command, "option")) { // setting of engine-define option; find out which
+          if(sscanf(inBuf+7, "Full analysis PV=%d", &noCut)  == 1) continue;
           if(sscanf(inBuf+7, "Resign=%d",   &resign)         == 1) continue;
           if(sscanf(inBuf+7, "Contempt=%d", &contemptFactor) == 1) continue;
           if(sscanf(inBuf+7, "Tsume=%s", command) == 1) {
