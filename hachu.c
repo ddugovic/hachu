@@ -11,14 +11,14 @@
 // promotions by pieces with Lion power stepping in & out the zone in same turn
 // promotion on capture
 
-#define VERSION "0.9beta"
+#define VERSION "0.10 null"
 
-#define PATH level==0 /*|| path[0] == 0x57097 &&  (level==1 || path[1] == 0x3f081 && (level == 2 || path[2] == 0x6f0ac && (level == 3 || path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5)))))*/
+#define PATH level==0 || path[0] == 0x848f1 &&  (level==1 /*|| path[1] == 0x3f081 && (level == 2 || path[2] == 0x6f0ac && (level == 3 || path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5))))*/)
 //define PATH 0
 
-#define XHASH
+#define HASH
 #define XKILLERS
-#define XNULLMOVE
+#define NULLMOVE
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -129,8 +129,8 @@ typedef struct {
 } UndoInfo;
 
 char *array, fenArray[4000], *reason;
-int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws;
-int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
+int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, tsume;
+int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
 int nodes, startTime, lastRootMove, lastRootIter, tlim1, tlim2, tlim3, repCnt, comp, abortFlag;
 Move ponderMove;
 Move retMove, moveStack[10000], path[100], repStack[300], pv[1000], repeatMove[300], killer[100][2];
@@ -558,6 +558,7 @@ typedef struct {
     int postThinking;
     int resign;         // engine-defined option
     int contemptFactor; // likewise
+    int seed;
 
 int squareKey[BSIZE];
 
@@ -1602,7 +1603,7 @@ int
 Search (int alpha, int beta, int difEval, int depth, int oldPromo, int promoSuppress, int threshold)
 {
   int i, j, k, phase, king, nextVictim, to, defer, autoFail=0;
-  int start, firstMove, oldMSP = msp, curMove, sorted, bad, dubious, bestMoveNr;
+  int firstMove, oldMSP = msp, curMove, sorted, bad, dubious, bestMoveNr;
   int resDep, iterDep, ext;
   int myPV = pvPtr;
   int score, bestScore, oldBest, curEval, iterAlpha;
@@ -1614,6 +1615,16 @@ Search (int alpha, int beta, int difEval, int depth, int oldPromo, int promoSupp
 if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("search(%d) {%d,%d} eval=%d, stm=%d (flag=%d)\n",depth,alpha,beta,difEval,stm,abortFlag),fflush(stdout);
   xstm = stm ^ WHITE;
 //printf("map made\n");fflush(stdout);
+
+  // TSUME filter
+  if(tsume && tsume & stm+1) {
+    k = p[king=royal[stm]].pos;
+//    if( k == ABSENT) k = p[king + 2].pos;
+    if( k != ABSENT && !attacks[2*k + xstm]) {
+      retDep = 60; return INF; // we win when not in check
+    }
+  }
+
   // KING CAPTURE
   k = p[king=royal[xstm]].pos;
   if( k != ABSENT) {
@@ -1634,22 +1645,27 @@ if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("search(%d) {%d,%d} eval=
   pv[pvPtr++] = 0; // start empty PV, directly behind PV of parent
 
 
-  firstMove = curMove = sorted = start = msp += 50; // leave 50 empty slots in front of move list
+  firstMove = curMove = sorted = msp += 50; // leave 50 empty slots in front of move list
   iterDep = -(depth == 0); tb.fireMask = phase = 0;
 
 #ifdef HASH
-  index = hashKeyL & hashMask; nr = hashKeyL >> 30; hit = -1;
+  index = (hashKeyL ^ 327*stm) & hashMask; nr = (hashKeyL >> 30) & 3; hit = -1;
   if(hashTable[index].lock[nr] == hashKeyH) hit = nr; else
   if(hashTable[index].lock[4]  == hashKeyH) hit = 4;
+if(PATH) printf("# probe hash index=%x hit=%d\n", index, hit),fflush(stdout);
   if(hit >= 0) {
     bestScore = hashTable[index].score[hit];
+    hashMove = hashTable[index].move[hit];
     if((bestScore <= alpha || hashTable[index].flag[hit] & H_LOWER) &&
        (bestScore >= beta  || hashTable[index].flag[hit] & H_UPPER)   ) {
-      iterDep = resDep = hashTable[index].depth[hit];
+      iterDep = resDep = hashTable[index].depth[hit]; bestMoveNr = 0;
+      if(!level) iterDep = 0; // no hash cutoff in root
     }
   } else { // decide on replacement
     if(depth >= hashTable[index].depth[nr]) hit = nr; else hit = 4;
+    hashMove = 0;
   }
+if(PATH) printf("# iterDep = %d score = %d move = %s\n",iterDep,bestScore,MoveToText(hashMove,0)),fflush(stdout);
 #endif
 
   if(depth > QSdepth && iterDep < QSdepth) iterDep = QSdepth; // full-width: start at least from 1-ply
@@ -1675,7 +1691,7 @@ if(PATH)printf("new moves, phase=%d\n", phase);
 	switch(phase) {
 	  case 0: // null move
 #ifdef NULLMOVE
-	    else if(curEval >= beta) {
+	    if(depth > QSdepth && curEval >= beta) {
               int nullDep = depth - 3;
 	      stm ^= WHITE;
 	      score = -Search(-beta, 1-beta, -difEval, nullDep<QSdepth ? QSdepth : nullDep, promoSuppress & SQUARE, ABSENT, INF);
@@ -1687,13 +1703,14 @@ if(PATH)printf("new moves, phase=%d\n", phase);
 //if(PATH) printf("mask=%x\n",tb.fireMask),pbytes(fireBoard);
 	    phase = 1;
 	  case 1: // hash move
+	    phase = 2;
 #ifdef HASH
-	    if(hashMove) {
+	    if(hashMove && (depth > QSdepth || // must be capture in QS
+		 (hashMove & SQUARE) >= SPECIAL || board[hashMove & SQUARE] != EMPTY)) {
 	      moveStack[sorted = msp++] = hashMove;
 	      goto extractMove;
 	    }
 #endif
-	    phase = 2;
 	  case 2: // capture-gen init
 	    nextVictim = xstm; autoFail = (depth == 0);
 	    phase = 3;
@@ -1767,7 +1784,7 @@ if(PATH) printf("# autofail end (%d-%d)\n", firstMove, msp);
 
       // MOVE EXTRACTION
     extractMove:
-if(flag & depth >= 0 || (PATH)) printf("%2d:%d extract %d/%d\n", depth, iterDep, curMove, msp);
+//if(flag & depth >= 0 || (PATH)) printf("%2d:%d extract %d/%d\n", depth, iterDep, curMove, msp);
       if(curMove > sorted) {
 	move = moveStack[sorted=j=curMove];
 	for(i=curMove+1; i<msp; i++)
@@ -1784,6 +1801,8 @@ if(flag & depth >= 0) printf("%2d:%d found %d/%d %08x %s\n", depth, iterDep, cur
       stm ^= WHITE;
       defer = MakeMove(move, &tb);
       ext = (depth == 0); // when out of depth we extend captures if there was no auto-fail-hi
+
+//      if(level == 1 && randomize) tb.booty += (hashKeyH * seed >> 24 & 31) - 20;
 
       if(autoFail) {
 	UnMake(&tb); // never search moves during auto-fail phase
@@ -1900,6 +1919,7 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d  (%d)\n", level, depth, iterDep
     // hash store
     hashTable[index].lock[hit]  = hashKeyH;
     hashTable[index].depth[hit] = iterDep;
+    hashTable[index].score[hit] = bestScore;
     hashTable[index].flag[hit]  = (bestScore < beta) * H_UPPER;
     if(bestScore > alpha) {
       hashTable[index].flag[hit] |= H_LOWER;
@@ -1990,7 +2010,7 @@ pmoves(int start, int end)
 
     // some parameter of your engine
     #define MAXMOVES 2000 /* maximum game length  */
-    #define MAXPLY   20   /* maximum search depth */
+    #define MAXPLY   30   /* maximum search depth */
 
     #define OFF 0
     #define ON  1
@@ -2087,7 +2107,8 @@ Setup2 (char *fen)
   }
   SetUp(array, currentVariant);
   sup0 = sup1 = sup2 = ABSENT;
-  rootEval = cnt50 = hashKeyH = hashKeyL = moveNr = 0;
+  rootEval = cnt50 = moveNr = 0;
+  hashKeyH = hashKeyL = 87620895*currentVariant;
   return stm;
 }
 
@@ -2096,15 +2117,14 @@ SetMemorySize (int n)
 {
 #ifdef HASH
   static HashBucket *realHash;
-  static int oldSize;
-  int m = 1;
-  intptr_t l;
-  if(n != oldSize) {
+  static intptr_t oldSize;
+  intptr_t l, m = 1;
+  while(m*sizeof(HashBucket) <= n*512UL) m <<= 1; // take largest power-of-2 that fits
+  if(m != oldSize) {
     if(oldSize) free(realHash);
-    while(m*sizeof(HashBucket) <= n*512) m <<= 1;
-    m *= 1024; hashMask = m - 1;
-    realHash = calloc(m + 1, sizeof(HashBucket));
-    l = (intptr_t) realHash; hashTable = (HashBucket*) (l & ~63); // align with cache line
+    hashMask = m*1024 - 1; oldSize = m;
+    realHash = malloc(m*1024*sizeof(HashBucket) + 64);
+    l = (intptr_t) realHash; hashTable = (HashBucket*) (l & ~63UL); // align with cache line
   }
 #endif
 }
@@ -2371,12 +2391,17 @@ printf("# ponder hit\n");
       int i, score, curVarNr;
 
   Init(V_CHU); // Chu
+      seed = GetTickCount(); moveNr = 0; // initialize random
 
       while(1) { // infinite loop
 
         fflush(stdout);                 // make sure everything is printed before we do something that might take time
-        *inBuf = 0;
+        *inBuf = 0; if(moveNr >= 20) randomize = OFF;
+//if(moveNr >20) printf("resign\n");
 
+#ifdef HASH
+	if(hashMask)
+#endif
         if(listEnd == 0) ListMoves();   // always maintain a list of legal moves in root position
         abortFlag = -(ponder && WHITE+BLACK-stm == engineSide && moveNr); // pondering and opponent on move
         if(stm == engineSide || abortFlag && ponderMove) {      // if it is the engine's turn to move, set it thinking, and let it move
@@ -2447,12 +2472,19 @@ pboard(board);
           printf("feature myname=\"HaChu " VERSION "\" highlight=1\n");
           printf("feature option=\"Resign -check 0\"\n");           // example of an engine-defined option
           printf("feature option=\"Contempt -spin 0 -200 200\"\n"); // and another one
+          printf("feature option=\"Tsume -combo no /// White Mates /// Black mates\"\n");
           printf("feature done=1\n");
           continue;
         }
         if(!strcmp(command, "option")) { // setting of engine-define option; find out which
           if(sscanf(inBuf+7, "Resign=%d",   &resign)         == 1) continue;
           if(sscanf(inBuf+7, "Contempt=%d", &contemptFactor) == 1) continue;
+          if(sscanf(inBuf+7, "Tsume=%s", command) == 1) {
+	    if(!strcmp(command, "no"))    tsume = 0; else
+	    if(!strcmp(command, "White")) tsume = 1; else
+	    if(!strcmp(command, "Black")) tsume = 2;
+	    continue;
+	  }
           continue;
         }
         if(!strcmp(command, "sd"))      { sscanf(inBuf, "sd %d", &maxDepth);    continue; }
