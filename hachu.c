@@ -11,7 +11,7 @@
 // promotions by pieces with Lion power stepping in & out the zone in same turn
 // promotion on capture
 
-#define VERSION "0.15"
+#define VERSION "0.16 k+ky"
 
 #define PATH level==0 /*|| path[0] == 0x3490a &&  (level==1 || path[1] == 0x285b3 && (level == 2 || path[2] == 0x8710f && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5)))))*/
 //define PATH 0
@@ -24,8 +24,11 @@
 #define LIONTRAP
 #define WINGS
 #define KINGSAFETY
+#define KSHIELD
 #define XFORTRESS
 #define PAWNBLOCK
+#define KYLIN 100 /* extra end-game value of Kylin for promotability */
+#define PROMO 0 /* extra bonus for 'vertical' piece when it actually promotes (diagonal pieces get half) */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -462,6 +465,7 @@ Vector direction[] = { // clockwise!
 
 int epList[96], ep2List[96], toList[96], reverse[96];  // decoding tables for double and triple moves
 int kingStep[10], knightStep[10];         // raw tables for step vectors (indexed as -1 .. 8)
+int neighbors[9];   // similar to kingStep, but starts with null-step
 char fireFlags[10]; // flags for Fire-Demon presence (last two are dummies, which stay 0, for compactify)
 #define kStep (kingStep+1)
 #define nStep (knightStep+1)
@@ -582,7 +586,7 @@ int attackMaps[200*BSIZE], *attacks = attackMaps;
 char distance[2*BSIZE]; // distance table
 char promoBoard[BSIZE]; // flags to indicate promotion zones
 char rawFire[BSIZE+2*BWMAX]; // flags to indicate squares controlled by Fire Demons
-signed char PST[4*BSIZE];
+signed char PST[5*BSIZE];
 
 #define board     (rawBoard + 6*BHMAX + 3)
 #define fireBoard (rawFire + BWMAX + 1)
@@ -667,7 +671,9 @@ int
 EasyProm (signed char *r)
 {
   int i;
-  return r[0] == X || r[1] == X || r[7] == X;
+  if(r[0] == X) return 30 + PROMO*((unsigned int)(r[1] | r[2] | r[3] | r[5] | r[6] | r[7]) <= 1);
+  if(r[1] == X || r[7] == X) return 30 + PROMO/2;
+  return 0;
 }
 
 int
@@ -829,9 +835,11 @@ SetUp(char *array, int var)
   }
   for(i=0; i<BH; i++) for(j=0; j<BH; j++) board[BW*i+j] = EMPTY;
   for(i=WHITE+2; i<=last[WHITE]; i+=2) if(p[i].pos != ABSENT) {
-    if((j = p[i].promo) > 0 && p[i].promoGain)
-      p[i].promoGain = (p[j].value - p[i].value - 30)*1.25, p[i].value = p[j].value - 30;
+    int g = p[i].promoGain;
+    if((j = p[i].promo) > 0 && g)
+      p[i].promoGain = (p[j].value - p[i].value - g)*1.25, p[i].value = p[j].value - g;
     else p[i].promoGain = 0;
+    if(i == kylin[WHITE]) p[i].promoGain = 1.25*KYLIN, p[i].value += KYLIN;
     if(j > 0 && p[i].pst == BH) p[i].pst = 3*BW*BH;      // use white pre-prom bonus
     board[p[i].pos] = i;
     rootEval += p[i].value + PST[p[i].pst + p[i].pos];
@@ -839,10 +847,13 @@ SetUp(char *array, int var)
     filling += p[i].bulk;
   } else p[i].promoGain = 0;
   for(i=BLACK+2; i<=last[BLACK]; i+=2) if(p[i].pos != ABSENT) {
-    if((j = p[i].promo) > 0 && p[i].promoGain)
-      p[i].promoGain = (p[j].value - p[i].value - 30)*1.25, p[i].value = p[j].value - 30;
+    int g = p[i].promoGain;
+    if((j = p[i].promo) > 0 && g)
+      p[i].promoGain = (p[j].value - p[i].value - g)*1.25, p[i].value = p[j].value - g;
     else p[i].promoGain = 0;
+    if(i == kylin[BLACK]) p[i].promoGain = 1.25*KYLIN, p[i].value += KYLIN;
     if(j > 0 && p[i].pst == BH) p[i].pst = 3*BW*BH + BH; // use black pre-prom bonus
+    if(j > 0 && p[i].pst == bsize) p[i].pst = 4*BW*BH;      // use white pre-prom bonus
     board[p[i].pos] = i;
     rootEval -= p[i].value + PST[p[i].pst + p[i].pos];
     promoDelta -= p[i].promoGain;
@@ -879,6 +890,7 @@ Init (int var)
     kStep[i] = STEP(direction[i&7].x,   direction[i&7].y);       // King
     nStep[i] = STEP(direction[(i&7)+8].x, direction[(i&7)+8].y); // Knight
   }
+  for(i=0; i<8; i++) neighbors[i+1] = kStep[i];
 
   for(i=0; i<8; i++) { // Lion double-move decoding tables
     for(j=0; j<8; j++) {
@@ -927,16 +939,23 @@ Init (int var)
   for(j=0; j<BH; j++) {
    for(i=0; i<BH; i++) {
     int s = BW*i + j, d = BH*(BH-2) - abs(2*i - BH + 1)*(BH-1) - (2*j - BH + 1)*(2*j - BH + 1);
-    PST[s] = 2*(i==0 | i==BH-1) + (i==1 | i==BH-2); // last-rank markers in null table
-    PST[BH+s] = d/4 - (i == 0 || i == BH-1 ? 5 : 0) - (j == 0 || j == BH-1 ? 5 : 0)
-                    + 2*(i==zone || i==BH-zone-1);  // stepper centralization
-    PST[BH*BW+s] = d/6;                             // double-stepper centralization
-    PST[BH*BW+BH+s] = d/12;                         // slider centralization
+    PST[s] = 2*(i==0 | i==BH-1) + (i==1 | i==BH-2);      // last-rank markers in null table
+    PST[BH+s] = d/4 - (i < 2 || i > BH-3 ? 3 : 0) - (j == 0 || j == BH-1 ? 5 : 0)
+                    + 3*(i==zone || i==BH-zone-1);       // stepper centralization
+    PST[BH*BW+s] = d/6;                                  // double-stepper centralization
+    PST[BH*BW+BH+s] = d/12 - 5*(i==BH/2 || i==(BH-1)/2); // slider centralization
     PST[2*BH*BW+s] = j < 3 || j > BH-4 ? (i < 3 ? 7 : i == 3 ? 4 : i == 4 ? 2 : 0) : 0;
     PST[2*BH*BW+BH+s] = ((BH-1)*(BH-1) - (2*i - BH + 1)*(2*i - BH + 1) - (2*j - BH + 1)*(2*j - BH + 1))/6;
-    PST[3*BH*BW+s] = PST[3*BH*BW+BH+s] = PST[BH+s]; // as stepper, but with pre-promotion bonus W/B
+    PST[3*BH*BW+s] = PST[3*BH*BW+BH+s] = PST[BH+s];      // as stepper, but with pre-promotion bonus W/B
+    PST[4*BH*BW+s] = PST[BW*BH+s];                       // as jumper, but with pre-promotion bonus B
+    PST[4*BH*BW+BH+s] = BW*(zone - 1 - i);               // board step to enter promo zone black
    }
-   if(zone > 1) PST[3*BW*BH+BW*(BH-1-zone) + j] += 10, PST[3*BW*BH+BH + BW*zone + j] += 10;
+   if(zone > 0) PST[3*BW*BH+BW*(BH-1-zone) + j] += 10, PST[3*BW*BH+BH + BW*zone + j] += 10;
+#if KYLIN
+   // pre-promotion bonuses for jumpers
+   if(zone > 0) PST[BW*BH + BW*(BH-2-zone) + j] = PST[4*BW*BH + BW*(zone+1) + j] = 100,
+                PST[BW*BH + BW*(BH-1-zone) + j] = PST[4*BW*BH + BW*zone + j] = 200;
+#endif
   }
 
   p[EDGE].qval = 5; // tenjiku jump-capturer sentinel
@@ -1717,6 +1736,20 @@ Fortress (int forward, int king, int lion)
 }
 
 int
+Surround (int stm, int king, int start)
+{
+  int i, s=0;
+  for(i=start; i<9; i++) {
+    int v, piece, sq = king + neighbors[i];
+    if((piece = board[sq]) == EDGE || !piece || piece&1^stm) continue;
+    if(p[piece].promoGain) continue;
+    v = p[piece].value;
+    s += -(v > 70) & v;
+  }
+  return (s > 512 ? 512 : s);
+}
+
+int
 Ftest (int side)
 {
   int lion = ABSENT, king;
@@ -1779,27 +1812,46 @@ Evaluate (int difEval)
   if(wLion != ABSENT) f -= Fortress(-BW, bKing, wLion);
   score += (filling < 96 ? f : f*(224 - filling) >> 7); // build up slowly
 # endif
+
+# ifdef KSHIELD
+  score += Surround(WHITE, wKing, 1) - Surround(BLACK, bKing, 1) >> 3;
+# endif
+
 #endif
 
-#ifdef KYLIN
-  // bonus for having Kylin in late end-game, where it could promote to Lion
-  if((filling < 64) {
-    if((wLion = kylin[WHITE]) && p[wLion].pos != ABSENT)
-      score += (64 - filling)*kylinProm[wLion];
-    if((filling < 64 && (bLion = kylin[BLACK]) && p[bLion].pos != ABSENT)
-      score -= (64 - filling)*kylinProm[bLion];
+#if KYLIN
+  // bonus for having Kylin in end-game, where it could promote to Lion
+  // depends on board population, defenders around zone entry and proximity to zone
+  if(filling < 128) {
+    int sq;
+    if((wLion = kylin[WHITE]) && (sq = p[wLion].pos) != ABSENT) {
+      int anchor = sq - PST[5*BW*BH - 1 - sq];
+      score += (512 - Surround(BLACK, anchor, 0))*(128 - filling)*PST[p[wLion].pst + sq] >> 15;
+    }
+    if((bLion = kylin[BLACK]) && (sq = p[bLion].pos) != ABSENT) {
+      int anchor = sq + PST[4*BW*BH + BH + sq];
+      score -= (512 - Surround(WHITE, anchor, 0))*(128 - filling)*PST[p[bLion].pst + sq] >> 15;
+    }
   }
 #endif
 
 #ifdef PAWNBLOCK
   // penalty for blocking own P or GB: 20 by slider, 10 by other, but 50 if only retreat mode is straight back
   for(i=last[WHITE]; i > 1 && p[i].value<=50; i-=2) {
-    if((f = p[i].pos) != ABSENT && (j = board[f + BW])&1) // P present, square before it white (odd) piece
-      score -= 10 + 10*(p[j].promoGain > 0) + 30*!(p[j].range[3] || p[j].range[5] || p[j].value==50);
+    if((f = p[i].pos) != ABSENT) { // P present,
+      if((j = board[f + BW])&1) // square before it white (odd) piece
+	score -= 10 + 10*(p[j].promoGain > 0) + 30*!(p[j].range[3] || p[j].range[5] || p[j].value==50);
+      if((j = board[f - BW])&1) // square behind it white (odd) piece
+	score += 7*(p[j].promoGain == 0 & p[j].value<=151);
+    }
   }
   for(i=last[BLACK]; i > 1 && p[i].value<=50; i-=2) {
-    if((f = p[i].pos) != ABSENT && (j = board[f - BW]) && !(j&1)) // P present, square before non-empty and even (black)
-      score += 10 + 10*(p[j].promoGain > 0) + 30*!(p[j].range[1] || p[j].range[7] || p[j].value==50);
+    if((f = p[i].pos) != ABSENT) { // P present,
+      if((j = board[f - BW]) && !(j&1)) // square before non-empty and even (black)
+	score += 10 + 10*(p[j].promoGain > 0) + 30*!(p[j].range[1] || p[j].range[7] || p[j].value==50);
+      if((j = board[f + BW]) && !(j&1)) // square behind non-empty and even (black)
+	score -= 7*(p[j].promoGain == 0 & p[j].value<=151);
+    }
   }
 #endif
 
