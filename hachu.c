@@ -11,14 +11,15 @@
 // promotions by pieces with Lion power stepping in & out the zone in same turn
 // promotion on capture
 
-#define VERSION "0.10 null"
+#define VERSION "0.11 kill"
 
 #define PATH level==0 || path[0] == 0x848f1 &&  (level==1 /*|| path[1] == 0x3f081 && (level == 2 || path[2] == 0x6f0ac && (level == 3 || path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5))))*/)
 //define PATH 0
 
 #define HASH
-#define XKILLERS
-#define NULLMOVE
+#define KILLERS
+#define XNULLMOVE
+#define LIONTRAP
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -119,18 +120,21 @@ typedef struct {
   char *name, *promoted;
   int value;
   signed char range[8];
+  char bulk;
   char ranking;
   int whiteKey, blackKey;
 } PieceDesc;
 
 typedef struct {
-  int from, to, piece, victim, new, booty, epSquare, epVictim[8], ep2Square, revMoveCount, savKeyL, savKeyH, gain, loss;
+  int from, to, piece, victim, new, booty, epSquare, epVictim[8], ep2Square, revMoveCount;
+  int savKeyL, savKeyH, gain, loss, filling, saveDelta;
   char fireMask;
 } UndoInfo;
 
 char *array, fenArray[4000], *reason;
 int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, tsume;
-int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
+int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
+int retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
 int nodes, startTime, lastRootMove, lastRootIter, tlim1, tlim2, tlim3, repCnt, comp, abortFlag;
 Move ponderMove;
 Move retMove, moveStack[10000], path[100], repStack[300], pv[1000], repeatMove[300], killer[100][2];
@@ -154,35 +158,35 @@ Move retMove, moveStack[10000], path[100], repStack[300], pv[1000], repeatMove[3
 #define FVAL 500 /* piece value of Fire Demon. Used in code for recognizing moves with it and do burns */
 
 PieceDesc chuPieces[] = {
-  {"LN", "", LVAL, { L,L,L,L,L,L,L,L } }, // lion
-  {"FK", "",   60, { X,X,X,X,X,X,X,X } }, // free king
-  {"SE", "",   55, { X,D,X,X,X,X,X,D } }, // soaring eagle
-  {"HF", "",   50, { D,X,X,X,X,X,X,X } }, // horned falcon
-  {"FO", "",   40, { X,X,0,X,X,X,0,X } }, // flying ox
-  {"FB", "",   40, { 0,X,X,X,0,X,X,X } }, // free boar
-  {"DK", "SE", 40, { X,1,X,1,X,1,X,1 } }, // dragon king
-  {"DH", "HF", 35, { 1,X,1,X,1,X,1,X } }, // dragon horse
-  {"WH", "",   35, { X,X,0,0,X,0,0,X } }, // white horse
-  {"R",  "DK", 30, { X,0,X,0,X,0,X,0 } }, // rook
-  {"FS", "",   30, { X,1,1,1,X,1,1,1 } }, // flying stag
-  {"WL", "",   25, { X,0,0,X,X,X,0,0 } }, // whale
-  {"K",  "",   28, { 1,1,1,1,1,1,1,1 }, 4 }, // king
-  {"CP", "",   27, { 1,1,1,1,1,1,1,1 }, 4 }, // king
-  {"B",  "DH", 25, { 0,X,0,X,0,X,0,X } }, // bishop
-  {"VM", "FO", 20, { X,0,1,0,X,0,1,0 } }, // vertical mover
-  {"SM", "FB", 20, { 1,0,X,0,1,0,X,0 } }, // side mover
-  {"DE", "CP", 20, { 1,1,1,1,0,1,1,1 } }, // drunk elephant
-  {"BT", "FS", 15, { 0,1,1,1,1,1,1,1 } }, // blind tiger
-  {"G",  "R",  15, { 1,1,1,0,1,0,1,1 } }, // gold
-  {"FL", "B",  15, { 1,1,0,1,1,1,0,1 } }, // ferocious leopard
-  {"KN", "LN", 15, { J,1,J,1,J,1,J,1 } }, // kirin
-  {"PH", "FK", 15, { 1,J,1,J,1,J,1,J } }, // phoenix
-  {"RV", "WL", 15, { X,0,0,0,X,0,0,0 } }, // reverse chariot
-  {"L",  "WH", 15, { X,0,0,0,0,0,0,0 } }, // lance
-  {"S",  "VM", 10, { 1,1,0,1,0,1,0,1 } }, // silver
-  {"C",  "SM", 10, { 1,1,0,0,1,0,0,1 } }, // copper
-  {"GB", "DE", 5,  { 1,0,0,0,1,0,0,0 } }, // go between
-  {"P",  "G",  4,  { 1,0,0,0,0,0,0,0 } }, // pawn
+  {"LN", "", LVAL, { L,L,L,L,L,L,L,L }, 4 }, // lion
+  {"FK", "",   60, { X,X,X,X,X,X,X,X }, 4 }, // free king
+  {"SE", "",   55, { X,D,X,X,X,X,X,D }, 4 }, // soaring eagle
+  {"HF", "",   50, { D,X,X,X,X,X,X,X }, 4 }, // horned falcon
+  {"FO", "",   40, { X,X,0,X,X,X,0,X }, 4 }, // flying ox
+  {"FB", "",   40, { 0,X,X,X,0,X,X,X }, 4 }, // free boar
+  {"DK", "SE", 40, { X,1,X,1,X,1,X,1 }, 4 }, // dragon king
+  {"DH", "HF", 35, { 1,X,1,X,1,X,1,X }, 4 }, // dragon horse
+  {"WH", "",   35, { X,X,0,0,X,0,0,X }, 3 }, // white horse
+  {"R",  "DK", 30, { X,0,X,0,X,0,X,0 }, 4 }, // rook
+  {"FS", "",   30, { X,1,1,1,X,1,1,1 }, 3 }, // flying stag
+  {"WL", "",   25, { X,0,0,X,X,X,0,0 }, 4 }, // whale
+  {"K",  "",   28, { 1,1,1,1,1,1,1,1 }, 2, 4 }, // king
+  {"CP", "",   27, { 1,1,1,1,1,1,1,1 }, 2, 4 }, // king
+  {"B",  "DH", 25, { 0,X,0,X,0,X,0,X }, 2 }, // bishop
+  {"VM", "FO", 20, { X,0,1,0,X,0,1,0 }, 2 }, // vertical mover
+  {"SM", "FB", 20, { 1,0,X,0,1,0,X,0 }, 6 }, // side mover
+  {"DE", "CP", 20, { 1,1,1,1,0,1,1,1 }, 2 }, // drunk elephant
+  {"BT", "FS", 15, { 0,1,1,1,1,1,1,1 }, 2 }, // blind tiger
+  {"G",  "R",  15, { 1,1,1,0,1,0,1,1 }, 2 }, // gold
+  {"FL", "B",  15, { 1,1,0,1,1,1,0,1 }, 2 }, // ferocious leopard
+  {"KN", "LN", 15, { J,1,J,1,J,1,J,1 }, 2 }, // kirin
+  {"PH", "FK", 15, { 1,J,1,J,1,J,1,J }, 2 }, // phoenix
+  {"RV", "WL", 15, { X,0,0,0,X,0,0,0 }, 1 }, // reverse chariot
+  {"L",  "WH", 15, { X,0,0,0,0,0,0,0 }, 1 }, // lance
+  {"S",  "VM", 10, { 1,1,0,1,0,1,0,1 }, 2 }, // silver
+  {"C",  "SM", 10, { 1,1,0,0,1,0,0,1 }, 2 }, // copper
+  {"GB", "DE", 5,  { 1,0,0,0,1,0,0,0 }, 1 }, // go between
+  {"P",  "G",  4,  { 1,0,0,0,0,0,0,0 }, 2 }, // pawn
   { NULL }  // sentinel
 };
 
@@ -203,14 +207,14 @@ PieceDesc shoPieces[] = {
 };
 
 PieceDesc daiPieces[] = {
-  {"FD", "G", 15, { 0,2,0,2,0,2,0,2 } }, // Flying Dragon
-  {"VO", "G", 20, { 2,0,2,0,2,0,2,0 } }, // Violent Ox
-  {"EW", "G",  8, { 1,1,1,0,0,0,1,1 } }, // Evil Wolf
-  {"CS", "G",  7, { 0,1,0,1,0,1,0,1 } }, // Cat Sword
-  {"AB", "G",  6, { 1,0,1,0,1,0,1,0 } }, // Angry Boar
-  {"I",  "G",  8, { 1,1,0,0,0,0,0,1 } }, // Iron
-  {"N",  "G",  6, { N,0,0,0,0,0,0,N } }, // Knight
-  {"ST", "G",  5, { 0,1,0,0,0,0,0,1 } }, // Stone
+  {"FD", "G", 15, { 0,2,0,2,0,2,0,2 }, 2 }, // Flying Dragon
+  {"VO", "G", 20, { 2,0,2,0,2,0,2,0 }, 2 }, // Violent Ox
+  {"EW", "G",  8, { 1,1,1,0,0,0,1,1 }, 2 }, // Evil Wolf
+  {"CS", "G",  7, { 0,1,0,1,0,1,0,1 }, 1 }, // Cat Sword
+  {"AB", "G",  6, { 1,0,1,0,1,0,1,0 }, 1 }, // Angry Boar
+  {"I",  "G",  8, { 1,1,0,0,0,0,0,1 }, 2 }, // Iron
+  {"N",  "G",  6, { N,0,0,0,0,0,0,N }, 0 }, // Knight
+  {"ST", "G",  5, { 0,1,0,0,0,0,0,1 }, 0 }, // Stone
   { NULL }  // sentinel
 };
 
@@ -328,10 +332,10 @@ PieceDesc taiPieces[] = {
 
 PieceDesc tenjikuPieces[] = { // only those not in Chu, or different (because of different promotion)
   {"FI", "", FVAL, { X,X,0,X,X,X,0,X } }, // Fire Demon
-  {"GG", "", 150, { R,R,R,R,R,R,R,R }, 3 }, // Great General
-  {"VG", "", 140, { 0,R,0,R,0,R,0,R }, 2 }, // Vice General
-  {"RG", "GG",120, { R,0,R,0,R,0,R,0 }, 1 }, // Rook General
-  {"BG", "VG",110, { 0,R,0,R,0,R,0,R }, 1 }, // Bishop General
+  {"GG", "", 150, { R,R,R,R,R,R,R,R }, 0, 3 }, // Great General
+  {"VG", "", 140, { 0,R,0,R,0,R,0,R }, 0, 2 }, // Vice General
+  {"RG", "GG",120, { R,0,R,0,R,0,R,0 }, 0, 1 }, // Rook General
+  {"BG", "VG",110, { 0,R,0,R,0,R,0,R }, 0, 1 }, // Bishop General
   {"SE", "RG", 1, { X,D,X,X,X,X,X,D } }, // Soaring Eagle
   {"HF", "BG", 1, { D,X,X,X,X,X,X,X } }, // Horned Falcon
   {"LH", "",   1, { L,S,L,S,L,S,L,S } }, // Lion-Hawk
@@ -536,6 +540,8 @@ typedef struct {
   char qval;
   char mobility;
   char mobWeight;
+  unsigned char promoGain;
+  char bulk;
 } PieceInfo; // piece-list entry
 
 int last[2], royal[2];
@@ -568,7 +574,7 @@ int attackMaps[200*BSIZE], *attacks = attackMaps;
 char distance[2*BSIZE]; // distance table
 char promoBoard[BSIZE]; // flags to indicate promotion zones
 char rawFire[BSIZE+2*BWMAX]; // flags to indicate squares controlled by Fire Demons
-signed char PST[2*BSIZE];
+signed char PST[3*BSIZE];
 
 #define board     (rawBoard + 6*BHMAX + 3)
 #define fireBoard (rawFire + BWMAX + 1)
@@ -638,6 +644,22 @@ Worse (int a, int b)
     default: return 1; // a >= 0, so b must be < 0 and can always do something a ranging move cannot do
   }
   return 0;
+}
+
+#if 0
+int
+Lance (signed char *r)
+{ // File-bound forward slider
+  int i;
+  for(i=1; i<4; i++) if(r[i] || r[i+4]) return 0;
+  return r[0] == X;
+}
+#endif
+int
+EasyProm (signed char *r)
+{
+  int i;
+  return r[0] == X || r[1] == X || r[7] == X;
 }
 
 int
@@ -723,9 +745,12 @@ AddPiece (int stm, PieceDesc *list)
   }
   key = (stm == WHITE ? &list->whiteKey : &list->blackKey);
   if(!*key) *key = ~(myRandom()*myRandom());
+  p[i].promoGain = EasyProm(list->range); // flag easy promotion based on white view
   p[i].pieceKey = *key;
   p[i].promoFlag = 0;
+  p[i].bulk = list->bulk;
   p[i].mobWeight = v > 600 ? 0 : v >= 400 ? 1 : v >= 300 ? 2 : v > 150 ? 3 : v >= 100 ? 2 : 0;
+//  if(Lance(list->range)) p[i].mobWeight = 5, p[i].pst = 0; // clear path but don't move forward
   for(j=stm+2; j<= last[stm]; j+=2) {
     if(p[j].promo >= i) p[j].promo += 2;
   }
@@ -792,8 +817,24 @@ SetUp(char *array, int var)
     n <<= 1;
   }
   for(i=0; i<BH; i++) for(j=0; j<BH; j++) board[BW*i+j] = EMPTY;
-  for(i=WHITE+2; i<=last[WHITE]; i+=2) board[p[i].pos] = i;
-  for(i=BLACK+2; i<=last[BLACK]; i+=2) board[p[i].pos] = i;
+  for(i=WHITE+2; i<=last[WHITE]; i+=2) if(p[i].pos != ABSENT) {
+    if(p[i].promoGain && (j = p[i].promo) > 0)
+      p[i].promoGain = (p[j].value - p[i].value - 30)*1.25, p[i].value = p[j].value - 30;
+    else p[i].promoGain = 0;
+    board[p[i].pos] = i;
+    rootEval += p[i].value + PST[p[i].pst + p[i].pos];
+    promoDelta += p[i].promoGain;
+    filling += p[i].bulk;
+  } else p[i].promoGain = 0;
+  for(i=BLACK+2; i<=last[BLACK]; i+=2) if(p[i].pos != ABSENT) {
+    if(p[i].promoGain && (j = p[i].promo) > 0)
+      p[i].promoGain = (p[j].value - p[i].value - 30)*1.25, p[i].value = p[j].value - 30;
+    else p[i].promoGain = 0;
+    board[p[i].pos] = i;
+    rootEval -= p[i].value + PST[p[i].pst + p[i].pos];
+    promoDelta -= p[i].promoGain;
+    filling += p[i].bulk;
+  } else p[i].promoGain = 0;
   StackMultis(WHITE);
   StackMultis(BLACK);
   stm = WHITE; xstm = BLACK;
@@ -844,10 +885,10 @@ Init (int var)
   for(i=0; i<2*BSIZE; i++) {
     distance[i] = 0;
   }
-  for(i=0; i<8; i++)
-    for(j=1; j<BH; j++)
-      dist[j * kStep[i]] = j;
-  if(currentVariant == V_TENJIKU)
+//  for(i=0; i<8; i++)
+//    for(j=1; j<BH; j++)
+//      dist[j * kStep[i]] = j;
+//  if(currentVariant == V_TENJIKU)
     for(i=1-BH; i<BH; i++) for(j=1-BH; j<BH; j++) dist[BW*i+j] = abs(i) > abs(j) ? abs(i) : abs(j);
 
   // hash key tables
@@ -876,6 +917,7 @@ Init (int var)
                     + 2*(i==zone || i==BH-zone-1);
     PST[BH*BW+s] = d/6;
     PST[BH*BW+BH+s] = d/12;
+    PST[2*BH*BW+s] = j < 3 || j > BH-4 ? (i < 3 ? 5 : i == 3 ? 2 : i == 4 ? 1 : 0) : 0;
   }
 
   p[EDGE].qval = 5; // tenjiku jump-capturer sentinel
@@ -890,6 +932,20 @@ PSTest ()
     int piece = board[s];
     if(!piece) continue;
     score = p[piece].value + PST[p[piece].pst + s];
+    if(piece & 1) tot += score; else tot -= score;
+  }
+  return tot;
+}
+
+int
+Dtest ()
+{
+  int r, f, score, tot=0;
+  for(r=0; r<BH; r++) for(f=0; f<BH; f++) {
+    int s = BW*r+f;
+    int piece = board[s];
+    if(!piece) continue;
+    score = p[piece].promoGain;
     if(piece & 1) tot += score; else tot -= score;
   }
   return tot;
@@ -1326,6 +1382,8 @@ MakeMove(Move m, UndoInfo *u)
   u->savKeyL = hashKeyL;
   u->savKeyH = hashKeyH;
   u->epVictim[0] = EMPTY;
+  u->saveDelta = promoDelta;
+  u->filling = filling;
 
   if(p[u->piece].promoFlag & LAST_RANK) cnt50 = 0; // forward piece: move is irreversible
   // TODO: put in some test for forward moves of non-backward pieces?
@@ -1364,6 +1422,10 @@ MakeMove(Move m, UndoInfo *u)
     u->booty += p[u->epVictim[0]].value + PST[p[u->epVictim[0]].pst + u->epSquare];
     u->gain  += p[u->epVictim[1]].value;
     u->gain  += p[u->epVictim[0]].value;
+    promoDelta += p[u->epVictim[0]].promoGain;
+    promoDelta += p[u->epVictim[1]].promoGain;
+    filling  -= p[u->epVictim[0]].bulk;
+    filling  -= p[u->epVictim[1]].bulk;
     hashKeyL ^= p[u->epVictim[0]].pieceKey * squareKey[u->epSquare];
     hashKeyH ^= p[u->epVictim[0]].pieceKey * squareKey[u->epSquare+BH];
     hashKeyL ^= p[u->epVictim[1]].pieceKey * squareKey[u->ep2Square];
@@ -1389,6 +1451,8 @@ MakeMove(Move m, UndoInfo *u)
 	  p[burnVictim].pos = ABSENT;
 	  u->booty += p[burnVictim].value + PST[p[burnVictim].pst + x];
 	  u->gain  += p[burnVictim].value;
+	  promoDelta += p[burnVictim].promoGain;
+	  filling  -= p[burnVictim].bulk;
 	  hashKeyL ^= p[burnVictim].pieceKey * squareKey[x];
 	  hashKeyH ^= p[burnVictim].pieceKey * squareKey[x + BH];
 	  cnt50 = 0; // actually burning something makes the move irreversible
@@ -1401,6 +1465,8 @@ MakeMove(Move m, UndoInfo *u)
 
   u->victim = board[u->to];
   p[u->victim].pos = ABSENT;
+  filling += p[u->new].bulk - p[u->piece].bulk - p[u->victim].bulk;
+  promoDelta += p[u->new].promoGain - p[u->piece].promoGain + p[u->victim].promoGain;
   u->booty += p[u->victim].value + PST[p[u->victim].pst + u->to];
   u->gain  += p[u->victim].value;
   if(u->victim != EMPTY) {
@@ -1410,6 +1476,7 @@ MakeMove(Move m, UndoInfo *u)
 
   p[u->new].pos = u->to;
   board[u->to] = u->new;
+  promoDelta = -promoDelta;
 
   hashKeyL ^= p[u->new].pieceKey * squareKey[u->to]
            ^  p[u->piece].pieceKey * squareKey[u->from]
@@ -1456,6 +1523,8 @@ UnMake(UndoInfo *u)
   cnt50 = u->revMoveCount;
   hashKeyL = u->savKeyL;
   hashKeyH = u->savKeyH;
+  filling  = u->filling;
+  promoDelta = u->saveDelta;
 }
 	
 void
@@ -1582,9 +1651,22 @@ GenCapts(int sqr, int victimValue)
 }
 
 int
-Evaluate ()
+Evaluate (int difEval)
 {
-  return (stm ? mobilityScore : -mobilityScore);
+  int wLion, bLion, score=mobilityScore;
+
+#ifdef LIONTRAP
+#define lionTrap (PST + 2*BH*BW)
+  // penalty for Lion in enemy corner, when enemy Lion is nearby
+  if(p[WHITE+2].value == 10*LVAL && (wLion = p[WHITE+2].pos) != ABSENT)
+    if(p[BLACK+2].value == 10*LVAL && (bLion = p[BLACK+2].pos) != ABSENT) { // both have a Lion
+      static int distFac[36] = { 0, 0, 10, 9, 8, 7, 5, 3, 1 };
+      score -= ( (1+9*!attacks[2*wLion+WHITE]) * lionTrap[BW*(BH-1)+BH-1-wLion]
+               - (1+9*!attacks[2*bLion+BLACK]) * lionTrap[bLion] ) * distFac[dist[wLion - bLion]];
+  }
+#endif
+
+  return difEval - (filling*filling*promoDelta >> 16) + (stm ? score : -score);
 }
 
 inline void
@@ -1637,7 +1719,7 @@ if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("search(%d) {%d,%d} eval=
   }
 //printf("King safe\n");fflush(stdout);
   // EVALUATION & WINDOW SHIFT
-  curEval = difEval + Evaluate();
+  curEval = Evaluate(difEval);
   alpha -= (alpha < curEval);
   beta  -= (beta <= curEval);
 
@@ -1649,7 +1731,8 @@ if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("search(%d) {%d,%d} eval=
   iterDep = -(depth == 0); tb.fireMask = phase = 0;
 
 #ifdef HASH
-  index = (hashKeyL ^ 327*stm) & hashMask; nr = (hashKeyL >> 30) & 3; hit = -1;
+  index = (hashKeyL ^ 327*stm ^ oldPromo*(63121 + promoSuppress)) & hashMask;
+  nr = (hashKeyL >> 30) & 3; hit = -1;
   if(hashTable[index].lock[nr] == hashKeyH) hit = nr; else
   if(hashTable[index].lock[4]  == hashKeyH) hit = 4;
 if(PATH) printf("# probe hash index=%x hit=%d\n", index, hit),fflush(stdout);
@@ -1882,7 +1965,8 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d  (%d)\n", level, depth, iterDep
 	  bestMoveNr = firstMove;
 	  if(score >= beta) { // beta cutoff
 #ifdef KILLERS
-	    if(iterDep == depth && move != killer[level][0]) {
+	    if(iterDep == depth && move != killer[level][0]
+		 && (tb.victim == EMPTY && (move & SQUARE) < SPECIAL)) {
 	      // update killer
 	      killer[level][1] = killer[level][0]; killer[level][0] = move;
 	    }
@@ -1908,7 +1992,7 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d  (%d)\n", level, depth, iterDep
 	printf("%d %d %d %d", iterDep-QSdepth, bestScore, lastRootIter/10, nodes);
         if(ponderMove) printf(" (%s)", MoveToText(ponderMove, 0));
 	for(i=0; pv[i]; i++) printf(" %s", MoveToText(pv[i], 0));
-        if(iterDep == 1) printf(" { root eval = %4.2f dif = %4.2f; abs = %4.2f}", curEval/100., difEval/100., PSTest()/100.);
+        if(iterDep == QSdepth+1) printf(" { root eval = %4.2f dif = %4.2f; abs = %4.2f f=%d D=%4.2f/%4.2f}", curEval/100., difEval/100., PSTest()/100., filling, promoDelta/100., Dtest()/100.);
 	printf("\n");
         fflush(stdout);
       }
@@ -1943,7 +2027,7 @@ pplist()
 {
   int i, j;
   for(i=0; i<182; i++) {
-	printf("%3d. %3d %3d %4d   %02x %d  ", i, p[i].value, p[i].promo, p[i].pos, p[i].promoFlag&255, p[i].qval);
+	printf("%3d. %3d %3d %4d   %02x %d %x %3d ", i, p[i].value, p[i].promo, p[i].pos, p[i].promoFlag&255, p[i].qval, p[i].bulk, p[i].promoGain);
 	for(j=0; j<8; j++) printf("  %2d", p[i].range[j]);
 	if(i<2 || i>11) printf("\n"); else printf("  %02x\n", fireFlags[i-2]&255);
   }
@@ -2105,9 +2189,9 @@ Setup2 (char *fen)
     if(q = strchr(fen, ' ')) stm = (q[1] == 'b' ? BLACK : WHITE); // fen contains color field
     if(strchr(fen, '.') || strchr(fen, ':')) array = fen; else array = Convert(fen);
   }
+  rootEval = promoDelta = filling = cnt50 = moveNr = 0;
   SetUp(array, currentVariant);
   sup0 = sup1 = sup2 = ABSENT;
-  rootEval = cnt50 = moveNr = 0;
   hashKeyH = hashKeyL = 87620895*currentVariant;
   return stm;
 }
