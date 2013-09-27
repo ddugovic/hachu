@@ -11,7 +11,7 @@
 // promotions by pieces with Lion power stepping in & out the zone in same turn
 // promotion on capture
 
-#define VERSION "0.12n"
+#define VERSION "0.13"
 
 #define PATH level==0 || path[0] == 0x848f1 &&  (level==1 /*|| path[1] == 0x3f081 && (level == 2 || path[2] == 0x6f0ac && (level == 3 || path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5))))*/)
 //define PATH 0
@@ -19,6 +19,7 @@
 #define HASH
 #define KILLERS
 #define NULLMOVE
+#define CHECKEXT
 #define LIONTRAP
 #define XKINGSAFETY
 
@@ -1715,7 +1716,7 @@ void TerminationCheck();
 int
 Search (int alpha, int beta, int difEval, int depth, int oldPromo, int promoSuppress, int threshold)
 {
-  int i, j, k, phase, king, nextVictim, to, defer, autoFail=0;
+  int i, j, k, phase, king, nextVictim, to, defer, autoFail=0, inCheck = 0, late=INF;
   int firstMove, oldMSP = msp, curMove, sorted, bad, dubious, bestMoveNr;
   int resDep, iterDep, ext;
   int myPV = pvPtr;
@@ -1729,12 +1730,20 @@ if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("search(%d) {%d,%d} eval=
   xstm = stm ^ WHITE;
 //printf("map made\n");fflush(stdout);
 
-  // TSUME filter
-  if(tsume && tsume & stm+1) {
+  // in-check test and TSUME filter
+  {
     k = p[king=royal[stm]].pos;
-//    if( k == ABSENT) k = p[king + 2].pos;
-    if( k != ABSENT && !attacks[2*k + xstm]) {
-      retDep = 60; return INF; // we win when not in check
+    if( k == ABSENT) k = p[king + 2].pos;
+    else if(p[king + 2].pos != ABSENT) k = ABSENT; // two kings is no king...
+    if( k != ABSENT) { // check is possible
+      if(!attacks[2*k + xstm]) {
+	if(tsume && tsume & stm+1) {
+	  retDep = 60; return INF; // we win when not in check
+        }
+      }
+#ifdef CHECKEXT
+      else if(depth >= QSdepth) inCheck = 1, depth++;
+#endif
     }
   }
 
@@ -1809,12 +1818,12 @@ if(PATH)printf("new moves, phase=%d\n", phase);
 	switch(phase) {
 	  case 0: // null move
 #ifdef NULLMOVE
-	    if(depth > QSdepth && curEval >= beta) {
+	    if(depth > QSdepth && curEval >= beta && !inCheck) {
               int nullDep = depth - 3;
 	      stm ^= WHITE;
 	      score = -Search(-beta, 1-beta, -difEval, nullDep<QSdepth ? QSdepth : nullDep, promoSuppress & SQUARE, ABSENT, INF);
 	      xstm = stm; stm ^= WHITE;
-	      if(score >= beta) { msp = oldMSP; retDep += 3; return score + (score < curEval); }
+	      if(score >= beta) { msp = oldMSP; retDep += 3; pvPtr = myPV; return score + (score < curEval); }
 	    }
 #endif
 	    if(tenFlag) FireSet(&tb); // in tenjiku we must identify opposing Fire Demons to perform any moves
@@ -1883,7 +1892,10 @@ if(PATH) printf("# autofail end (%d-%d)\n", firstMove, msp);
 	      for(i=curMove; i<msp; i++) if(moveStack[i] == h) { moveStack[i] = moveStack[j]; moveStack[j++] = h; break; }
 	      h = killer[level][1];
 	      for(i=curMove; i<msp; i++) if(moveStack[i] == h) { moveStack[i] = moveStack[j]; moveStack[j++] = h; break; }
+	      late = j;
 	    }
+#else
+	    late = j;
 #endif
 	    phase = 7;
 	    sorted = msp; // do not sort noncapts
@@ -2052,7 +2064,7 @@ leave:
   msp = oldMSP; // pop move list
   pvPtr = myPV; // pop PV
   retMove = bestMoveNr ? moveStack[bestMoveNr] : 0;
-  retDep = resDep;
+  retDep = resDep - inCheck;
 if(PATH) printf("return %d: %d %d (t=%d s=%d lim=%d)\n", depth, bestScore, curEval, GetTickCount(), startTime, tlim1),fflush(stdout);
   return bestScore + (bestScore < curEval);
 }
