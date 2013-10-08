@@ -12,8 +12,8 @@
 
 #define VERSION "0.16 k+ky"
 
-#define PATH level==0 /*|| path[0] == 0x3490a &&  (level==1 || path[1] == 0x285b3 && (level == 2 || path[2] == 0x8710f && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5)))))*/
-//define PATH 0
+//define PATH level==0 /*|| path[0] == 0x3490a &&  (level==1 || path[1] == 0x285b3 && (level == 2 || path[2] == 0x8710f && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5)))))*/
+#define PATH 0
 
 #define HASH
 #define KILLERS
@@ -71,7 +71,7 @@
 #define BSIZE BWMAX*BHMAX
 #define ZONE  zone
 
-#define ONE (currentVariant == V_SHO || currentVariant == V_CHESS || currentVariant == V_SHATRANJ || currentVariant == V_MAKRUK)
+#define ONE (currentVariant == V_SHO || currentVariant == V_CHESS || currentVariant == V_SHATRANJ || currentVariant == V_MAKRUK || currentVariant == V_LION)
 
 #define BLACK      0
 #define WHITE      1
@@ -378,6 +378,17 @@ PieceDesc chessPieces[] = {
   { NULL }  // sentinel
 };
 
+PieceDesc lionPieces[] = {
+  {"LN","", LVAL, { L,L,L,L,L,L,L,L } },
+  {"Q", "",  600, { X,X,X,X,X,X,X,X } },
+  {"R", "",  300, { X,0,X,0,X,0,X,0 } },
+  {"K", "",  280, { 1,1,1,1,1,1,1,1 } },
+  {"B", "",  190, { 0,X,0,X,0,X,0,X } },
+  {"N", "",  180, { N,N,N,N,N,N,N,N } },
+  {"P", "Q",  50, { M,C,0,0,0,0,0,C } },
+  { NULL }  // sentinel
+};
+
 PieceDesc shatranjPieces[] = {
   {"FK", "", 150, { 0,1,0,1,0,1,0,1 } },
   {"R", "",  500, { X,0,X,0,X,0,X,0 } },
@@ -411,6 +422,7 @@ char tenArray[] = "LN:FLICSGK:DEGSCI:FLNL/:RV.:CS:CS.:BT:KN:LN:FK:PH:BT.:CS:CS.:
 		  ":ss:vsb:dh:dk:wb:fi:fe:lh:fi:wb:dk:dhb:vs:ss/:rv.:cs:cs.:bt:ph:fk:ln:kn:bt.:cs:cs.:rv/ln:flicsg:dekgsci:flnl";
 char shoArray[] = "LNSGKGSNL/.B..:DE..R./PPPPPPPPP/........./........./........./ppppppppp/.r..:de..b./lnsgkgsnl";
 char chessArray[] = "RNBQKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnbqkbnr";
+char lionArray[]  = "R:LNBQKBNR/PPPPPPPP/......../......../......../......../pppppppp/r:lnbqkbnr";
 char shatArray[]= "RNBK:FKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnbk:fkbnr";
 char thaiArray[]= "RNSK:SMSNR/......../PPPPPPPP/......../......../pppppppp/......../rnsk:smsnr";
 
@@ -420,7 +432,7 @@ typedef struct {
   char *array; // initial position
 } VariantDesc;
 
-typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_TENJIKU, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_SHATRANJ, V_MAKRUK } Variant;
+typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_TENJIKU, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_SHATRANJ, V_MAKRUK, V_LION, V_NUMBER } Variant;
 
 VariantDesc variants[] = {
   { 16,  8,  8, 1, V_CHESS,  "normal", chessArray }, // FIDE
@@ -430,6 +442,7 @@ VariantDesc variants[] = {
   { 32, 16, 16, 5, V_TENJIKU, "tenjiku", tenArray }, // Tenjiku
   { 16,  8,  8, 1, V_SHATRANJ,"shatranj",shatArray}, // Shatranj
   { 16,  8,  8, 3, V_MAKRUK,  "makruk",  thaiArray}, // Makruk
+  { 16,  8,  8, 1, V_LION,    "lion",    lionArray}, // Mighty Lion
 
 //  { 0, 0, 0, 0, 0 }, // sentinel
   { 34, 17, 17, 0, V_DADA,    "dada",    chuArray }, // Dai Dai
@@ -620,6 +633,8 @@ LookUp (char *name, int var)
       return ListLookUp(name, shatranjPieces);
     case V_MAKRUK: // Makruk
       return ListLookUp(name, makrukPieces);
+    case V_LION: // Mighty Lion
+      return ListLookUp(name, lionPieces);
   }
   return NULL;
 }
@@ -879,10 +894,10 @@ Init (int var)
   zone    = variants[var].zoneDepth;
   array   = variants[var].array;
   bsize = bWidth*bHeight;
-  chuFlag = (currentVariant == V_CHU);
+  chuFlag = (currentVariant == V_CHU || currentVariant == V_LION);
   tenFlag = (currentVariant == V_TENJIKU);
-  chessFlag = (currentVariant == V_CHESS);
-  repDraws  = (currentVariant == V_CHESS || currentVariant == V_SHATRANJ || currentVariant == V_MAKRUK);
+  chessFlag = (currentVariant == V_CHESS || currentVariant == V_LION);
+  repDraws  = (currentVariant == V_CHESS || currentVariant == V_SHATRANJ || currentVariant == V_MAKRUK || currentVariant == V_LION);
   ll = 0; lr = bHeight - 1; ul = (bHeight - 1)*bWidth; ur = ul + bHeight - 1;
 
   for(i= -1; i<9; i++) { // board steps in linear coordinates
@@ -2178,7 +2193,7 @@ UnMake2 (MOVE move)
   sup2 = sup1; sup1 = sup0;
 }
 
-char fenNames[] = "RV....DKDEFL..DHGB......SMLNKN..FK....BT..VM..PH...."; // pairs of char
+char fenNames[] = "RV....DKDEFL..DHGB......SMLNKN..FK....BT..VM..PH..LN"; // pairs of char
 char fenPromo[] = "WLDHSMSECPB R HFDE....WHFB..LNG ..DKVMFS..FO..FK...."; // pairs of char
 
 char *
@@ -2198,10 +2213,11 @@ Convert (char *fen)
     if(n=atoi(fen)) fen++; // digits read
     if(n > 9) fen++; // double digit
     while(n-- > 0) *p++ = '.'; // expand to empty squares
+    if(currentVariant == V_LION && (*fen == 'L' || *fen == 'l')) *fen += 'Z' - 'L'; // L in Mighty-Lion Chess changed in Z for Lion
     if(isalpha(*fen)) {
       char *table = fenNames;
       n = *fen > 'Z' ? 'a' - 'A' : 0;
-      if((currentVariant == V_CHESS || currentVariant == V_SHATRANJ ||
+      if((currentVariant == V_CHESS || currentVariant == V_SHATRANJ || currentVariant == V_LION ||
           currentVariant == V_MAKRUK || currentVariant == V_SHO) && *fen - n == 'N' // In Chess N is Knight, not Lion
            || table[2* (*fen - 'A' - n)] == '.') *p++ = *fen; else {
         *p++ = ':';
@@ -2597,7 +2613,7 @@ pboard(board);
         }
         if(!strcmp(command, "protover")){
           printf("feature ping=1 setboard=1 colors=0 usermove=1 memory=1 debug=1 sigint=0 sigterm=0\n");
-          printf("feature variants=\"normal,shatranj,makruk,chu,dai,tenjiku,12x12+0_fairy,9x9+0_shogi\"\n");
+          printf("feature variants=\"normal,shatranj,makruk,chu,dai,tenjiku,12x12+0_fairy,9x9+0_shogi,lion\"\n");
           printf("feature myname=\"HaChu " VERSION "\" highlight=1\n");
           printf("feature option=\"Full analysis PV -check 1\"\n"); // example of an engine-defined option
           printf("feature option=\"Allow repeats -check 0\"\n");
@@ -2671,7 +2687,7 @@ pboard(board);
           continue;
         }
         if(!strcmp(command, "variant")) {
-          for(i=0; i<7; i++) {
+          for(i=0; i<8; i++) {
             sscanf(inBuf+8, "%s", command);
             if(!strcmp(variants[i].name, command)) {
               Init(curVarNr = i); stm = Setup2(NULL); break;
