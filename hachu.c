@@ -1242,6 +1242,8 @@ MakeMove(Move m, UndoInfo *u)
 
   if(p[u->piece].promoFlag & LAST_RANK) cnt50 = 0; // forward piece: move is irreversible
   // TODO: put in some test for forward moves of non-backward pieces?
+//		int n = board[promoSuppress-1];
+//		if( n != EMPTY && (n&TYPE) == xstm && p[n].value == 8 ) NewNonCapt(promoSuppress-1, 16, 0);
 
   if(p[u->piece].value == FVAL) { // move with Fire Demon
     int i, f=~fireFlags[u->piece-2];
@@ -1839,15 +1841,18 @@ if(PATH) printf("%d:%2d:%2d msp=%d\n",level,depth,iterDep,msp);
 if(PATH) printf("captures on %d generated, msp=%d, group=%d, threshold=%d\n", nextVictim, msp, group, threshold);
 	      goto extractMove; // in auto-fail phase, only search if they might auto-fail-hi
 	    }
+	    if(chessFlag && promoSuppress != ABSENT) { // e.p. rights. Create e.p. captures as Lion moves
+		int n = board[promoSuppress-1], old = msp; // a-side neighbor of pushed pawn
+		if( n != EMPTY && (n&TYPE) == stm && p[n].value == 80 ) NewCapture(promoSuppress-1, SPECIAL + 20 - 4*stm, 0);
+		n = board[promoSuppress+1];      // h-side neighbor of pushed pawn
+		if( n != EMPTY && (n&TYPE) == stm && p[n].value == 80 ) NewCapture(promoSuppress+1, SPECIAL + 52 - 4*stm, 0);
+		if(msp != old) goto extractMove; // one or more e.p. capture were generated
+	    }
 if(PATH) printf("# autofail=%d\n", autoFail);
 	    if(autoFail) { // non-captures cannot auto-fail; flush queued captures first
 if(PATH) printf("# autofail end (%d-%d)\n", firstMove, msp);
 	      autoFail = 0; curMove = firstMove - 1; continue; // release stashed moves for search
 	    }
-//	    if(currentVariant == V_CHESS && promoSuppress != ABSENT) { // e.p.
-//		int n = board[promoSuppress-1];
-//		if( n != EMPTY && (n&TYPE) == xstm && p[n].value == 8 ) 
-//	    }
 	    phase = 4; // out of victims: all captures generated
 	  case 4: // dubious captures
 #if 0
@@ -2337,6 +2342,11 @@ ParseMove (char *moveText)
     for(j=0; j<8; j++) if(e + kStep[j] == t) break;
     if(j >= 8) return INVALID; // this rejects Lion Dog 1+2 moves!
     t2 = SPECIAL + 8*i + j;
+  } else if(chessFlag && board[f] != EMPTY && p[board[f]].value == 80 && board[t] == EMPTY) { // Pawn to empty, could be e.p.
+      if(t == f + BW + 1) t2 = SPECIAL + 16; else
+      if(t == f + BW - 1) t2 = SPECIAL + 48; else
+      if(t == f - BW + 1) t2 = SPECIAL + 20; else
+      if(t == f - BW - 1) t2 = SPECIAL + 52; // fake double-move
   }
   ret = f<<SQLEN | t2;
   if(*moveText != '\n' && *moveText != '=') ret |= PROMOTE;
