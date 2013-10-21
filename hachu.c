@@ -432,11 +432,12 @@ typedef struct {
   char *array; // initial position
 } VariantDesc;
 
-typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_TENJIKU, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_SHATRANJ, V_MAKRUK, V_LION, V_NUMBER } Variant;
+typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_TENJIKU, V_SHATRANJ, V_MAKRUK, V_LION } Variant;
 
 VariantDesc variants[] = {
   { 16,  8,  8, 1, V_CHESS,  "normal", chessArray }, // FIDE
   { 18,  9,  9, 3, V_SHO, "9x9+0_shogi", shoArray }, // Sho
+  { 18,  9,  9, 3, V_SHO,     "sho",     shoArray }, // Sho duplicat
   { 24, 12, 12, 4, V_CHU,     "chu",     chuArray }, // Chu
   { 30, 15, 15, 5, V_DAI,     "dai",     daiArray }, // Dai
   { 32, 16, 16, 5, V_TENJIKU, "tenjiku", tenArray }, // Tenjiku
@@ -444,7 +445,7 @@ VariantDesc variants[] = {
   { 16,  8,  8, 3, V_MAKRUK,  "makruk",  thaiArray}, // Makruk
   { 16,  8,  8, 1, V_LION,    "lion",    lionArray}, // Mighty Lion
 
-//  { 0, 0, 0, 0, 0 }, // sentinel
+  { 0, 0, 0, 0, 0 }, // sentinel
   { 34, 17, 17, 0, V_DADA,    "dada",    chuArray }, // Dai Dai
   { 38, 19, 19, 0, V_MAKA,    "maka",    chuArray }, // Maka Dai Dai
   { 50, 25, 25, 0, V_TAI,     "tai",     chuArray }, // Tai
@@ -2612,8 +2613,9 @@ pboard(board);
           continue;
         }
         if(!strcmp(command, "protover")){
+          for(i=0; variants[i].boardWidth; i++)
+          printf("%s%s", (i ? "," : "feature variants=\""), variants[i].name); printf("\"\n");
           printf("feature ping=1 setboard=1 colors=0 usermove=1 memory=1 debug=1 sigint=0 sigterm=0\n");
-          printf("feature variants=\"normal,shatranj,makruk,chu,dai,tenjiku,12x12+0_fairy,9x9+0_shogi,lion\"\n");
           printf("feature myname=\"HaChu " VERSION "\" highlight=1\n");
           printf("feature option=\"Full analysis PV -check 1\"\n"); // example of an engine-defined option
           printf("feature option=\"Allow repeats -check 0\"\n");
@@ -2687,12 +2689,14 @@ pboard(board);
           continue;
         }
         if(!strcmp(command, "variant")) {
-          for(i=0; i<8; i++) {
+          for(i=0; variants[i].boardWidth; i++) {
             sscanf(inBuf+8, "%s", command);
             if(!strcmp(variants[i].name, command)) {
               Init(curVarNr = i); stm = Setup2(NULL); break;
             }
 	  }
+          if(currentVariant == V_SHO)
+            printf("setup (PNBRLSE..G.+++++++Kpnbrlse..g.+++++++k) 9x9+0_shogi lnsgkgsnl/1r2e2b1/ppppppppp/9/9/9/PPPPPPPPP/1B2E2R1/LNSGKGSNL w 0 1\n");
 	  repStack[199] = hashKeyH, checkStack[199] = 0;
           continue;
         }
