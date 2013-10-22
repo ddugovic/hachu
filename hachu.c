@@ -140,7 +140,7 @@ typedef struct {
 } UndoInfo;
 
 char *array, fenArray[4000], startPos[4000], *reason, checkStack[300];
-int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, stalemate, tsume, pvCuts, allowRep, entryProm;
+int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, stalemate, tsume, pvCuts, allowRep, entryProm, pVal;
 int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
 int retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
 int ll, lr, ul, ur; // corner squares
@@ -888,6 +888,7 @@ void
 Init (int var)
 {
   int i, j, k;
+  PieceDesc *pawn;
 
   currentVariant = variants[var].varNr;
   bWidth  = variants[var].boardWidth;
@@ -901,6 +902,7 @@ Init (int var)
   stalemate = (currentVariant == V_CHESS || currentVariant == V_MAKRUK || currentVariant == V_LION);
   repDraws  = (stalemate || currentVariant == V_SHATRANJ);
   ll = 0; lr = bHeight - 1; ul = (bHeight - 1)*bWidth; ur = ul + bHeight - 1;
+  pawn = LookUp("P", currentVariant); pVal = pawn ? pawn->value : 0; // get Pawn value
 
   for(i= -1; i<9; i++) { // board steps in linear coordinates
     kStep[i] = STEP(direction[i&7].x,   direction[i&7].y);       // King
@@ -1850,9 +1852,9 @@ if(PATH) printf("# autofail end (%d-%d)\n", firstMove, msp);
 	    phase = 4; // out of victims: all captures generated
 	    if(chessFlag && promoSuppress != ABSENT) { // e.p. rights. Create e.p. captures as Lion moves
 		int n = board[promoSuppress-1], old = msp; // a-side neighbor of pushed pawn
-		if( n != EMPTY && (n&TYPE) == stm && p[n].value == 80 ) NewCapture(promoSuppress-1, SPECIAL + 20 - 4*stm, 0);
+		if( n != EMPTY && (n&TYPE) == stm && p[n].value == pVal ) NewCapture(promoSuppress-1, SPECIAL + 20 - 4*stm, 0);
 		n = board[promoSuppress+1];      // h-side neighbor of pushed pawn
-		if( n != EMPTY && (n&TYPE) == stm && p[n].value == 80 ) NewCapture(promoSuppress+1, SPECIAL + 52 - 4*stm, 0);
+		if( n != EMPTY && (n&TYPE) == stm && p[n].value == pVal ) NewCapture(promoSuppress+1, SPECIAL + 52 - 4*stm, 0);
 		if(msp != old) goto extractMove; // one or more e.p. capture were generated
 	    }
 	  case 4: // dubious captures
@@ -2344,7 +2346,7 @@ ParseMove (char *moveText)
     for(j=0; j<8; j++) if(e + kStep[j] == t) break;
     if(j >= 8) return INVALID; // this rejects Lion Dog 1+2 moves!
     t2 = SPECIAL + 8*i + j;
-  } else if(chessFlag && board[f] != EMPTY && p[board[f]].value == 80 && board[t] == EMPTY) { // Pawn to empty, could be e.p.
+  } else if(chessFlag && board[f] != EMPTY && p[board[f]].value == pVal && board[t] == EMPTY) { // Pawn to empty, could be e.p.
       if(t == f + BW + 1) t2 = SPECIAL + 16; else
       if(t == f + BW - 1) t2 = SPECIAL + 48; else
       if(t == f - BW + 1) t2 = SPECIAL + 20; else
@@ -2594,7 +2596,7 @@ pboard(board);
             PrintResult(stm, score);
           } else {
             MOVE f, pMove = move;
-            if((move & SQUARE) >= SPECIAL && p[board[f = move>>SQLEN & SQUARE]].value == 80) { // e.p. capture
+            if((move & SQUARE) >= SPECIAL && p[board[f = move>>SQLEN & SQUARE]].value == pVal) { // e.p. capture
               pMove = move & ~SQUARE | f + toList[(move & SQUARE) - SPECIAL]; // print as a single move
             }
             stm = MakeMove2(stm, move);  // assumes MakeMove returns new side to move
