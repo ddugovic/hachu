@@ -1841,6 +1841,12 @@ if(PATH) printf("%d:%2d:%2d msp=%d\n",level,depth,iterDep,msp);
 if(PATH) printf("captures on %d generated, msp=%d, group=%d, threshold=%d\n", nextVictim, msp, group, threshold);
 	      goto extractMove; // in auto-fail phase, only search if they might auto-fail-hi
 	    }
+if(PATH) printf("# autofail=%d\n", autoFail);
+	    if(autoFail) { // non-captures cannot auto-fail; flush queued captures first
+if(PATH) printf("# autofail end (%d-%d)\n", firstMove, msp);
+	      autoFail = 0; curMove = firstMove - 1; continue; // release stashed moves for search
+	    }
+	    phase = 4; // out of victims: all captures generated
 	    if(chessFlag && promoSuppress != ABSENT) { // e.p. rights. Create e.p. captures as Lion moves
 		int n = board[promoSuppress-1], old = msp; // a-side neighbor of pushed pawn
 		if( n != EMPTY && (n&TYPE) == stm && p[n].value == 80 ) NewCapture(promoSuppress-1, SPECIAL + 20 - 4*stm, 0);
@@ -1848,12 +1854,6 @@ if(PATH) printf("captures on %d generated, msp=%d, group=%d, threshold=%d\n", ne
 		if( n != EMPTY && (n&TYPE) == stm && p[n].value == 80 ) NewCapture(promoSuppress+1, SPECIAL + 52 - 4*stm, 0);
 		if(msp != old) goto extractMove; // one or more e.p. capture were generated
 	    }
-if(PATH) printf("# autofail=%d\n", autoFail);
-	    if(autoFail) { // non-captures cannot auto-fail; flush queued captures first
-if(PATH) printf("# autofail end (%d-%d)\n", firstMove, msp);
-	      autoFail = 0; curMove = firstMove - 1; continue; // release stashed moves for search
-	    }
-	    phase = 4; // out of victims: all captures generated
 	  case 4: // dubious captures
 #if 0
 	    while( dubious < framePtr + 250 ) // add dubious captures back to move stack
@@ -2591,9 +2591,13 @@ pboard(board);
             engineSide = NONE;          // so stop playing
             PrintResult(stm, score);
           } else {
+            MOVE f, pMove = move;
+            if((move & SQUARE) >= SPECIAL && p[board[f = move>>SQLEN & SQUARE]].value == 80) { // e.p. capture
+              pMove = move & ~SQUARE | f + toList[(move & SQUARE) - SPECIAL]; // print as a single move
+            }
             stm = MakeMove2(stm, move);  // assumes MakeMove returns new side to move
             gameMove[moveNr++] = move;   // remember game
-            printf("move %s\n", MoveToText(move, 1));
+            printf("move %s\n", MoveToText(pMove, 1));
             listEnd = 0;
             continue;                    // go check if we should ponder
           }
