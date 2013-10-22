@@ -369,23 +369,23 @@ PieceDesc taikyokuPieces[] = {
 };
 
 PieceDesc chessPieces[] = {
-  {"Q", "",  950, { X,X,X,X,X,X,X,X } },
+  {"FK", "", 950, { X,X,X,X,X,X,X,X } },
   {"R", "",  500, { X,0,X,0,X,0,X,0 } },
   {"B", "",  320, { 0,X,0,X,0,X,0,X } },
   {"N", "",  300, { N,N,N,N,N,N,N,N } },
   {"K", "",  280, { 1,1,1,1,1,1,1,1 } },
-  {"P", "Q",  80, { M,C,0,0,0,0,0,C } },
+  {"P", "FK", 80, { M,C,0,0,0,0,0,C } },
   { NULL }  // sentinel
 };
 
 PieceDesc lionPieces[] = {
   {"LN","", LVAL, { L,L,L,L,L,L,L,L } },
-  {"Q", "",  600, { X,X,X,X,X,X,X,X } },
+  {"FK", "", 600, { X,X,X,X,X,X,X,X } },
   {"R", "",  300, { X,0,X,0,X,0,X,0 } },
   {"K", "",  280, { 1,1,1,1,1,1,1,1 } },
   {"B", "",  190, { 0,X,0,X,0,X,0,X } },
   {"N", "",  180, { N,N,N,N,N,N,N,N } },
-  {"P", "Q",  50, { M,C,0,0,0,0,0,C } },
+  {"P", "FK", 50, { M,C,0,0,0,0,0,C } },
   { NULL }  // sentinel
 };
 
@@ -421,8 +421,8 @@ char tenArray[] = "LN:FLICSGK:DEGSCI:FLNL/:RV.:CS:CS.:BT:KN:LN:FK:PH:BT.:CS:CS.:
 		  "....d......d..../pppppppppppppppp/:sm:vmr:hf:se:bg:rg:vg:gg:rg:bg:se:hfr:vm:sm/"
 		  ":ss:vsb:dh:dk:wb:fi:fe:lh:fi:wb:dk:dhb:vs:ss/:rv.:cs:cs.:bt:ph:fk:ln:kn:bt.:cs:cs.:rv/ln:flicsg:dekgsci:flnl";
 char shoArray[] = "LNSGKGSNL/.B..:DE..R./PPPPPPPPP/........./........./........./ppppppppp/.r..:de..b./lnsgkgsnl";
-char chessArray[] = "RNBQKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnbqkbnr";
-char lionArray[]  = "R:LNBQKBNR/PPPPPPPP/......../......../......../......../pppppppp/r:lnbqkbnr";
+char chessArray[] = "RNB:FKKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnb:fkkbnr";
+char lionArray[]  = "R:LNB:FKKBNR/PPPPPPPP/......../......../......../......../pppppppp/r:lnb:fkkbnr";
 char shatArray[]= "RNBK:FKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnbk:fkbnr";
 char thaiArray[]= "RNSK:SMSNR/......../PPPPPPPP/......../......../pppppppp/......../rnsk:smsnr";
 
