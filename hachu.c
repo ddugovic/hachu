@@ -140,7 +140,7 @@ typedef struct {
 } UndoInfo;
 
 char *array, fenArray[4000], startPos[4000], *reason, checkStack[300];
-int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, tsume, pvCuts, allowRep, entryProm;
+int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, stalemate, tsume, pvCuts, allowRep, entryProm;
 int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
 int retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
 int ll, lr, ul, ur; // corner squares
@@ -898,7 +898,8 @@ Init (int var)
   chuFlag = (currentVariant == V_CHU || currentVariant == V_LION);
   tenFlag = (currentVariant == V_TENJIKU);
   chessFlag = (currentVariant == V_CHESS || currentVariant == V_LION);
-  repDraws  = (currentVariant == V_CHESS || currentVariant == V_SHATRANJ || currentVariant == V_MAKRUK || currentVariant == V_LION);
+  stalemate = (currentVariant == V_CHESS || currentVariant == V_MAKRUK || currentVariant == V_LION);
+  repDraws  = (stalemate || currentVariant == V_SHATRANJ);
   ll = 0; lr = bHeight - 1; ul = (bHeight - 1)*bWidth; ur = ul + bHeight - 1;
 
   for(i= -1; i<9; i++) { // board steps in linear coordinates
@@ -2042,6 +2043,7 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d  (%d)\n", level, depth, iterDep
     if(lmr && bestScore <= alpha && iterDep == depth)
       depth++, lmr--; // self-deepen on fail-low reply to late move by lowering reduction
 #endif
+    if(stalemate && bestScore == -INF && !inCheck) bestScore = 0; // stalemate
 #ifdef HASH
     // hash store
     hashTable[index].lock[hit]  = hashKeyH;
