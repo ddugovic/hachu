@@ -424,7 +424,7 @@ char shoArray[] = "LNSGKGSNL/.B..:DE..R./PPPPPPPPP/........./........./.........
 char chessArray[] = "RNB:FKKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnb:fkkbnr";
 char lionArray[]  = "R:LNB:FKKBNR/PPPPPPPP/......../......../......../......../pppppppp/r:lnb:fkkbnr";
 char shatArray[]= "RNBK:FKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnbk:fkbnr";
-char thaiArray[]= "RNSK:SMSNR/......../PPPPPPPP/......../......../pppppppp/......../rnsk:smsnr";
+char thaiArray[]= "RNSK:SMSNR/......../PPPPPPPP/......../......../pppppppp/......../rns:smksnr";
 
 typedef struct {
   int boardWidth, boardFiles, boardRanks, zoneDepth, varNr; // board sizes
