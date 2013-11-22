@@ -1,0 +1,28 @@
+;
+; additional settings for Sho Shogi
+;
+-variant shogi
+;
+; size overrides
+;
+-boardWidth 9
+-boardHeight 9
+-holdingsSize 0
+;
+; add Elephant to piece set
+;
+-pieceToCharTable "PNBRLSE..G.+++++++Kpnbrlse..g.+++++++k"
+;
+; provide initial position
+;
+-loadPositionFile "~~/themes/conf/sho.fen"
+;
+; must play with legality testing off, for +E and mate
+;
+-testLegality false
+;
+; redefine default engine
+;
+-fcp hachu
+-scp hachu
+

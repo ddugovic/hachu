@@ -4,17 +4,21 @@
 %:
 	dh $@ 
 
-override_dh_auto_build: hachu
+override_dh_auto_build: hachu hachu.6
 	:
 
 override_dh_auto_install:
 	install -m0755 -D hachu debian/tmp/usr/games/hachu
+	install -m0644 -D hachu.6 debian/tmp/usr/share/man/man6/hachu.6
 	dh_buildinfo
 override_dh_auto_clean:
-	rm -f hachu *.o
+	rm -f hachu hachu.6 *.o
 
 # replace lack of upstream Makefile
 %.o: %.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
-hachu: hachu_public.o
+hachu: hachu.o
 	$(CC) $(LDFLAGS) $< -o $@
+
+%.6: %.pod
+	pod2man --section=6 $< > $@

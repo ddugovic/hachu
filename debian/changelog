@@ -1,3 +1,16 @@
+hachu (0.17-1) experimental; urgency=low
+
+  * New upstream version from git.
+    * Document how to get most uptodate source in README.maint.
+    * Update build rules.
+    * Includes pod manpage, build-depend on perl for pod2man.
+  * Added more contents to debian/copyright: Upstream-Contact, Source as
+    git url.
+  * Add in extended description: note about some games being unfinished,
+    and about upcoming xboard-4.8.
+
+ -- Yann Dirson <dirson@debian.org>  Fri, 22 Nov 2013 22:33:11 +0100
+
 hachu (0.16-1) experimental; urgency=low
 
   * Initial release, from source sent by upstream via email.

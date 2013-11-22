@@ -1,6 +1,7 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: hachu
-Source: Sent by upstream in private email
+Upstream-Contact: H.G. Muller <h.g.muller@hccnet.nl>
+Source: http://hgm.nubati.net/git/hachu.git
 
 Files: *
 Copyright: 2013 H.G. Muller <h.g.muller@hccnet.nl> 

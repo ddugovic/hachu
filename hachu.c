@@ -1,20 +1,19 @@
-/***********************************************************************/
-/*                               HaChu                                 */
-/* A WinBoard engine for large (dropless) Shogi variants by H.G.Muller */
-/* The engine is based on incremental updating of an attack map and    */
-/* mobility scores, since the effort in this only grows proportional   */
-/* to board edge length, rather than board area.                       */
-/***********************************************************************/
+/**************************************************************************/
+/*                               HaChu                                    */
+/* A WinBoard engine for Chu Shogi (and some related games) by H.G.Muller */
+/**************************************************************************/
+/* This source code is released in the public domain                      */
+/**************************************************************************/
 
 // TODO:
 // in GenCapts we do not generate jumps of more than two squares yet
 // promotions by pieces with Lion power stepping in & out the zone in same turn
 // promotion on capture
 
-#define VERSION "0.16 k+ky"
+#define VERSION "0.17"
 
-#define PATH level==0 /*|| path[0] == 0x3490a &&  (level==1 || path[1] == 0x285b3 && (level == 2 || path[2] == 0x8710f && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5)))))*/
-//define PATH 0
+//define PATH level==0 /*|| path[0] == 0x3490a &&  (level==1 || path[1] == 0x285b3 && (level == 2 || path[2] == 0x8710f && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5)))))*/
+#define PATH 0
 
 #define HASH
 #define KILLERS
@@ -72,7 +71,7 @@
 #define BSIZE BWMAX*BHMAX
 #define ZONE  zone
 
-#define ONE (currentVariant == V_SHO || currentVariant == V_CHESS || currentVariant == V_SHATRANJ || currentVariant == V_MAKRUK)
+#define ONE (currentVariant == V_SHO || currentVariant == V_CHESS || currentVariant == V_SHATRANJ || currentVariant == V_MAKRUK || currentVariant == V_LION)
 
 #define BLACK      0
 #define WHITE      1
@@ -141,7 +140,7 @@ typedef struct {
 } UndoInfo;
 
 char *array, fenArray[4000], startPos[4000], *reason, checkStack[300];
-int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, tsume, pvCuts, allowRep, entryProm;
+int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, stalemate, tsume, pvCuts, allowRep, entryProm, pVal;
 int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
 int retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
 int ll, lr, ul, ur; // corner squares
@@ -370,12 +369,23 @@ PieceDesc taikyokuPieces[] = {
 };
 
 PieceDesc chessPieces[] = {
-  {"Q", "",  950, { X,X,X,X,X,X,X,X } },
+  {"FK", "", 950, { X,X,X,X,X,X,X,X } },
   {"R", "",  500, { X,0,X,0,X,0,X,0 } },
   {"B", "",  320, { 0,X,0,X,0,X,0,X } },
   {"N", "",  300, { N,N,N,N,N,N,N,N } },
   {"K", "",  280, { 1,1,1,1,1,1,1,1 } },
-  {"P", "Q",  80, { M,C,0,0,0,0,0,C } },
+  {"P", "FK", 80, { M,C,0,0,0,0,0,C } },
+  { NULL }  // sentinel
+};
+
+PieceDesc lionPieces[] = {
+  {"LN","", LVAL, { L,L,L,L,L,L,L,L } },
+  {"FK", "", 600, { X,X,X,X,X,X,X,X } },
+  {"R", "",  300, { X,0,X,0,X,0,X,0 } },
+  {"K", "",  280, { 1,1,1,1,1,1,1,1 } },
+  {"B", "",  190, { 0,X,0,X,0,X,0,X } },
+  {"N", "",  180, { N,N,N,N,N,N,N,N } },
+  {"P", "FK", 50, { M,C,0,0,0,0,0,C } },
   { NULL }  // sentinel
 };
 
@@ -411,9 +421,10 @@ char tenArray[] = "LN:FLICSGK:DEGSCI:FLNL/:RV.:CS:CS.:BT:KN:LN:FK:PH:BT.:CS:CS.:
 		  "....d......d..../pppppppppppppppp/:sm:vmr:hf:se:bg:rg:vg:gg:rg:bg:se:hfr:vm:sm/"
 		  ":ss:vsb:dh:dk:wb:fi:fe:lh:fi:wb:dk:dhb:vs:ss/:rv.:cs:cs.:bt:ph:fk:ln:kn:bt.:cs:cs.:rv/ln:flicsg:dekgsci:flnl";
 char shoArray[] = "LNSGKGSNL/.B..:DE..R./PPPPPPPPP/........./........./........./ppppppppp/.r..:de..b./lnsgkgsnl";
-char chessArray[] = "RNBQKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnbqkbnr";
+char chessArray[] = "RNB:FKKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnb:fkkbnr";
+char lionArray[]  = "R:LNB:FKKBNR/PPPPPPPP/......../......../......../......../pppppppp/r:lnb:fkkbnr";
 char shatArray[]= "RNBK:FKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnbk:fkbnr";
-char thaiArray[]= "RNSK:SMSNR/......../PPPPPPPP/......../......../pppppppp/......../rnsk:smsnr";
+char thaiArray[]= "RNSK:SMSNR/......../PPPPPPPP/......../......../pppppppp/......../rns:smksnr";
 
 typedef struct {
   int boardWidth, boardFiles, boardRanks, zoneDepth, varNr; // board sizes
@@ -421,18 +432,20 @@ typedef struct {
   char *array; // initial position
 } VariantDesc;
 
-typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_TENJIKU, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_SHATRANJ, V_MAKRUK } Variant;
+typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_TENJIKU, V_SHATRANJ, V_MAKRUK, V_LION } Variant;
 
 VariantDesc variants[] = {
   { 16,  8,  8, 1, V_CHESS,  "normal", chessArray }, // FIDE
   { 18,  9,  9, 3, V_SHO, "9x9+0_shogi", shoArray }, // Sho
+  { 18,  9,  9, 3, V_SHO,     "sho",     shoArray }, // Sho duplicat
   { 24, 12, 12, 4, V_CHU,     "chu",     chuArray }, // Chu
   { 30, 15, 15, 5, V_DAI,     "dai",     daiArray }, // Dai
   { 32, 16, 16, 5, V_TENJIKU, "tenjiku", tenArray }, // Tenjiku
   { 16,  8,  8, 1, V_SHATRANJ,"shatranj",shatArray}, // Shatranj
   { 16,  8,  8, 3, V_MAKRUK,  "makruk",  thaiArray}, // Makruk
+  { 16,  8,  8, 1, V_LION,    "lion",    lionArray}, // Mighty Lion
 
-//  { 0, 0, 0, 0, 0 }, // sentinel
+  { 0, 0, 0, 0, 0 }, // sentinel
   { 34, 17, 17, 0, V_DADA,    "dada",    chuArray }, // Dai Dai
   { 38, 19, 19, 0, V_MAKA,    "maka",    chuArray }, // Maka Dai Dai
   { 50, 25, 25, 0, V_TAI,     "tai",     chuArray }, // Tai
@@ -621,6 +634,8 @@ LookUp (char *name, int var)
       return ListLookUp(name, shatranjPieces);
     case V_MAKRUK: // Makruk
       return ListLookUp(name, makrukPieces);
+    case V_LION: // Mighty Lion
+      return ListLookUp(name, lionPieces);
   }
   return NULL;
 }
@@ -873,6 +888,7 @@ void
 Init (int var)
 {
   int i, j, k;
+  PieceDesc *pawn;
 
   currentVariant = variants[var].varNr;
   bWidth  = variants[var].boardWidth;
@@ -880,11 +896,13 @@ Init (int var)
   zone    = variants[var].zoneDepth;
   array   = variants[var].array;
   bsize = bWidth*bHeight;
-  chuFlag = (currentVariant == V_CHU);
+  chuFlag = (currentVariant == V_CHU || currentVariant == V_LION);
   tenFlag = (currentVariant == V_TENJIKU);
-  chessFlag = (currentVariant == V_CHESS);
-  repDraws  = (currentVariant == V_CHESS || currentVariant == V_SHATRANJ || currentVariant == V_MAKRUK);
+  chessFlag = (currentVariant == V_CHESS || currentVariant == V_LION);
+  stalemate = (currentVariant == V_CHESS || currentVariant == V_MAKRUK || currentVariant == V_LION);
+  repDraws  = (stalemate || currentVariant == V_SHATRANJ);
   ll = 0; lr = bHeight - 1; ul = (bHeight - 1)*bWidth; ur = ul + bHeight - 1;
+  pawn = LookUp("P", currentVariant); pVal = pawn ? pawn->value : 0; // get Pawn value
 
   for(i= -1; i<9; i++) { // board steps in linear coordinates
     kStep[i] = STEP(direction[i&7].x,   direction[i&7].y);       // King
@@ -1206,205 +1224,6 @@ MapFromScratch (int *map)
   mobilityScore -= MapOneColor(0, last[BLACK], map);
 }
 
-void
-Connect (int sqr, int piece, int dir)
-{ // scan to both sides along ray to elongate attacks from there, and remove our own attacks on there, if needed
-  int x, step = kStep[dir], r1 = p[piece].range[dir], r2 = p[piece].range[dir+4], r3, r4, piece1, piece2;
-  int d1, d2, r, y, c;
-
-  if((attacks[2*sqr] + attacks[2*sqr+1]) & attackMask[dir]) {         // there are incoming attack(s) from 'behind'
-    x = sqr;
-    while(board[x-=step] == EMPTY);                                   // in any case, scan to attacker, to see where / what it is
-    d1 = dist[x-sqr]; piece1 = board[x];
-    attacks[2*x + stm] -= -(d1 <= r2) & one[dir+4];                   // remove our attack on it if in-range
-    if((attacks[2*sqr] + attacks[2*sqr+1]) & attackMask[dir+4]) {     // there are also incoming attack(s) from 'ahead'
-
-      y = sqr;
-      while(board[y+=step] == EMPTY);                                 // also always scan to that one to see what it is
-      d2 = dist[y-sqr]; piece2 = board[y];
-      attacks[2*y+stm] -= -(d2 <= r1) & one[dir];                     // remove our attack on it if in-range
-      // we have two pieces now shooting at each other. See how far they get.
-      if(d1 + d2 <= (r3 = p[piece1].range[dir])) {                    // 1 hits 2
-	attacks[2*y + (piece1 & WHITE)] += one[dir];                  // count attack
-	UPDATE_MOBILITY(piece1, d2);
-      } else UPDATE_MOBILITY(piece1, r3 - d1);                        // does not connect, but could still gain mobility
-      if(d1 + d2 <= (r4 = p[piece2].range[dir+4])) {                  // 2 hits 1
-	attacks[2*x + (piece2 & WHITE)] += one[dir+4];                // count attack
-	UPDATE_MOBILITY(piece2, d1);
-      } else UPDATE_MOBILITY(piece2, r4 - d2);                        // does not connect, but could still gain mobility
-      // if r1 or r2<0, moves typically jump, and thus cannot be unblocked. Exceptions are FF and BS distant moves.
-      // test for d1+d2 > 2 && rN == F && d== 3 or rN == S
-      if(d1 <= 2) { // could be jump interactions
-	if(d1 == 2) {
-	  if(r2 <= J) attacks[2*x + stm] -= one[dir+4];
-	  if(r1 <= J) attacks[2*y + stm] -= one[dir];
-	} else { // d1 == 1
-	  if(r2 < J) attacks[2*x + stm] -= one[dir+4];
-	  if(r1 < J) attacks[2*y + stm] -= one[dir];
-	  if(board[x-step] != EMPTY && board[x-step] != EDGE)
-	    attacks[2*(x-step) + stm] -= one[dir+4];
-	}
-      }
-
-    } else { // we were only attacked from behind
-
-      r = (r2 = p[piece1].range[dir]) - d1;
-      if(r < 0 || c > one[dir+4]) { // Oops! This was not our attacker, or not the only one. There must be a jump attack from even further behind!
-	// for now, forget jumpers
-      }
-      y = sqr; 
-      while(r--)
-	if(board[y+=step] != EMPTY) {
-	  d2 = dist[y-sqr]; piece2 = board[y];
-	  if(piece2 != EDGE) {                                // extended move hits a piece
-	    attacks[2*y + (piece1 & WHITE)] += one[dir];      // count attack
-	    attacks[2*y + stm] -= -(d2 <= r1) & one[dir];     // remove our own attack on it, if in-range
-	  }
-	  UPDATE_MOBILITY(piece1, d2);                        // count extra mobility even if we hit edge
-	  return;
-	}
-      // we hit nothing with the extended move of the attacker behind us.
-      UPDATE_MOBILITY(piece1, r2 - d1);
-      r = r1 - r2 + d1;                                       // extra squares covered by mover
-      while(r-- > 0)
-	if(board[y+=step] != EMPTY) {
-	  d2 = dist[y-sqr]; piece2 = board[y];
-	  if(piece2 != EDGE) {                                // extended move hits a piece
-	    attacks[2*y + stm] -= one[dir];                   // count attack
-	  }
-	  return;
-	}
-    }
-    // if r2<0 we should again test for F and S moves
-
-  } else // no incoming attack from behind
-  if(c = (attacks[2*sqr] + attacks[2*sqr+1]) & attackMask[dir+4]) { // but incoming attack(s) from 'ahead'
-
-      y = sqr; while(board[y+=step]);                               // locate attacker
-      d2 = dist[y-sqr]; piece2 = board[y];
-      attacks[2*y + stm] -= -(d2 <= r1) & one[dir];                 // remove our attack on it if in-range
-      r = (r1 = p[piece1].range[dir]) - d2;
-      if(r < 0 || c > one[dir]) { // Oops! This was not our attacker, or not the only one. There must be a jump attack from even further behind!
-	// for now, forget jumpers
-      }
-      x = sqr;
-      while(r--)
-	if(board[x-=step] != EMPTY) {
-	  d1 = dist[x-sqr]; piece1 = board[x];
-	  if(piece1 != EDGE) {                                      // extended move hits a piece
-	    attacks[2*x + (piece2 & WHITE)] += one[dir+4];          // count attack
-	    attacks[2*x + stm] -= -(d1 <= r2) & one[dir+4];         // remove our own attack on it, if in-range
-	  }
-	  UPDATE_MOBILITY(piece2, d1);                              // count extra mobility even if we hit edge
-	  return;
-	}
-      // we hit nothing with the extended move of the attacker behind us.
-      UPDATE_MOBILITY(piece2, r2 - d1);
-      r = r2 - r1 + d2;                                             // extra squares covered by mover
-      while(r-- > 0)
-	if(board[x-=step] != EMPTY) {
-	  d1 = dist[x-sqr]; piece1 = board[x];
-	  if(piece1 != EDGE) {                                      // extended move hits a piece
-	    attacks[2*x + stm] -= one[dir+4];                       // count attack
-	  }
-	  return;
-	}
-
-  } else { // no incoming attacks from either side. Only delete attacks of mover on others
-
-    x = sqr;
-    while(r1--)
-      if(board[x+=step] != EMPTY) {       // piece found that we attacked
-	attacks[2*x + stm] -= one[dir];   // decrement attacks along that direction
-	break;
-      }
-
-    x = sqr;
-    while(r2--)
-      if(board[x-=step] != EMPTY) {       // piece found that we attacked
-	attacks[2*x + stm] -= one[dir+4]; // decrement attacks along opposite direction
-	break;
-      }
-
-  }
-}
-
-inline int
-Hit (int r, int d)
-{ // test if move with range r reaches over (un-obstructed) distance d
-  if(r < 0) switch(r) {
-    case J: return (d == 2);
-    case D:
-    case L: return (d <= 2);
-    case T:
-    case F: return (d <= 3);
-    case S: return 1;
-    default: return 0;
-  } else return (d <= r);
-  return 0; // not reached
-}
-
-void
-Disconnect (int sqr, int piece, int dir)
-{
-  int x = sqr, step = kStep[dir], piece1, piece2, d1, d2, r1, r2, y;
-  while( board[x+=step] == EMPTY );
-  piece1 = board[x];
-  if(piece1 != EDGE) { // x has hit a piece
-    d1 = dist[x-sqr];
-    r1 = p[piece1].range[dir+4];
-    y = sqr; while( board[y-=step] == EMPTY );
-    piece2 = board[y];
-    if(piece2 != EDGE) { // both ends of the ray hit a piece
-      d2 = dist[y-sqr];
-      r2 = p[piece2].range[dir];
-      if(r1 >= d1) {      // piece1 hits us
-	attacks[2*sqr + (piece1 & WHITE)] += one[dir+4];
-	if(r1 >= d1 + d2) // was hitting piece2 before, now blocked
-	  attacks[2*y + (piece1 & WHITE)] -= one[dir+4];
-      }
-      if(r2 >= d2) {      // piece2 hits us
-	attacks[2*sqr + (piece2 & WHITE)] += one[dir];
-	if(r2 >= d1 + d2) // was hitting piece1 before, now blocked
-	  attacks[2*x + (piece2 & WHITE)] -= one[dir];
-      }
-      if( Hit(p[piece].range[dir], d1) )
-	attacks[2*sqr + stm] += one[dir];
-      if( Hit(p[piece].range[dir+4], d2) )
-	attacks[2*sqr + stm] += one[dir+4];
-      return;
-    }
-  } else {
-    x = sqr; while( board[x-=step] == EMPTY );
-    piece1 = board[x];
-    if(piece1 == EDGE) return; // ray empty on both sides
-    d1 = dist[x-sqr];
-    r1 = p[piece1].range[dir];
-    dir += 4;
-  }
-  // we only get here if one side looks to the board edge
-  if(r1 >= d1) // piece1 hits us
-    attacks[2*sqr + (piece1 & WHITE)] += one[dir^4];
-  if( Hit(p[piece].range[dir], d1) )
-    attacks[2*sqr + stm] += one[dir];
-}
-
-void
-Occupy (int sqr)
-{ // determines attacks on square and blocking when a piece lands on an empty square
-  int i;
-  for(i=0; i<4; i++) {
-    Disconnect(sqr, board[sqr], i);
-  }
-}
-
-void
-Evacuate (int sqr, int piece)
-{ // determines change in attacks on neighbors due to unblocking and mover when the mentioned piece vacates the given square
-  int i;
-  for(i=0; i<4; i++) Connect(sqr, piece, i);
-}
-
 int
 MakeMove(Move m, UndoInfo *u)
 {
@@ -1426,6 +1245,8 @@ MakeMove(Move m, UndoInfo *u)
 
   if(p[u->piece].promoFlag & LAST_RANK) cnt50 = 0; // forward piece: move is irreversible
   // TODO: put in some test for forward moves of non-backward pieces?
+//		int n = board[promoSuppress-1];
+//		if( n != EMPTY && (n&TYPE) == xstm && p[n].value == 8 ) NewNonCapt(promoSuppress-1, 16, 0);
 
   if(p[u->piece].value == FVAL) { // move with Fire Demon
     int i, f=~fireFlags[u->piece-2];
@@ -2028,11 +1849,14 @@ if(PATH) printf("# autofail=%d\n", autoFail);
 if(PATH) printf("# autofail end (%d-%d)\n", firstMove, msp);
 	      autoFail = 0; curMove = firstMove - 1; continue; // release stashed moves for search
 	    }
-//	    if(currentVariant == V_CHESS && promoSuppress != ABSENT) { // e.p.
-//		int n = board[promoSuppress-1];
-//		if( n != EMPTY && (n&TYPE) == xstm && p[n].value == 8 ) 
-//	    }
 	    phase = 4; // out of victims: all captures generated
+	    if(chessFlag && promoSuppress != ABSENT) { // e.p. rights. Create e.p. captures as Lion moves
+		int n = board[promoSuppress-1], old = msp; // a-side neighbor of pushed pawn
+		if( n != EMPTY && (n&TYPE) == stm && p[n].value == pVal ) NewCapture(promoSuppress-1, SPECIAL + 20 - 4*stm, 0);
+		n = board[promoSuppress+1];      // h-side neighbor of pushed pawn
+		if( n != EMPTY && (n&TYPE) == stm && p[n].value == pVal ) NewCapture(promoSuppress+1, SPECIAL + 52 - 4*stm, 0);
+		if(msp != old) goto extractMove; // one or more e.p. capture were generated
+	    }
 	  case 4: // dubious captures
 #if 0
 	    while( dubious < framePtr + 250 ) // add dubious captures back to move stack
@@ -2221,6 +2045,7 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d  (%d)\n", level, depth, iterDep
     if(lmr && bestScore <= alpha && iterDep == depth)
       depth++, lmr--; // self-deepen on fail-low reply to late move by lowering reduction
 #endif
+    if(stalemate && bestScore == -INF && !inCheck) bestScore = 0; // stalemate
 #ifdef HASH
     // hash store
     hashTable[index].lock[hit]  = hashKeyH;
@@ -2378,7 +2203,7 @@ UnMake2 (MOVE move)
   sup2 = sup1; sup1 = sup0;
 }
 
-char fenNames[] = "RV....DKDEFL..DHGB......SMLNKN..FK....BT..VM..PH...."; // pairs of char
+char fenNames[] = "RV....DKDEFL..DHGB......SMLNKN..FK....BT..VM..PH..LN"; // pairs of char
 char fenPromo[] = "WLDHSMSECPB R HFDE....WHFB..LNG ..DKVMFS..FO..FK...."; // pairs of char
 
 char *
@@ -2398,10 +2223,11 @@ Convert (char *fen)
     if(n=atoi(fen)) fen++; // digits read
     if(n > 9) fen++; // double digit
     while(n-- > 0) *p++ = '.'; // expand to empty squares
+    if(currentVariant == V_LION && (*fen == 'L' || *fen == 'l')) *fen += 'Z' - 'L'; // L in Mighty-Lion Chess changed in Z for Lion
     if(isalpha(*fen)) {
       char *table = fenNames;
       n = *fen > 'Z' ? 'a' - 'A' : 0;
-      if((currentVariant == V_CHESS || currentVariant == V_SHATRANJ ||
+      if((currentVariant == V_CHESS || currentVariant == V_SHATRANJ || currentVariant == V_LION ||
           currentVariant == V_MAKRUK || currentVariant == V_SHO) && *fen - n == 'N' // In Chess N is Knight, not Lion
            || table[2* (*fen - 'A' - n)] == '.') *p++ = *fen; else {
         *p++ = ':';
@@ -2498,6 +2324,7 @@ MapFromScratch(attacks);
   postThinking--; repCnt = 0; tlim1 = tlim2 = tlim3 = 1e8; abortFlag = msp = 0;
   Search(-INF-1, INF+1, 0, QSdepth+1, 0, sup1 & ~PROMOTE, sup2, INF);
   postThinking++;
+
   listStart = retFirst; listEnd = msp = retMSP;
 }
 
@@ -2519,6 +2346,11 @@ ParseMove (char *moveText)
     for(j=0; j<8; j++) if(e + kStep[j] == t) break;
     if(j >= 8) return INVALID; // this rejects Lion Dog 1+2 moves!
     t2 = SPECIAL + 8*i + j;
+  } else if(chessFlag && board[f] != EMPTY && p[board[f]].value == pVal && board[t] == EMPTY) { // Pawn to empty, could be e.p.
+      if(t == f + BW + 1) t2 = SPECIAL + 16; else
+      if(t == f + BW - 1) t2 = SPECIAL + 48; else
+      if(t == f - BW + 1) t2 = SPECIAL + 20; else
+      if(t == f - BW - 1) t2 = SPECIAL + 52; // fake double-move
   }
   ret = f<<SQLEN | t2;
   if(*moveText != '\n' && *moveText != '=') ret |= PROMOTE;
@@ -2763,9 +2595,13 @@ pboard(board);
             engineSide = NONE;          // so stop playing
             PrintResult(stm, score);
           } else {
+            MOVE f, pMove = move;
+            if((move & SQUARE) >= SPECIAL && p[board[f = move>>SQLEN & SQUARE]].value == pVal) { // e.p. capture
+              pMove = move & ~SQUARE | f + toList[(move & SQUARE) - SPECIAL]; // print as a single move
+            }
             stm = MakeMove2(stm, move);  // assumes MakeMove returns new side to move
             gameMove[moveNr++] = move;   // remember game
-            printf("move %s\n", MoveToText(move, 1));
+            printf("move %s\n", MoveToText(pMove, 1));
             listEnd = 0;
             continue;                    // go check if we should ponder
           }
@@ -2795,8 +2631,9 @@ pboard(board);
           continue;
         }
         if(!strcmp(command, "protover")){
+          for(i=0; variants[i].boardWidth; i++)
+          printf("%s%s", (i ? "," : "feature variants=\""), variants[i].name); printf("\"\n");
           printf("feature ping=1 setboard=1 colors=0 usermove=1 memory=1 debug=1 sigint=0 sigterm=0\n");
-          printf("feature variants=\"normal,shatranj,makruk,chu,dai,tenjiku,12x12+0_fairy,9x9+0_shogi\"\n");
           printf("feature myname=\"HaChu " VERSION "\" highlight=1\n");
           printf("feature option=\"Full analysis PV -check 1\"\n"); // example of an engine-defined option
           printf("feature option=\"Allow repeats -check 0\"\n");
@@ -2870,12 +2707,14 @@ pboard(board);
           continue;
         }
         if(!strcmp(command, "variant")) {
-          for(i=0; i<7; i++) {
+          for(i=0; variants[i].boardWidth; i++) {
             sscanf(inBuf+8, "%s", command);
             if(!strcmp(variants[i].name, command)) {
               Init(curVarNr = i); stm = Setup2(NULL); break;
             }
 	  }
+          if(currentVariant == V_SHO)
+            printf("setup (PNBRLSE..G.+++++++Kpnbrlse..g.+++++++k) 9x9+0_shogi lnsgkgsnl/1r2e2b1/ppppppppp/9/9/9/PPPPPPPPP/1B2E2R1/LNSGKGSNL w 0 1\n");
 	  repStack[199] = hashKeyH, checkStack[199] = 0;
           continue;
         }
