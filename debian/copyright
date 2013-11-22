@@ -1,0 +1,14 @@
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: hachu
+Source: Sent by upstream in private email
+
+Files: *
+Copyright: 2013 H.G. Muller <h.g.muller@hccnet.nl> 
+License: Public Domain
+
+Files: debian/*
+Copyright: 2013 Yann Dirson <dirson@debian.org>
+License: Public Domain
+
+License: Public Domain
+ This source code is released into the public domain.

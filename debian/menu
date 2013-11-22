@@ -1,0 +1,2 @@
+?package(hachu):needs="text" section="Games/Strategy"\
+  title="HaChu" command="/usr/games/hachu"

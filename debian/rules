@@ -1,0 +1,20 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+%:
+	dh $@ 
+
+override_dh_auto_build: hachu
+	:
+
+override_dh_auto_install:
+	install -m0755 -D hachu debian/tmp/usr/games/hachu
+	dh_buildinfo
+override_dh_auto_clean:
+	rm -f hachu *.o
+
+# replace lack of upstream Makefile
+%.o: %.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+hachu: hachu_public.o
+	$(CC) $(LDFLAGS) $< -o $@

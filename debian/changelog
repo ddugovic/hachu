@@ -1,0 +1,8 @@
+hachu (0.16-1) experimental; urgency=low
+
+  * Initial release, from source sent by upstream via email.
+  * Set VERSION to just "0.16" as discussed with upstream.
+  * Upload to experimental because of an apparent misunderstanding about
+    shogi with xboard, works well as Chess engine in xboard at least.
+
+ -- Yann Dirson <dirson@debian.org>  Sat, 28 Sep 2013 18:56:04 +0200
