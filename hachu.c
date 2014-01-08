@@ -71,7 +71,7 @@
 #define BSIZE BWMAX*BHMAX
 #define ZONE  zone
 
-#define ONE (currentVariant == V_SHO || currentVariant == V_CHESS || currentVariant == V_SHATRANJ || currentVariant == V_MAKRUK || currentVariant == V_LION)
+#define ONE 1 /* currently no variants with 10-deep board */
 
 #define BLACK      0
 #define WHITE      1
