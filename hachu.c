@@ -71,7 +71,7 @@
 #define BSIZE BWMAX*BHMAX
 #define ZONE  zone
 
-#define ONE (currentVariant == V_SHO || currentVariant == V_CHESS || currentVariant == V_SHATRANJ || currentVariant == V_MAKRUK || currentVariant == V_LION)
+#define ONE 1 /* currently no variants with 10-deep board */
 
 #define BLACK      0
 #define WHITE      1
@@ -432,7 +432,7 @@ typedef struct {
   char *array; // initial position
 } VariantDesc;
 
-typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_TENJIKU, V_SHATRANJ, V_MAKRUK, V_LION } Variant;
+typedef enum { V_SAME, V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_TENJIKU, V_SHATRANJ, V_MAKRUK, V_LION } Variant;
 
 VariantDesc variants[] = {
   { 16,  8,  8, 1, V_CHESS,  "normal", chessArray }, // FIDE
@@ -890,11 +890,13 @@ Init (int var)
   int i, j, k;
   PieceDesc *pawn;
 
+  if(var != V_SAME) { // the following should be already set if we stay in same variant (for TakeBack)
   currentVariant = variants[var].varNr;
   bWidth  = variants[var].boardWidth;
   bHeight = variants[var].boardRanks;
   zone    = variants[var].zoneDepth;
   array   = variants[var].array;
+  }
   bsize = bWidth*bHeight;
   chuFlag = (currentVariant == V_CHU || currentVariant == V_LION);
   tenFlag = (currentVariant == V_TENJIKU);
@@ -2485,7 +2487,7 @@ printf("# ponder=%s\n", MoveToText(pv[1],0));
     { // reset the game and then replay it to the desired point
       int last, stm;
       last = moveNr - n; if(last < 0) last = 0;
-      Init(currentVariant); stm = Setup2(startPos);
+      Init(V_SAME); stm = Setup2(startPos);
 printf("# setup done");fflush(stdout);
       for(moveNr=0; moveNr<last; moveNr++) stm = MakeMove2(stm, gameMove[moveNr]),printf("make %2d: %x\n", moveNr, gameMove[moveNr]);
       return stm;

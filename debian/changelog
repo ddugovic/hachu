@@ -1,3 +1,10 @@
+hachu (0.17-3-g3460d0c-1) experimental; urgency=low
+
+  * New upstream snapshot from git, changing protocol as suitable for
+    latest xboard-4.8 snapshot.
+
+ -- Yann Dirson <dirson@debian.org>  Sat, 01 Feb 2014 22:24:45 +0100
+
 hachu (0.17-1) experimental; urgency=low
 
   * New upstream version from git.
