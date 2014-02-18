@@ -1696,7 +1696,7 @@ void TerminationCheck();
 int
 Search (int alpha, int beta, int difEval, int depth, int lmr, int oldPromo, int promoSuppress, int threshold)
 {
-  int i, j, k, phase, king, nextVictim, to, defer, autoFail=0, inCheck = 0, late=100000;
+  int i, j, k, phase, king, nextVictim, to, defer, autoFail=0, inCheck = 0, late=100000, ep;
   int firstMove, oldMSP = msp, curMove, sorted, bad, dubious, bestMoveNr;
   int resDep, iterDep, ext;
   int myPV = pvPtr;
@@ -1852,11 +1852,11 @@ if(PATH) printf("# autofail end (%d-%d)\n", firstMove, msp);
 	      autoFail = 0; curMove = firstMove - 1; continue; // release stashed moves for search
 	    }
 	    phase = 4; // out of victims: all captures generated
-	    if(chessFlag && promoSuppress != ABSENT) { // e.p. rights. Create e.p. captures as Lion moves
-		int n = board[promoSuppress-1], old = msp; // a-side neighbor of pushed pawn
-		if( n != EMPTY && (n&TYPE) == stm && p[n].value == pVal ) NewCapture(promoSuppress-1, SPECIAL + 20 - 4*stm, 0);
-		n = board[promoSuppress+1];      // h-side neighbor of pushed pawn
-		if( n != EMPTY && (n&TYPE) == stm && p[n].value == pVal ) NewCapture(promoSuppress+1, SPECIAL + 52 - 4*stm, 0);
+	    if(chessFlag && (ep = promoSuppress & SQUARE) != ABSENT) { // e.p. rights. Create e.p. captures as Lion moves
+		int n = board[ep-1], old = msp; // a-side neighbor of pushed pawn
+		if( n != EMPTY && (n&TYPE) == stm && p[n].value == pVal ) NewCapture(ep-1, SPECIAL + 20 - 4*stm, 0);
+		n = board[ep+1];      // h-side neighbor of pushed pawn
+		if( n != EMPTY && (n&TYPE) == stm && p[n].value == pVal ) NewCapture(ep+1, SPECIAL + 52 - 4*stm, 0);
 		if(msp != old) goto extractMove; // one or more e.p. capture were generated
 	    }
 	  case 4: // dubious captures
