@@ -11,6 +11,9 @@ Homepage: http://hgm.nubati.net/cgi-bin/gitweb.cgi?p=hachu.git
 Package: hachu
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
+Enhances: xboard (>> 4.8~)
+Recommends: xboard (>> 4.8~)
+Replaces: xboard (= 4.8~git20140119-1)
 Description: AI engine for many Shogi and Chess variants, including Chu, Sho, and Dai Shogi
  HaChu is an AI engine for many variants of Shogi (japanese chess), and Chess.
  .

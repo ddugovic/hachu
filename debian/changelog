@@ -2,8 +2,13 @@ hachu (0.17-4-g8540cba-1) experimental; urgency=medium
 
   * New upstream snapshot from git, fixing Lion captures in "Mighty Lion"
     variant.
+  * Install xboard confs for Chu and Sho, and theme for Chu; declare that it
+    Enhances: xboard (and replace the version that ships an old version of the
+    confs).
+  * Declare Recommends: xboard 4.8 as well, as it is still the only
+    available way to use the engine.
 
- -- Yann Dirson <dirson@debian.org>  Thu, 27 Feb 2014 22:24:36 +0100
+ -- Yann Dirson <dirson@debian.org>  Thu, 27 Feb 2014 22:33:20 +0100
 
 hachu (0.17-3-g3460d0c-1) experimental; urgency=low
 

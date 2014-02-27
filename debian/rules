@@ -10,6 +10,10 @@ override_dh_auto_build: hachu hachu.6
 override_dh_auto_install:
 	install -m0755 -D hachu debian/tmp/usr/games/hachu
 	install -m0644 -D hachu.6 debian/tmp/usr/share/man/man6/hachu.6
+	install -d debian/tmp/usr/share/games/xboard/themes/chu
+	install -m0644 svg/*.svg debian/tmp/usr/share/games/xboard/themes/chu/
+	install -d debian/tmp/usr/share/games/xboard/themes/conf
+	install -m0644 svg/sho svg/chu debian/tmp/usr/share/games/xboard/themes/conf/
 	dh_buildinfo
 override_dh_auto_clean:
 	rm -f hachu hachu.6 *.o
