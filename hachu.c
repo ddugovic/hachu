@@ -437,10 +437,10 @@ typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_T
 #define SAME (-1)
 
 VariantDesc variants[] = {
-  { 16,  8,  8, 1, V_CHESS,  "normal", chessArray }, // FIDE
+  { 24, 12, 12, 4, V_CHU,     "chu",     chuArray }, // Chu
+  { 16,  8,  8, 1, V_CHESS,  "nocastle", chessArray }, // FIDE
   { 18,  9,  9, 3, V_SHO, "9x9+0_shogi", shoArray }, // Sho
   { 18,  9,  9, 3, V_SHO,     "sho",     shoArray }, // Sho duplicat
-  { 24, 12, 12, 4, V_CHU,     "chu",     chuArray }, // Chu
   { 30, 15, 15, 5, V_DAI,     "dai",     daiArray }, // Dai
   { 32, 16, 16, 5, V_TENJIKU, "tenjiku", tenArray }, // Tenjiku
   { 16,  8,  8, 1, V_SHATRANJ,"shatranj",shatArray}, // Shatranj
