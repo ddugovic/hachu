@@ -432,7 +432,9 @@ typedef struct {
   char *array; // initial position
 } VariantDesc;
 
-typedef enum { V_SAME, V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_TENJIKU, V_SHATRANJ, V_MAKRUK, V_LION } Variant;
+typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_TENJIKU, V_SHATRANJ, V_MAKRUK, V_LION } Variant;
+
+#define SAME (-1)
 
 VariantDesc variants[] = {
   { 16,  8,  8, 1, V_CHESS,  "normal", chessArray }, // FIDE
@@ -890,7 +892,7 @@ Init (int var)
   int i, j, k;
   PieceDesc *pawn;
 
-  if(var != V_SAME) { // the following should be already set if we stay in same variant (for TakeBack)
+  if(var != SAME) { // the following should be already set if we stay in same variant (for TakeBack)
   currentVariant = variants[var].varNr;
   bWidth  = variants[var].boardWidth;
   bHeight = variants[var].boardRanks;
@@ -2487,7 +2489,7 @@ printf("# ponder=%s\n", MoveToText(pv[1],0));
     { // reset the game and then replay it to the desired point
       int last, stm;
       last = moveNr - n; if(last < 0) last = 0;
-      Init(V_SAME); stm = Setup2(startPos);
+      Init(SAME); stm = Setup2(startPos);
 printf("# setup done");fflush(stdout);
       for(moveNr=0; moveNr<last; moveNr++) stm = MakeMove2(stm, gameMove[moveNr]),printf("make %2d: %x\n", moveNr, gameMove[moveNr]);
       return stm;
