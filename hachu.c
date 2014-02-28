@@ -1122,7 +1122,7 @@ GenNonCapts (int promoSuppress)
 	  }
 	} else
 	if(r == M) { // FIDE Pawn; check double-move
-	  if(!NewNonCapture(x, x+v, pFlag) && chessFlag && promoBoard[x-v])
+	  if(!NewNonCapture(x, x+v, pFlag) && chessFlag && promoBoard[x-v] & LAST_RANK)
 	    NewNonCapture(x, x+2*v, pFlag), moveStack[msp-1] |= DEFER; // use promoSuppress flag as e.p. flag
 	}
 	continue;
