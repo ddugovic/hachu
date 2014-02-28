@@ -1,7 +1,7 @@
-hachu (0.17-4-g8540cba-1) experimental; urgency=medium
+hachu (0.18-1) experimental; urgency=medium
 
-  * New upstream snapshot from git, fixing Lion captures in "Mighty Lion"
-    variant.
+  * New upstream release, including a Makefile.
+  * Include a patch to the Makefile for packaging-friendly "install" target.
   * Install xboard confs for Chu and Sho, and theme for Chu; declare that it
     Enhances: xboard (and replace the version that ships an old version of the
     confs).
@@ -11,7 +11,7 @@ hachu (0.17-4-g8540cba-1) experimental; urgency=medium
   * Adjusted extended description.
   * Bumped Standards-Version to 3.9.5, no change.
 
- -- Yann Dirson <dirson@debian.org>  Thu, 27 Feb 2014 23:15:40 +0100
+ -- Yann Dirson <dirson@debian.org>  Sat, 01 Mar 2014 00:44:21 +0100
 
 hachu (0.17-3-g3460d0c-1) experimental; urgency=low
 

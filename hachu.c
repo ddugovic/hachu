@@ -10,7 +10,7 @@
 // promotions by pieces with Lion power stepping in & out the zone in same turn
 // promotion on capture
 
-#define VERSION "0.17"
+#define VERSION "0.18"
 
 //define PATH level==0 /*|| path[0] == 0x3490a &&  (level==1 || path[1] == 0x285b3 && (level == 2 || path[2] == 0x8710f && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5)))))*/
 #define PATH 0
@@ -432,13 +432,15 @@ typedef struct {
   char *array; // initial position
 } VariantDesc;
 
-typedef enum { V_SAME, V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_TENJIKU, V_SHATRANJ, V_MAKRUK, V_LION } Variant;
+typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_TENJIKU, V_SHATRANJ, V_MAKRUK, V_LION } Variant;
+
+#define SAME (-1)
 
 VariantDesc variants[] = {
-  { 16,  8,  8, 1, V_CHESS,  "normal", chessArray }, // FIDE
+  { 24, 12, 12, 4, V_CHU,     "chu",     chuArray }, // Chu
+  { 16,  8,  8, 1, V_CHESS,  "nocastle", chessArray }, // FIDE
   { 18,  9,  9, 3, V_SHO, "9x9+0_shogi", shoArray }, // Sho
   { 18,  9,  9, 3, V_SHO,     "sho",     shoArray }, // Sho duplicat
-  { 24, 12, 12, 4, V_CHU,     "chu",     chuArray }, // Chu
   { 30, 15, 15, 5, V_DAI,     "dai",     daiArray }, // Dai
   { 32, 16, 16, 5, V_TENJIKU, "tenjiku", tenArray }, // Tenjiku
   { 16,  8,  8, 1, V_SHATRANJ,"shatranj",shatArray}, // Shatranj
@@ -890,7 +892,7 @@ Init (int var)
   int i, j, k;
   PieceDesc *pawn;
 
-  if(var != V_SAME) { // the following should be already set if we stay in same variant (for TakeBack)
+  if(var != SAME) { // the following should be already set if we stay in same variant (for TakeBack)
   currentVariant = variants[var].varNr;
   bWidth  = variants[var].boardWidth;
   bHeight = variants[var].boardRanks;
@@ -1120,7 +1122,7 @@ GenNonCapts (int promoSuppress)
 	  }
 	} else
 	if(r == M) { // FIDE Pawn; check double-move
-	  if(!NewNonCapture(x, x+v, pFlag) && chessFlag && promoBoard[x-v])
+	  if(!NewNonCapture(x, x+v, pFlag) && chessFlag && promoBoard[x-v] & LAST_RANK)
 	    NewNonCapture(x, x+2*v, pFlag), moveStack[msp-1] |= DEFER; // use promoSuppress flag as e.p. flag
 	}
 	continue;
@@ -2487,7 +2489,7 @@ printf("# ponder=%s\n", MoveToText(pv[1],0));
     { // reset the game and then replay it to the desired point
       int last, stm;
       last = moveNr - n; if(last < 0) last = 0;
-      Init(V_SAME); stm = Setup2(startPos);
+      Init(SAME); stm = Setup2(startPos);
 printf("# setup done");fflush(stdout);
       for(moveNr=0; moveNr<last; moveNr++) stm = MakeMove2(stm, gameMove[moveNr]),printf("make %2d: %x\n", moveNr, gameMove[moveNr]);
       return stm;
