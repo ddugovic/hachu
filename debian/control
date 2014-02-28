@@ -3,7 +3,7 @@ Section: games
 Priority: extra
 Maintainer: Yann Dirson <dirson@debian.org>
 Build-Depends: debhelper (>= 9.0.0), dh-buildinfo, perl
-Standards-Version: 3.9.4
+Standards-Version: 3.9.5
 Homepage: http://hgm.nubati.net/cgi-bin/gitweb.cgi?p=hachu.git
 #Vcs-Git: git://git.debian.org/collab-maint/hachu.git
 #Vcs-Browser: http://git.debian.org/?p=collab-maint/hachu.git;a=summary
@@ -17,16 +17,14 @@ Replaces: xboard (= 4.8~git20140119-1)
 Description: AI engine for many Shogi and Chess variants, including Chu, Sho, and Dai Shogi
  HaChu is an AI engine for many variants of Shogi (japanese chess), and Chess.
  .
- It currently plays the following games, although some of them may not be 100%
- finished yet :
-  * Chess
+ It currently plays the following games:
   * Sho Shogi, the immediate ancestor of modern Shogi
   * Chu Shogi, the most widely played large-board variant (12x12 board),
     featuring the famous Lion piece
-  * Dai Shogi, a variant on 15x15 board
-  * Tenjiku Shogi, a 16x16 variant with even more exotic pieces
-  * Shatranj
-  * Makruk
+  * Dai Shogi, a variant on 15x15 board (no GUI support yet)
+  * Tenjiku Shogi, a 16x16 variant with even more exotic pieces (unfinished,
+    no GUI support yet)
+  * More widespread chess variants: Chess, Shatranj, Makruk
  .
- The engine is using an enhanced version of the XBoard protocol, as used by
- WinBoard Alien Edition, and by the upcoming XBoard 4.8.
+ Most games (excluding Dai and Tenjiku) can be played through the
+ XBoard GUI (version 4.8 and later).

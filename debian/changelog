@@ -8,8 +8,10 @@ hachu (0.17-4-g8540cba-1) experimental; urgency=medium
   * Add menu entries to start Chu and Sho.
   * Declare Recommends: xboard 4.8 as well, as it is still the only
     available way to use the engine.
+  * Adjusted extended description.
+  * Bumped Standards-Version to 3.9.5, no change.
 
- -- Yann Dirson <dirson@debian.org>  Thu, 27 Feb 2014 22:33:20 +0100
+ -- Yann Dirson <dirson@debian.org>  Thu, 27 Feb 2014 23:15:40 +0100
 
 hachu (0.17-3-g3460d0c-1) experimental; urgency=low
 
