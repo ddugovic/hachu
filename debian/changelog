@@ -5,6 +5,7 @@ hachu (0.17-4-g8540cba-1) experimental; urgency=medium
   * Install xboard confs for Chu and Sho, and theme for Chu; declare that it
     Enhances: xboard (and replace the version that ships an old version of the
     confs).
+  * Add menu entries to start Chu and Sho.
   * Declare Recommends: xboard 4.8 as well, as it is still the only
     available way to use the engine.
 

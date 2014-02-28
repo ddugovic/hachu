@@ -1,0 +1,17 @@
+?package(xboard):needs="x11" section="Games/Board" hints="Shogi"\
+  title="HaChu (Chu Shogi, XBoard, western theme)" \
+  longtitle="Play Chu Shogi, a large version of Shogi, using XBoard."\
+  command="/usr/games/xboard -variant chu -fcp hachu -scp hachu"
+?package(xboard):needs="x11" section="Games/Board" hints="Shogi"\
+  title="HaChu (Chu Shogi, XBoard, japanese theme)" \
+  longtitle="Play Chu Shogi, a large version of Shogi, using XBoard."\
+  command="/usr/games/xboard @chu"
+
+?package(xboard):needs="x11" section="Games/Board" hints="Shogi"\
+  title="HaChu (Sho Shogi, XBoard, western theme)" \
+  longtitle="Play Sho Shogi, an ancestor of Shogi, using XBoard."\
+  command="/usr/games/xboard @sho"
+#?package(xboard):needs="x11" section="Games/Board" hints="Shogi"\
+#  title="HaChu (Chu Shogi, XBoard, japanese theme)" \
+#  longtitle="Play Chu Shogi, a large version of Shogi, using XBoard."\
+#  command="/usr/games/xboard @chu @sho"
