@@ -1,0 +1,7 @@
+/tmp/
+/files
+/*.debhelper.log
+/*.debhelper
+/*.substvars
+
+/hachu/
