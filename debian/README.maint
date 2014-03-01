@@ -1,11 +1,4 @@
 upstream tarball was generated from the git repo using:
 
-* retrieving most recent sha1 from gitweb, since the dumb http server
-  used does not systematically update refs for "git fetch"
-* fetch it:
-	git fetch origin $sha:refs/remotes/origin/hidden
-* lay tags for interesting versions:
-	git tag 0.17 origin/hidden -m 0.17
-* create tarball:
-	(V=origin/hidden; git archive --prefix=hachu-$(git describe $V)/ \
-            --format=tar.gz -o ../hachu_$(git describe $V).orig.tar.gz $V)
+(V=origin/public; REV=$(git describe --tags $V);
+ git archive --prefix=hachu-$REV/  --format=tar.gz -o ../hachu_$REV.orig.tar.gz $V)
