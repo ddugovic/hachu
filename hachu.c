@@ -2476,7 +2476,7 @@ printf("# SearchBestMove\n");
 printf("# s=%d\n", startTime);fflush(stdout);
 MapFromScratch(attacks);
   retMove = INVALID; repCnt = 0;
-  score = Search(-INF-1, INF+1, rootEval, maxDepth, 0, sup1, sup2, INF);
+  score = Search(-INF-1, INF+1, rootEval, maxDepth + QSdepth, 0, sup1, sup2, INF);
   *move = retMove;
   *ponderMove = pv[1];
 printf("# best=%s\n", MoveToText(pv[0],0));
@@ -2664,6 +2664,7 @@ pboard(board);
         }
         if(!strcmp(command, "sd"))      { sscanf(inBuf, "sd %d", &maxDepth);    continue; }
         if(!strcmp(command, "st"))      { sscanf(inBuf, "st %d", &timePerMove); continue; }
+
         if(!strcmp(command, "memory"))  { SetMemorySize(atoi(inBuf+7)); continue; }
         if(!strcmp(command, "ping"))    { printf("pong%s", inBuf+4); continue; }
     //  if(!strcmp(command, ""))        { sscanf(inBuf, " %d", &); continue; }
