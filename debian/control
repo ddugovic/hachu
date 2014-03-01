@@ -21,10 +21,15 @@ Description: AI engine for many Shogi and Chess variants, including Chu, Sho, an
   * Sho Shogi, the immediate ancestor of modern Shogi
   * Chu Shogi, the most widely played large-board variant (12x12 board),
     featuring the famous Lion piece
+  * Mighty Lion (a simple variant of normal chess to more easily get to know
+    the Lion; does not implement castling yet)
   * Dai Shogi, a variant on 15x15 board (no GUI support yet)
   * Tenjiku Shogi, a 16x16 variant with even more exotic pieces (unfinished,
     no GUI support yet)
-  * More widespread chess variants: Chess, Shatranj, Makruk
+  * More classical chess variants:
+    * Shatranj (does not implement the baring rule yet)
+    * Makruk (does not implement counting yet)
+    * Standard Chess (without castling)
  .
  Most games (excluding Dai and Tenjiku) can be played through the
  XBoard GUI (version 4.8 and later).
