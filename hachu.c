@@ -140,7 +140,8 @@ typedef struct {
 } UndoInfo;
 
 char *array, fenArray[4000], startPos[4000], *reason, checkStack[300];
-int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, stalemate, tsume, pvCuts, allowRep, entryProm, pVal;
+int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, stalemate;
+int tsume, pvCuts, allowRep, entryProm, okazaki, pVal;
 int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
 int retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
 int ll, lr, ul, ur; // corner squares
@@ -1963,7 +1964,9 @@ MapFromScratch(attacks); // for as long as incremental update does not work.
 	  if(dist[tb.from-tb.to] != 1 && attacks[2*tb.to + stm] && p[tb.epVictim[0]].value <= 50)
 	    score = -INF;                           // our Lion is indeed made vulnerable and can be recaptured
 	} else {                                    // other x Ln
-	  if(promoSuppress & PROMOTE) score = -INF; // non-Lion captures Lion after opponent did same
+	  if(promoSuppress & PROMOTE) {             // non-Lion captures Lion after opponent did same
+	    if(!okazaki || attacks[2*tb.to + stm]) score = -INF;
+	  }
 	  defer |= PROMOTE;                         // if we started, flag  he cannot do it in reply
 	}
         if(score == -INF) {
@@ -2642,6 +2645,7 @@ pboard(board);
           printf("feature option=\"Full analysis PV -check 1\"\n"); // example of an engine-defined option
           printf("feature option=\"Allow repeats -check 0\"\n");
           printf("feature option=\"Promote on entry -check 0\"\n");
+          printf("feature option=\"Okazaki rule -check 0\"\n");
           printf("feature option=\"Resign -check 0\"\n");           // 
           printf("feature option=\"Contempt -spin 0 -200 200\"\n"); // and another one
           printf("feature option=\"Tsume -combo no /// Sente mates /// Gote mates\"\n");
@@ -2653,6 +2657,7 @@ pboard(board);
           if(sscanf(inBuf+7, "Allow repeats=%d", &allowRep)  == 1) continue;
           if(sscanf(inBuf+7, "Resign=%d",   &resign)         == 1) continue;
           if(sscanf(inBuf+7, "Contempt=%d", &contemptFactor) == 1) continue;
+          if(sscanf(inBuf+7, "Okazaki rule=%d", &okazaki)    == 1) continue;
           if(sscanf(inBuf+7, "Promote on entry=%d", &entryProm) == 1) continue;
           if(sscanf(inBuf+7, "Tsume=%s", command) == 1) {
 	    if(!strcmp(command, "no"))    tsume = 0; else
