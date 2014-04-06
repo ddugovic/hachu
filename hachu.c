@@ -12,7 +12,7 @@
 
 #define VERSION "0.18"
 
-//define PATH level==0 /*|| path[0] == 0x3490a &&  (level==1 || path[1] == 0x285b3 && (level == 2 || path[2] == 0x8710f && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5)))))*/
+//define PATH level==0 || path[0] == 0x1103a &&  (level==1 || path[1] == 0x6f0f6 && (level == 2 /*|| path[2] == 0x8710f && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5)))*/))
 #define PATH 0
 
 #define HASH
@@ -817,7 +817,7 @@ SetUp(char *array, int var)
 	name[0] += 'A' - 'a';
 	if(name[1]) name[1] += 'A' - 'a';
       } else color = WHITE;
-      if(!strcmp(name, "CP")) prince |= color+1; // remember if we added Crown Prince
+      if(!strcmp(name, "CP") || pflag && !strcmp(name, "DE")) prince |= color+1; // remember if we added Crown Prince
       p1 = LookUp(name, var);
       if(!p1) printf("tellusererror Unknown piece '%s' in setup\n", name), exit(-1);
       if(pflag && p1->promoted) p1 = LookUp(p1->promoted, var); // use promoted piece instead
@@ -1623,8 +1623,8 @@ Evaluate (int difEval)
 
 #ifdef KINGSAFETY
   // basic centralization in end-game (also facilitates bare-King mating)
-  wKing = p[royal[WHITE]].pos; if(wKing == ABSENT) wKing = p[royal[WHITE]+1].pos;
-  bKing = p[royal[BLACK]].pos; if(bKing == ABSENT) bKing = p[royal[BLACK]+1].pos;
+  wKing = p[royal[WHITE]].pos; if(wKing == ABSENT) wKing = p[royal[WHITE]+2].pos;
+  bKing = p[royal[BLACK]].pos; if(bKing == ABSENT) bKing = p[royal[BLACK]+2].pos;
   if(filling < 32) {
     int lead = (stm == WHITE ? difEval : -difEval);
     score += (PST[3*BW*BH+wKing] - PST[3*BW*BH+bKing])*(32 - filling) >> 7;
@@ -1739,7 +1739,7 @@ if(!level) {for(i=0; i<5; i++)printf("# %d %08x, %d\n", i, repStack[200-i], chec
     }
   } else { // he has no king! Test for attacks on Crown Prince
     k = p[king + 2].pos;
-    if(attacks[2*k + stm]) return INF; // we have attack on Crown Prince
+    if(k == ABSENT || attacks[2*k + stm]) return INF; // we have attack on Crown Prince
   }
 //printf("King safe\n");fflush(stdout);
   // EVALUATION & WINDOW SHIFT
