@@ -102,6 +102,18 @@
 #define P_WHITE     0x0F
 #define P_BLACK     0xF0
 
+// Piece-Square Tables
+#define PST_NEUTRAL 0
+#define PST_STEPPER BH
+#define PST_WJUMPER (BW*BH)
+#define PST_SLIDER  (BW*BH+BH)
+#define PST_TRAP    (2*BW*BH)
+#define PST_CENTER  (2*BW*BH+BH)
+#define PST_WPPROM  (3*BW*BH)
+#define PST_BPPROM  (3*BW*BH+BH)
+#define PST_BJUMPER (4*BW*BH)
+#define PST_ZONDIST (4*BW*BH+BH)
+
 typedef unsigned int Move;
 
 char *MoveToText(Move move, int m);     // from WB driver
@@ -771,9 +783,9 @@ AddPiece (int stm, PieceDesc *list)
   p[i].value = v = list->value;
   for(j=0; j<8; j++) p[i].range[j] = list->range[j^4*(WHITE-stm)];
   switch(Range(p[i].range)) {
-    case 1:  p[i].pst = BH; break;
-    case 2:  p[i].pst = bsize; break;
-    default: p[i].pst = bsize + BH; break;
+    case 1:  p[i].pst = PST_STEPPER; break;
+    case 2:  p[i].pst = PST_WJUMPER; break;
+    default: p[i].pst = PST_SLIDER;  break;
   }
   key = (stm == WHITE ? &list->whiteKey : &list->blackKey);
   if(!*key) *key = ~(myRandom()*myRandom());
@@ -858,7 +870,7 @@ SetUp(char *array, int var)
       p[i].promoGain = (p[j].value - p[i].value - g)*1.25, p[i].value = p[j].value - g;
     else p[i].promoGain = 0;
     if(i == kylin[WHITE]) p[i].promoGain = 1.25*KYLIN, p[i].value += KYLIN;
-    if(j > 0 && p[i].pst == BH) p[i].pst = 3*BW*BH;      // use white pre-prom bonus
+    if(j > 0 && p[i].pst == PST_STEPPER) p[i].pst = PST_WPPROM; // use white pre-prom bonus
     board[p[i].pos] = i;
     rootEval += p[i].value + PST[p[i].pst + p[i].pos];
     promoDelta += p[i].promoGain;
@@ -870,8 +882,8 @@ SetUp(char *array, int var)
       p[i].promoGain = (p[j].value - p[i].value - g)*1.25, p[i].value = p[j].value - g;
     else p[i].promoGain = 0;
     if(i == kylin[BLACK]) p[i].promoGain = 1.25*KYLIN, p[i].value += KYLIN;
-    if(j > 0 && p[i].pst == BH) p[i].pst = 3*BW*BH + BH; // use black pre-prom bonus
-    if(j > 0 && p[i].pst == bsize) p[i].pst = 4*BW*BH;      // use white pre-prom bonus
+    if(j > 0 && p[i].pst == PST_STEPPER) p[i].pst = PST_BPPROM;  // use black pre-prom bonus
+    if(j > 0 && p[i].pst == PST_WJUMPER) p[i].pst = PST_BJUMPER; // use black pre-prom bonus
     board[p[i].pos] = i;
     rootEval -= p[i].value + PST[p[i].pst + p[i].pos];
     promoDelta -= p[i].promoGain;
@@ -962,22 +974,22 @@ Init (int var)
   for(j=0; j<BH; j++) {
    for(i=0; i<BH; i++) {
     int s = BW*i + j, d = BH*(BH-2) - abs(2*i - BH + 1)*(BH-1) - (2*j - BH + 1)*(2*j - BH + 1);
-    PST[s] = 2*(i==0 | i==BH-1) + (i==1 | i==BH-2);      // last-rank markers in null table
-    PST[BH+s] = d/4 - (i < 2 || i > BH-3 ? 3 : 0) - (j == 0 || j == BH-1 ? 5 : 0)
-                    + 3*(i==zone || i==BH-zone-1);       // stepper centralization
-    PST[BH*BW+s] = d/6;                                  // double-stepper centralization
-    PST[BH*BW+BH+s] = d/12 - 5*(i==BH/2 || i==(BH-1)/2); // slider centralization
-    PST[2*BH*BW+s] = j < 3 || j > BH-4 ? (i < 3 ? 7 : i == 3 ? 4 : i == 4 ? 2 : 0) : 0;
-    PST[2*BH*BW+BH+s] = ((BH-1)*(BH-1) - (2*i - BH + 1)*(2*i - BH + 1) - (2*j - BH + 1)*(2*j - BH + 1))/6;
-    PST[3*BH*BW+s] = PST[3*BH*BW+BH+s] = PST[BH+s];      // as stepper, but with pre-promotion bonus W/B
-    PST[4*BH*BW+s] = PST[BW*BH+s];                       // as jumper, but with pre-promotion bonus B
-    PST[4*BH*BW+BH+s] = BW*(zone - 1 - i);               // board step to enter promo zone black
+    PST[s] = 2*(i==0 | i==BH-1) + (i==1 | i==BH-2);         // last-rank markers in null table
+    PST[PST_STEPPER+s] = d/4 - (i < 2 || i > BH-3 ? 3 : 0) - (j == 0 || j == BH-1 ? 5 : 0)
+                    + 3*(i==zone || i==BH-zone-1);          // stepper centralization
+    PST[PST_WJUMPER+s] = d/6;                               // double-stepper centralization
+    PST[PST_SLIDER +s] = d/12 - 5*(i==BH/2 || i==(BH-1)/2); // slider centralization
+    PST[PST_TRAP  +s] = j < 3 || j > BH-4 ? (i < 3 ? 7 : i == 3 ? 4 : i == 4 ? 2 : 0) : 0;
+    PST[PST_CENTER+s] = ((BH-1)*(BH-1) - (2*i - BH + 1)*(2*i - BH + 1) - (2*j - BH + 1)*(2*j - BH + 1))/6;
+    PST[PST_WPPROM+s] = PST[PST_BPPROM+s] = PST[PST_STEPPER+s]; // as stepper, but with pre-promotion bonus W/B
+    PST[PST_BJUMPER+s] = PST[PST_WJUMPER+s];                // as jumper, but with pre-promotion bonus B
+    PST[PST_ZONDIST+s] = BW*(zone - 1 - i);                 // board step to enter promo zone black
    }
-   if(zone > 0) PST[3*BW*BH+BW*(BH-1-zone) + j] += 10, PST[3*BW*BH+BH + BW*zone + j] += 10;
+   if(zone > 0) PST[PST_WPPROM+BW*(BH-1-zone) + j] += 10, PST[PST_BPPROM + BW*zone + j] += 10;
 #if KYLIN
    // pre-promotion bonuses for jumpers
-   if(zone > 0) PST[BW*BH + BW*(BH-2-zone) + j] = PST[4*BW*BH + BW*(zone+1) + j] = 100,
-                PST[BW*BH + BW*(BH-1-zone) + j] = PST[4*BW*BH + BW*zone + j] = 200;
+   if(zone > 0) PST[PST_WJUMPER + BW*(BH-2-zone) + j] = PST[PST_BJUMPER + BW*(zone+1) + j] = 100,
+                PST[PST_WJUMPER + BW*(BH-1-zone) + j] = PST[PST_BJUMPER + BW*zone + j] = 200;
 #endif
   }
 
@@ -1596,7 +1608,7 @@ Evaluate (int difEval)
   if(bLion == ABSENT && p[BLACK+4].value == LVAL) bLion = p[BLACK+4].pos;
 
 #ifdef LIONTRAP
-# define lionTrap (PST + 2*BH*BW)
+# define lionTrap (PST + PST_TRAP)
   // penalty for Lion in enemy corner, when enemy Lion is nearby
   if(wLion != ABSENT && bLion != ABSENT) { // both have a Lion
       static int distFac[36] = { 0, 0, 10, 9, 8, 7, 5, 3, 1 };
@@ -1627,9 +1639,9 @@ Evaluate (int difEval)
   bKing = p[royal[BLACK]].pos; if(bKing == ABSENT) bKing = p[royal[BLACK]+2].pos;
   if(filling < 32) {
     int lead = (stm == WHITE ? difEval : -difEval);
-    score += (PST[3*BW*BH+wKing] - PST[3*BW*BH+bKing])*(32 - filling) >> 7;
-    if(lead  > 100) score -= PST[3*BW*BH+bKing]*(32 - filling) >> 3; // white leads, drive black K to corner
-    if(lead < -100) score += PST[3*BW*BH+wKing]*(32 - filling) >> 3; // black leads, drive white K to corner
+    score += (PST[PST_CENTER+wKing] - PST[PST_CENTER+bKing])*(32 - filling) >> 7;
+    if(lead  > 100) score -= PST[PST_CENTER+bKing]*(32 - filling) >> 3; // white leads, drive black K to corner
+    if(lead < -100) score += PST[PST_CENTER+wKing]*(32 - filling) >> 3; // black leads, drive white K to corner
   }
 
 # ifdef FORTRESS
@@ -1651,11 +1663,11 @@ Evaluate (int difEval)
   if(filling < 128) {
     int sq;
     if((wLion = kylin[WHITE]) && (sq = p[wLion].pos) != ABSENT) {
-      int anchor = sq - PST[5*BW*BH - 1 - sq];
+      int anchor = sq - PST[5*BW*BH - 1 - sq]; // FIXME: PST_ZONDIST indexed backwards
       score += (512 - Surround(BLACK, anchor, 0))*(128 - filling)*PST[p[wLion].pst + sq] >> 15;
     }
     if((bLion = kylin[BLACK]) && (sq = p[bLion].pos) != ABSENT) {
-      int anchor = sq + PST[4*BW*BH + BH + sq];
+      int anchor = sq + PST[PST_ZONDIST + sq];
       score -= (512 - Surround(WHITE, anchor, 0))*(128 - filling)*PST[p[bLion].pst + sq] >> 15;
     }
   }
@@ -2509,6 +2521,7 @@ printf("# setup done");fflush(stdout);
 
     void GetLine(int root)
     {
+
       int i, c;
       while(1) {
         // wait for input, and read it until we have collected a complete line
