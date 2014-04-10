@@ -21,7 +21,7 @@
 #define CHECKEXT
 #define LMR 4
 #define LIONTRAP
-#define WINGS
+#define XWINGS
 #define KINGSAFETY
 #define KSHIELD
 #define XFORTRESS
@@ -113,6 +113,11 @@
 #define PST_BPPROM  (3*BW*BH+BH)
 #define PST_BJUMPER (4*BW*BH)
 #define PST_ZONDIST (4*BW*BH+BH)
+#define PST_ADVANCE (5*BW*BH)
+#define PST_RETRACT (5*BW*BH+BH)
+#define PST_WFLYER  (6*BW*BH)
+#define PST_BFLYER  (6*BW*BH+BH)
+#define PST_END     (7*BW*BH)
 
 typedef unsigned int Move;
 
@@ -614,7 +619,7 @@ int attackMaps[200*BSIZE], *attacks = attackMaps;
 char distance[2*BSIZE]; // distance table
 char promoBoard[BSIZE]; // flags to indicate promotion zones
 char rawFire[BSIZE+2*BWMAX]; // flags to indicate squares controlled by Fire Demons
-signed char PST[5*BSIZE];
+signed char PST[7*BSIZE];
 
 #define board     (rawBoard + 6*BHMAX + 3)
 #define fireBoard (rawFire + BWMAX + 1)
@@ -866,11 +871,14 @@ SetUp(char *array, int var)
   for(i=0; i<BH; i++) for(j=0; j<BH; j++) board[BW*i+j] = EMPTY;
   for(i=WHITE+2; i<=last[WHITE]; i+=2) if(p[i].pos != ABSENT) {
     int g = p[i].promoGain;
+    if(i == kylin[WHITE]) p[i].promoGain = 1.25*KYLIN, p[i].value += KYLIN;
+//    if(j > 0 && p[i].pst == PST_STEPPER) p[i].pst = PST_WPPROM; // use white pre-prom bonus
+    if(j > 0 && p[i].pst == PST_STEPPER && p[i].value >= 100)
+	p[i].pst = p[i].value <= 150 ? PST_ADVANCE : PST_NEUTRAL; // light steppers advance
+    if(j > 0 && p[i].bulk == 6) p[i].pst = PST_WFLYER, p[i].mobWeight = 4; // SM defends zone
     if((j = p[i].promo) > 0 && g)
       p[i].promoGain = (p[j].value - p[i].value - g)*1.25, p[i].value = p[j].value - g;
     else p[i].promoGain = 0;
-    if(i == kylin[WHITE]) p[i].promoGain = 1.25*KYLIN, p[i].value += KYLIN;
-    if(j > 0 && p[i].pst == PST_STEPPER) p[i].pst = PST_WPPROM; // use white pre-prom bonus
     board[p[i].pos] = i;
     rootEval += p[i].value + PST[p[i].pst + p[i].pos];
     promoDelta += p[i].promoGain;
@@ -878,12 +886,15 @@ SetUp(char *array, int var)
   } else p[i].promoGain = 0;
   for(i=BLACK+2; i<=last[BLACK]; i+=2) if(p[i].pos != ABSENT) {
     int g = p[i].promoGain;
+//    if(j > 0 && p[i].pst == PST_STEPPER) p[i].pst = PST_BPPROM; // use black pre-prom bonus
+    if(j > 0 && p[i].pst == PST_STEPPER && p[i].value >= 100)
+	p[i].pst = p[i].value <= 150 ? PST_RETRACT : PST_NEUTRAL; // light steppers advance
+    if(j > 0 && p[i].pst == PST_WJUMPER) p[i].pst = PST_BJUMPER;  // use black pre-prom bonus
+    if(j > 0 && p[i].bulk == 6) p[i].pst = PST_BFLYER, p[i].mobWeight = 4; // SM defends zone
     if((j = p[i].promo) > 0 && g)
       p[i].promoGain = (p[j].value - p[i].value - g)*1.25, p[i].value = p[j].value - g;
     else p[i].promoGain = 0;
     if(i == kylin[BLACK]) p[i].promoGain = 1.25*KYLIN, p[i].value += KYLIN;
-    if(j > 0 && p[i].pst == PST_STEPPER) p[i].pst = PST_BPPROM;  // use black pre-prom bonus
-    if(j > 0 && p[i].pst == PST_WJUMPER) p[i].pst = PST_BJUMPER; // use black pre-prom bonus
     board[p[i].pos] = i;
     rootEval -= p[i].value + PST[p[i].pst + p[i].pos];
     promoDelta -= p[i].promoGain;
@@ -984,6 +995,9 @@ Init (int var)
     PST[PST_WPPROM+s] = PST[PST_BPPROM+s] = PST[PST_STEPPER+s]; // as stepper, but with pre-promotion bonus W/B
     PST[PST_BJUMPER+s] = PST[PST_WJUMPER+s];                // as jumper, but with pre-promotion bonus B
     PST[PST_ZONDIST+s] = BW*(zone - 1 - i);                 // board step to enter promo zone black
+    PST[PST_ADVANCE+s] = PST[PST_WFLYER-s-1] = 2*(5*i+i*i) - (i >= zone)*8*(i-zone+1)*(i-zone+1)
+			 - 50 - 10*(j==0 || j == BH-1);     // advance-encouraging table
+    PST[PST_WFLYER +s] = PST[PST_END-s-1] = (i == zone-1)*40 + (i == zone-2)*20 - 20;
    }
    if(zone > 0) PST[PST_WPPROM+BW*(BH-1-zone) + j] += 10, PST[PST_BPPROM + BW*zone + j] += 10;
 #if KYLIN
@@ -2093,7 +2107,7 @@ pplist()
 {
   int i, j;
   for(i=0; i<182; i++) {
-	printf("%3d. %3d %3d %4d   %02x %d %d %x %3d ", i, p[i].value, p[i].promo, p[i].pos, p[i].promoFlag&255, p[i].mobWeight, p[i].qval, p[i].bulk, p[i].promoGain);
+	printf("%3d. %3d %3d %4d   %02x %d %d %x %3d %4d ", i, p[i].value, p[i].promo, p[i].pos, p[i].promoFlag&255, p[i].mobWeight, p[i].qval, p[i].bulk, p[i].promoGain, p[i].pst);
 	for(j=0; j<8; j++) printf("  %2d", p[i].range[j]);
 	if(i<2 || i>11) printf("\n"); else printf("  %02x\n", fireFlags[i-2]&255);
   }
