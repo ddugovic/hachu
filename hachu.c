@@ -878,7 +878,7 @@ SetUp(char *array, int var)
 	p[i].pst = p[i].value <= 150 ? PST_ADVANCE : PST_NEUTRAL; // light steppers advance
     if(j > 0 && p[i].bulk == 6) p[i].pst = PST_WFLYER, p[i].mobWeight = 4; // SM defends zone
     if((j = p[i].promo) > 0 && g)
-      p[i].promoGain = (p[j].value - p[i].value - g)*1.25, p[i].value = p[j].value - g;
+      p[i].promoGain = (p[j].value - p[i].value - g)*0.9, p[i].value = p[j].value - g;
     else p[i].promoGain = 0;
     board[p[i].pos] = i;
     rootEval += p[i].value + PST[p[i].pst + p[i].pos];
@@ -893,7 +893,7 @@ SetUp(char *array, int var)
     if(j > 0 && p[i].pst == PST_WJUMPER) p[i].pst = PST_BJUMPER;  // use black pre-prom bonus
     if(j > 0 && p[i].bulk == 6) p[i].pst = PST_BFLYER, p[i].mobWeight = 4; // SM defends zone
     if((j = p[i].promo) > 0 && g)
-      p[i].promoGain = (p[j].value - p[i].value - g)*1.25, p[i].value = p[j].value - g;
+      p[i].promoGain = (p[j].value - p[i].value - g)*0.9, p[i].value = p[j].value - g;
     else p[i].promoGain = 0;
     if(i == kylin[BLACK]) p[i].promoGain = 1.25*KYLIN, p[i].value += KYLIN;
     board[p[i].pos] = i;
@@ -1727,7 +1727,7 @@ Evaluate (int difEval)
     }
 #endif
 
-  return difEval - (filling*filling*promoDelta >> 16) + (stm ? score : -score);
+  return difEval - (filling*promoDelta >> 8) + (stm ? score : -score);
 }
 
 inline void
