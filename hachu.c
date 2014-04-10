@@ -26,6 +26,7 @@
 #define KSHIELD
 #define XFORTRESS
 #define PAWNBLOCK
+#define TANDEM 100 /* bonus for pairs of attacking light steppers */
 #define KYLIN 100 /* extra end-game value of Kylin for promotability */
 #define PROMO 0 /* extra bonus for 'vertical' piece when it actually promotes (diagonal pieces get half) */
 
@@ -1688,7 +1689,7 @@ Evaluate (int difEval)
 #endif
 
 #ifdef PAWNBLOCK
-  // penalty for blocking own P or GB: 20 by slider, 10 by other, but 50 if only retreat mode is straight back
+  // penalty for blocking own P or GB: 20 by slider, 10 by other, but 50 if only RETRACT mode is straight back
   for(i=last[WHITE]; i > 1 && p[i].value<=50; i-=2) {
     if((f = p[i].pos) != ABSENT) { // P present,
       if((j = board[f + BW])&1) // square before it white (odd) piece
@@ -1705,6 +1706,25 @@ Evaluate (int difEval)
 	score -= 7*(p[j].promoGain == 0 & p[j].value<=151);
     }
   }
+#endif
+
+#ifdef TANDEM
+    if(zone > 0) {
+      int rw = BW*(BH-1-zone), rb = BW*zone, h=0;
+      for(f=0; f<BH; f++) {
+	if(p[board[rw+f]].pst == PST_ADVANCE) {
+	  h += (p[board[rw+f-BW]].pst == PST_ADVANCE);
+	  if(f > 0)    h += (p[board[rw+f-BW-1]].pst == PST_ADVANCE);
+	  if(f+1 < BH) h += (p[board[rw+f-BW+1]].pst == PST_ADVANCE);
+	}
+	if(p[board[rb+f]].pst == PST_ADVANCE) {
+	  h -= (p[board[rb+f+BW]].pst == PST_RETRACT);
+	  if(f > 0)    h -= (p[board[rb+f+BW-1]].pst == PST_RETRACT);
+	  if(f+1 < BH) h -= (p[board[rb+f+BW+1]].pst == PST_RETRACT);
+	}
+      }
+      score += h*TANDEM;
+    }
 #endif
 
   return difEval - (filling*filling*promoDelta >> 16) + (stm ? score : -score);
