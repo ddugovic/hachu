@@ -736,7 +736,7 @@ Range (signed char *r)
   int i, m=0;
   for(i=0; i<8; i++) {
     int d = r[i];
-    if(r[i] < 0) d == r[i] >= L ? 2 : 36;
+    if(r[i] < 0) d = r[i] >= L ? 2 : 36;
     if(d > m) m = d;
   }
   return m;
@@ -990,14 +990,15 @@ Init (int var)
     PST[PST_STEPPER+s] = d/4 - (i < 2 || i > BH-3 ? 3 : 0) - (j == 0 || j == BH-1 ? 5 : 0)
                     + 3*(i==zone || i==BH-zone-1);          // stepper centralization
     PST[PST_WJUMPER+s] = d/6;                               // double-stepper centralization
-    PST[PST_SLIDER +s] = d/12 - 7*(i==BH/2 || i==(BH-1)/2); // slider centralization
+    PST[PST_SLIDER +s] = d/12 - 15*(i==BH/2 || i==(BH-1)/2);// slider centralization
     PST[PST_TRAP  +s] = j < 3 || j > BH-4 ? (i < 3 ? 7 : i == 3 ? 4 : i == 4 ? 2 : 0) : 0;
     PST[PST_CENTER+s] = ((BH-1)*(BH-1) - (2*i - BH + 1)*(2*i - BH + 1) - (2*j - BH + 1)*(2*j - BH + 1))/6;
     PST[PST_WPPROM+s] = PST[PST_BPPROM+s] = PST[PST_STEPPER+s]; // as stepper, but with pre-promotion bonus W/B
     PST[PST_BJUMPER+s] = PST[PST_WJUMPER+s];                // as jumper, but with pre-promotion bonus B
     PST[PST_ZONDIST+s] = BW*(zone - 1 - i);                 // board step to enter promo zone black
     PST[PST_ADVANCE+s] = PST[PST_WFLYER-s-1] = 2*(5*i+i*i) - (i >= zone)*6*(i-zone+1)*(i-zone+1)
-	- 50 - 20*(j==0 || j == BH-1) - 10*(j == 1 || BH-2); // advance-encouraging table
+	- (2*j - BH + 1)*(2*j - BH + 1)/BH + BH/2
+	- 50 - 35*(j==0 || j == BH-1) - 15*(j == 1 || BH-2); // advance-encouraging table
     PST[PST_WFLYER +s] = PST[PST_END-s-1] = (i == zone-1)*40 + (i == zone-2)*20 - 20;
    }
    if(zone > 0) PST[PST_WPPROM+BW*(BH-1-zone) + j] += 10, PST[PST_BPPROM + BW*zone + j] += 10;
@@ -2025,6 +2026,7 @@ MapFromScratch(attacks); // for as long as incremental update does not work.
       score = -Search(-beta, -iterAlpha, -difEval - tb.booty, iterDep-1+ext,
                        curMove >= late && iterDep > QSdepth + LMR,
                                                       promoSuppress & ~PROMOTE, defer, depth ? INF : tb.gain);
+
 #else
       score = 0;
 #endif
