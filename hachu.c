@@ -24,7 +24,7 @@
 #define XWINGS
 #define KINGSAFETY
 #define KSHIELD
-#define XFORTRESS
+#define FORTRESS
 #define PAWNBLOCK
 #define TANDEM 100 /* bonus for pairs of attacking light steppers */
 #define KYLIN 100 /* extra end-game value of Kylin for promotability */
@@ -875,7 +875,7 @@ SetUp(char *array, int var)
     if(i == kylin[WHITE]) p[i].promoGain = 1.25*KYLIN, p[i].value += KYLIN;
 //    if(j > 0 && p[i].pst == PST_STEPPER) p[i].pst = PST_WPPROM; // use white pre-prom bonus
     if(j > 0 && p[i].pst == PST_STEPPER && p[i].value >= 100)
-	p[i].pst = p[i].value <= 150 ? PST_ADVANCE : PST_NEUTRAL; // light steppers advance
+	p[i].pst = p[i].value <= 150 ? PST_ADVANCE : PST_WPPROM;  // light steppers advance
     if(j > 0 && p[i].bulk == 6) p[i].pst = PST_WFLYER, p[i].mobWeight = 4; // SM defends zone
     if((j = p[i].promo) > 0 && g)
       p[i].promoGain = (p[j].value - p[i].value - g)*0.9, p[i].value = p[j].value - g;
@@ -889,7 +889,7 @@ SetUp(char *array, int var)
     int g = p[i].promoGain;
 //    if(j > 0 && p[i].pst == PST_STEPPER) p[i].pst = PST_BPPROM; // use black pre-prom bonus
     if(j > 0 && p[i].pst == PST_STEPPER && p[i].value >= 100)
-	p[i].pst = p[i].value <= 150 ? PST_RETRACT : PST_NEUTRAL; // light steppers advance
+	p[i].pst = p[i].value <= 150 ? PST_RETRACT : PST_BPPROM;  // light steppers advance
     if(j > 0 && p[i].pst == PST_WJUMPER) p[i].pst = PST_BJUMPER;  // use black pre-prom bonus
     if(j > 0 && p[i].bulk == 6) p[i].pst = PST_BFLYER, p[i].mobWeight = 4; // SM defends zone
     if((j = p[i].promo) > 0 && g)
@@ -1002,6 +1002,10 @@ Init (int var)
     PST[PST_WFLYER +s] = PST[PST_END-s-1] = (i == zone-1)*40 + (i == zone-2)*20 - 20;
    }
    if(zone > 0) PST[PST_WPPROM+BW*(BH-1-zone) + j] += 10, PST[PST_BPPROM + BW*zone + j] += 10;
+   if(j > (BH-1)/2 - 3 && j < BH/2 + 3)
+	PST[PST_WPPROM + j] += 4, PST[PST_BPPROM + BW*(BH-1) + j] += 4; // fortress
+   if(j > (BH-1)/2 - 2 && j < BH/2 + 2)
+	PST[PST_WPPROM + BW + j] += 2, PST[PST_BPPROM + BW*(BH-2) + j] += 2; // fortress
 #if KYLIN
    // pre-promotion bonuses for jumpers
    if(zone > 0) PST[PST_WJUMPER + BW*(BH-2-zone) + j] = PST[PST_BJUMPER + BW*(zone+1) + j] = 100,
@@ -1558,9 +1562,26 @@ Guard (int sqr)
 int
 Fortress (int forward, int king, int lion)
 { // penalty for lack of Lion-proof fortress
-  int rank = PST[king], anchor, r, l, q;
-  if(!rank) return -300;
+  int rank = PST[king], anchor, r, l, q, res = 0;
+  if(rank != 2) return 25*(rank-2);
   anchor = king + forward*(rank-1);
+
+  q = Guard(anchor); l = Guard(anchor-1); r = Guard(anchor+1);
+  if(!q) return l > 1 || r > 1 ? 0 : -25;
+  if(q == 1) res = 40*(l > 1 && r > 1);           // TGT, EGT or TGE get 40
+  else { // T or E in front of King
+    if(l > 1) res = 30 + (r > 1)*(20 + 5*(q==2)); // TT., ET. or TE. (30), TET (50), TTE (55)
+    else if(r > 1) res = 30;                      // .TT, .ET or .TE (30)
+  }
+  q = 0;
+  if(filling > 32) {
+    if(r > 1 && Guard(king+2) == 1) q += 10;
+    if(l > 1 && Guard(king-2) == 1) q += 10; 
+    q += 5*(Guard(king+1) == 1);
+    q += 5*(Guard(king-1) == 1);
+    if(filling < 96) q = q*(filling - 32)>>6;
+  }
+  return res + q;
 
   if(Guard(anchor) == 3 || Guard(anchor+1) == 3 || Guard(anchor-1) == 3) return 0;
   if(rank == 2 && Guard(king+1) == 3 || Guard(king-1) == 3) return -50;
@@ -1664,7 +1685,7 @@ Evaluate (int difEval)
   f = 0;
   if(bLion != ABSENT) f += Fortress( BW, wKing, bLion);
   if(wLion != ABSENT) f -= Fortress(-BW, bKing, wLion);
-  score += (filling < 96 ? f : f*(224 - filling) >> 7); // build up slowly
+  score += (filling < 192 ? f : f*(224 - filling) >> 5); // build up slowly
 # endif
 
 # ifdef KSHIELD
