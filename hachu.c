@@ -1613,7 +1613,7 @@ Fortress (int forward, int king, int lion)
 }
 
 int
-Surround (int stm, int king, int start)
+Surround (int stm, int king, int start, int max)
 {
   int i, s=0;
   for(i=start; i<9; i++) {
@@ -1623,7 +1623,7 @@ Surround (int stm, int king, int start)
     v = p[piece].value;
     s += -(v > 70) & v;
   }
-  return (s > 512 ? 512 : s);
+  return (s > max ? max : s);
 }
 
 int
@@ -1639,7 +1639,7 @@ Ftest (int side)
 int
 Evaluate (int difEval)
 {
-  int wLion = ABSENT, bLion = ABSENT, wKing, bKing, score=mobilityScore, f, i, j;
+  int wLion = ABSENT, bLion = ABSENT, wKing, bKing, score=mobilityScore, f, i, j, max=512;
 
   if(p[WHITE+2].value == LVAL) wLion = p[WHITE+2].pos;
   if(p[BLACK+2].value == LVAL) bLion = p[BLACK+2].pos;
@@ -1681,6 +1681,7 @@ Evaluate (int difEval)
     score += (PST[PST_CENTER+wKing] - PST[PST_CENTER+bKing])*(32 - filling) >> 7;
     if(lead  > 100) score -= PST[PST_CENTER+bKing]*(32 - filling) >> 3; // white leads, drive black K to corner
     if(lead < -100) score += PST[PST_CENTER+wKing]*(32 - filling) >> 3; // black leads, drive white K to corner
+    max = 16*filling;
   }
 
 # ifdef FORTRESS
@@ -1691,7 +1692,7 @@ Evaluate (int difEval)
 # endif
 
 # ifdef KSHIELD
-  score += Surround(WHITE, wKing, 1) - Surround(BLACK, bKing, 1) >> 3;
+  score += Surround(WHITE, wKing, 1, max) - Surround(BLACK, bKing, 1, max) >> 3;
 # endif
 
 #endif
@@ -1703,11 +1704,11 @@ Evaluate (int difEval)
     int sq;
     if((wLion = kylin[WHITE]) && (sq = p[wLion].pos) != ABSENT) {
       int anchor = sq - PST[5*BW*BH - 1 - sq]; // FIXME: PST_ZONDIST indexed backwards
-      score += (512 - Surround(BLACK, anchor, 0))*(128 - filling)*PST[p[wLion].pst + sq] >> 15;
+      score += (512 - Surround(BLACK, anchor, 0, 512))*(128 - filling)*PST[p[wLion].pst + sq] >> 15;
     }
     if((bLion = kylin[BLACK]) && (sq = p[bLion].pos) != ABSENT) {
       int anchor = sq + PST[PST_ZONDIST + sq];
-      score -= (512 - Surround(WHITE, anchor, 0))*(128 - filling)*PST[p[bLion].pst + sq] >> 15;
+      score -= (512 - Surround(WHITE, anchor, 0, 512))*(128 - filling)*PST[p[bLion].pst + sq] >> 15;
     }
   }
 #endif
