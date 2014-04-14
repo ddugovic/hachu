@@ -118,7 +118,8 @@
 #define PST_RETRACT (5*BW*BH+BH)
 #define PST_WFLYER  (6*BW*BH)
 #define PST_BFLYER  (6*BW*BH+BH)
-#define PST_END     (7*BW*BH)
+#define PST_LANCE   (7*BW*BH)
+#define PST_END     (8*BW*BH)
 
 typedef unsigned int Move;
 
@@ -801,7 +802,7 @@ AddPiece (int stm, PieceDesc *list)
   p[i].bulk = list->bulk;
   p[i].mobWeight = v > 600 ? 0 : v >= 400 ? 1 : v >= 300 ? 2 : v > 150 ? 3 : v >= 100 ? 2 : 0;
   if(Lance(list->range))
-    p[i].mobWeight = 5 + 3*(list->range[4]==X), p[i].pst = 0; // clear path but don't move forward
+    p[i].mobWeight = 0, p[i].pst = list->range[4] ? PST_NEUTRAL : PST_LANCE; // keep back
   for(j=stm+2; j<= last[stm]; j+=2) {
     if(p[j].promo >= i) p[j].promo += 2;
   }
@@ -999,7 +1000,8 @@ Init (int var)
     PST[PST_ADVANCE+s] = PST[PST_WFLYER-s-1] = 2*(5*i+i*i) - (i >= zone)*6*(i-zone+1)*(i-zone+1)
 	- (2*j - BH + 1)*(2*j - BH + 1)/BH + BH/2
 	- 50 - 35*(j==0 || j == BH-1) - 15*(j == 1 || BH-2); // advance-encouraging table
-    PST[PST_WFLYER +s] = PST[PST_END-s-1] = (i == zone-1)*40 + (i == zone-2)*20 - 20;
+    PST[PST_WFLYER +s] = PST[PST_LANCE-s-1] = (i == zone-1)*40 + (i == zone-2)*20 - 20;
+    PST[PST_LANCE  +s] = (PST[PST_STEPPER+j] - PST[PST_STEPPER+s])/2; 
    }
    if(zone > 0) PST[PST_WPPROM+BW*(BH-1-zone) + j] += 10, PST[PST_BPPROM + BW*zone + j] += 10;
    if(j > (BH-1)/2 - 3 && j < BH/2 + 3)
