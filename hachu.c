@@ -12,7 +12,7 @@
 
 #define VERSION "0.19"
 
-//define PATH level==0 || path[0] == 0x1103a &&  (level==1 || path[1] == 0x6f0f6 && (level == 2 /*|| path[2] == 0x8710f && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5)))*/))
+//define PATH level==0/* || path[0] == 0x1103a &&  (level==1 || path[1] == 0x6f0f6 && (level == 2 /*|| path[2] == 0x8710f && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5)))))*/
 #define PATH 0
 
 #define HASH
@@ -2334,7 +2334,7 @@ Setup2 (char *fen)
   SetUp(array, currentVariant);
   strcpy(startPos, array);
   sup0 = sup1 = sup2 = ABSENT;
-  hashKeyH = hashKeyL = 87620895*currentVariant;
+  hashKeyH = hashKeyL = 87620895*currentVariant + !!fen;
   return stm;
 }
 
