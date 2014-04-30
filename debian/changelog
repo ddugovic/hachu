@@ -1,3 +1,9 @@
+hachu (0.19-1) experimental; urgency=medium
+
+  * New upstream release.
+
+ -- Yann Dirson <dirson@debian.org>  Wed, 30 Apr 2014 20:36:27 +0200
+
 hachu (0.18-1) experimental; urgency=medium
 
   * New upstream release, including a Makefile.
