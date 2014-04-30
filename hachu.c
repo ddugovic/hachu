@@ -10,9 +10,9 @@
 // promotions by pieces with Lion power stepping in & out the zone in same turn
 // promotion on capture
 
-#define VERSION "0.18"
+#define VERSION "0.19"
 
-//define PATH level==0 /*|| path[0] == 0x3490a &&  (level==1 || path[1] == 0x285b3 && (level == 2 || path[2] == 0x8710f && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5)))))*/
+//define PATH level==0 || path[0] == 0x1103a &&  (level==1 || path[1] == 0x6f0f6 && (level == 2 /*|| path[2] == 0x8710f && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5)))*/))
 #define PATH 0
 
 #define HASH
@@ -21,11 +21,12 @@
 #define CHECKEXT
 #define LMR 4
 #define LIONTRAP
-#define WINGS
+#define XWINGS
 #define KINGSAFETY
 #define KSHIELD
-#define XFORTRESS
+#define FORTRESS
 #define PAWNBLOCK
+#define TANDEM 100 /* bonus for pairs of attacking light steppers */
 #define KYLIN 100 /* extra end-game value of Kylin for promotability */
 #define PROMO 0 /* extra bonus for 'vertical' piece when it actually promotes (diagonal pieces get half) */
 
@@ -102,6 +103,24 @@
 #define P_WHITE     0x0F
 #define P_BLACK     0xF0
 
+// Piece-Square Tables
+#define PST_NEUTRAL 0
+#define PST_STEPPER BH
+#define PST_WJUMPER (BW*BH)
+#define PST_SLIDER  (BW*BH+BH)
+#define PST_TRAP    (2*BW*BH)
+#define PST_CENTER  (2*BW*BH+BH)
+#define PST_WPPROM  (3*BW*BH)
+#define PST_BPPROM  (3*BW*BH+BH)
+#define PST_BJUMPER (4*BW*BH)
+#define PST_ZONDIST (4*BW*BH+BH)
+#define PST_ADVANCE (5*BW*BH)
+#define PST_RETRACT (5*BW*BH+BH)
+#define PST_WFLYER  (6*BW*BH)
+#define PST_BFLYER  (6*BW*BH+BH)
+#define PST_LANCE   (7*BW*BH)
+#define PST_END     (8*BW*BH)
+
 typedef unsigned int Move;
 
 char *MoveToText(Move move, int m);     // from WB driver
@@ -140,7 +159,8 @@ typedef struct {
 } UndoInfo;
 
 char *array, fenArray[4000], startPos[4000], *reason, checkStack[300];
-int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, stalemate, tsume, pvCuts, allowRep, entryProm, pVal;
+int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, stalemate;
+int tsume, pvCuts, allowRep, entryProm, okazaki, pVal;
 int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
 int retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
 int ll, lr, ul, ur; // corner squares
@@ -601,7 +621,7 @@ int attackMaps[200*BSIZE], *attacks = attackMaps;
 char distance[2*BSIZE]; // distance table
 char promoBoard[BSIZE]; // flags to indicate promotion zones
 char rawFire[BSIZE+2*BWMAX]; // flags to indicate squares controlled by Fire Demons
-signed char PST[5*BSIZE];
+signed char PST[7*BSIZE];
 
 #define board     (rawBoard + 6*BHMAX + 3)
 #define fireBoard (rawFire + BWMAX + 1)
@@ -717,7 +737,7 @@ Range (signed char *r)
   int i, m=0;
   for(i=0; i<8; i++) {
     int d = r[i];
-    if(r[i] < 0) d == r[i] >= L ? 2 : 36;
+    if(r[i] < 0) d = r[i] >= L ? 2 : 36;
     if(d > m) m = d;
   }
   return m;
@@ -770,9 +790,9 @@ AddPiece (int stm, PieceDesc *list)
   p[i].value = v = list->value;
   for(j=0; j<8; j++) p[i].range[j] = list->range[j^4*(WHITE-stm)];
   switch(Range(p[i].range)) {
-    case 1:  p[i].pst = BH; break;
-    case 2:  p[i].pst = bsize; break;
-    default: p[i].pst = bsize + BH; break;
+    case 1:  p[i].pst = PST_STEPPER; break;
+    case 2:  p[i].pst = PST_WJUMPER; break;
+    default: p[i].pst = PST_SLIDER;  break;
   }
   key = (stm == WHITE ? &list->whiteKey : &list->blackKey);
   if(!*key) *key = ~(myRandom()*myRandom());
@@ -782,7 +802,7 @@ AddPiece (int stm, PieceDesc *list)
   p[i].bulk = list->bulk;
   p[i].mobWeight = v > 600 ? 0 : v >= 400 ? 1 : v >= 300 ? 2 : v > 150 ? 3 : v >= 100 ? 2 : 0;
   if(Lance(list->range))
-    p[i].mobWeight = 5 + 3*(list->range[4]==X), p[i].pst = 0; // clear path but don't move forward
+    p[i].mobWeight = 0, p[i].pst = list->range[4] ? PST_NEUTRAL : PST_LANCE; // keep back
   for(j=stm+2; j<= last[stm]; j+=2) {
     if(p[j].promo >= i) p[j].promo += 2;
   }
@@ -816,7 +836,7 @@ SetUp(char *array, int var)
 	name[0] += 'A' - 'a';
 	if(name[1]) name[1] += 'A' - 'a';
       } else color = WHITE;
-      if(!strcmp(name, "CP")) prince |= color+1; // remember if we added Crown Prince
+      if(!strcmp(name, "CP") || pflag && !strcmp(name, "DE")) prince |= color+1; // remember if we added Crown Prince
       p1 = LookUp(name, var);
       if(!p1) printf("tellusererror Unknown piece '%s' in setup\n", name), exit(-1);
       if(pflag && p1->promoted) p1 = LookUp(p1->promoted, var); // use promoted piece instead
@@ -853,11 +873,14 @@ SetUp(char *array, int var)
   for(i=0; i<BH; i++) for(j=0; j<BH; j++) board[BW*i+j] = EMPTY;
   for(i=WHITE+2; i<=last[WHITE]; i+=2) if(p[i].pos != ABSENT) {
     int g = p[i].promoGain;
-    if((j = p[i].promo) > 0 && g)
-      p[i].promoGain = (p[j].value - p[i].value - g)*1.25, p[i].value = p[j].value - g;
-    else p[i].promoGain = 0;
     if(i == kylin[WHITE]) p[i].promoGain = 1.25*KYLIN, p[i].value += KYLIN;
-    if(j > 0 && p[i].pst == BH) p[i].pst = 3*BW*BH;      // use white pre-prom bonus
+//    if(j > 0 && p[i].pst == PST_STEPPER) p[i].pst = PST_WPPROM; // use white pre-prom bonus
+    if(j > 0 && p[i].pst == PST_STEPPER && p[i].value >= 100)
+	p[i].pst = p[i].value <= 150 ? PST_ADVANCE : PST_WPPROM;  // light steppers advance
+    if(j > 0 && p[i].bulk == 6) p[i].pst = PST_WFLYER, p[i].mobWeight = 4; // SM defends zone
+    if((j = p[i].promo) > 0 && g)
+      p[i].promoGain = (p[j].value - p[i].value - g)*0.9, p[i].value = p[j].value - g;
+    else p[i].promoGain = 0;
     board[p[i].pos] = i;
     rootEval += p[i].value + PST[p[i].pst + p[i].pos];
     promoDelta += p[i].promoGain;
@@ -865,12 +888,15 @@ SetUp(char *array, int var)
   } else p[i].promoGain = 0;
   for(i=BLACK+2; i<=last[BLACK]; i+=2) if(p[i].pos != ABSENT) {
     int g = p[i].promoGain;
+//    if(j > 0 && p[i].pst == PST_STEPPER) p[i].pst = PST_BPPROM; // use black pre-prom bonus
+    if(j > 0 && p[i].pst == PST_STEPPER && p[i].value >= 100)
+	p[i].pst = p[i].value <= 150 ? PST_RETRACT : PST_BPPROM;  // light steppers advance
+    if(j > 0 && p[i].pst == PST_WJUMPER) p[i].pst = PST_BJUMPER;  // use black pre-prom bonus
+    if(j > 0 && p[i].bulk == 6) p[i].pst = PST_BFLYER, p[i].mobWeight = 4; // SM defends zone
     if((j = p[i].promo) > 0 && g)
-      p[i].promoGain = (p[j].value - p[i].value - g)*1.25, p[i].value = p[j].value - g;
+      p[i].promoGain = (p[j].value - p[i].value - g)*0.9, p[i].value = p[j].value - g;
     else p[i].promoGain = 0;
     if(i == kylin[BLACK]) p[i].promoGain = 1.25*KYLIN, p[i].value += KYLIN;
-    if(j > 0 && p[i].pst == BH) p[i].pst = 3*BW*BH + BH; // use black pre-prom bonus
-    if(j > 0 && p[i].pst == bsize) p[i].pst = 4*BW*BH;      // use white pre-prom bonus
     board[p[i].pos] = i;
     rootEval -= p[i].value + PST[p[i].pst + p[i].pos];
     promoDelta -= p[i].promoGain;
@@ -961,22 +987,31 @@ Init (int var)
   for(j=0; j<BH; j++) {
    for(i=0; i<BH; i++) {
     int s = BW*i + j, d = BH*(BH-2) - abs(2*i - BH + 1)*(BH-1) - (2*j - BH + 1)*(2*j - BH + 1);
-    PST[s] = 2*(i==0 | i==BH-1) + (i==1 | i==BH-2);      // last-rank markers in null table
-    PST[BH+s] = d/4 - (i < 2 || i > BH-3 ? 3 : 0) - (j == 0 || j == BH-1 ? 5 : 0)
-                    + 3*(i==zone || i==BH-zone-1);       // stepper centralization
-    PST[BH*BW+s] = d/6;                                  // double-stepper centralization
-    PST[BH*BW+BH+s] = d/12 - 5*(i==BH/2 || i==(BH-1)/2); // slider centralization
-    PST[2*BH*BW+s] = j < 3 || j > BH-4 ? (i < 3 ? 7 : i == 3 ? 4 : i == 4 ? 2 : 0) : 0;
-    PST[2*BH*BW+BH+s] = ((BH-1)*(BH-1) - (2*i - BH + 1)*(2*i - BH + 1) - (2*j - BH + 1)*(2*j - BH + 1))/6;
-    PST[3*BH*BW+s] = PST[3*BH*BW+BH+s] = PST[BH+s];      // as stepper, but with pre-promotion bonus W/B
-    PST[4*BH*BW+s] = PST[BW*BH+s];                       // as jumper, but with pre-promotion bonus B
-    PST[4*BH*BW+BH+s] = BW*(zone - 1 - i);               // board step to enter promo zone black
+    PST[s] = 2*(i==0 | i==BH-1) + (i==1 | i==BH-2);         // last-rank markers in null table
+    PST[PST_STEPPER+s] = d/4 - (i < 2 || i > BH-3 ? 3 : 0) - (j == 0 || j == BH-1 ? 5 : 0)
+                    + 3*(i==zone || i==BH-zone-1);          // stepper centralization
+    PST[PST_WJUMPER+s] = d/6;                               // double-stepper centralization
+    PST[PST_SLIDER +s] = d/12 - 15*(i==BH/2 || i==(BH-1)/2);// slider centralization
+    PST[PST_TRAP  +s] = j < 3 || j > BH-4 ? (i < 3 ? 7 : i == 3 ? 4 : i == 4 ? 2 : 0) : 0;
+    PST[PST_CENTER+s] = ((BH-1)*(BH-1) - (2*i - BH + 1)*(2*i - BH + 1) - (2*j - BH + 1)*(2*j - BH + 1))/6;
+    PST[PST_WPPROM+s] = PST[PST_BPPROM+s] = PST[PST_STEPPER+s]; // as stepper, but with pre-promotion bonus W/B
+    PST[PST_BJUMPER+s] = PST[PST_WJUMPER+s];                // as jumper, but with pre-promotion bonus B
+    PST[PST_ZONDIST+s] = BW*(zone - 1 - i);                 // board step to enter promo zone black
+    PST[PST_ADVANCE+s] = PST[PST_WFLYER-s-1] = 2*(5*i+i*i) - (i >= zone)*6*(i-zone+1)*(i-zone+1)
+	- (2*j - BH + 1)*(2*j - BH + 1)/BH + BH/2
+	- 50 - 35*(j==0 || j == BH-1) - 15*(j == 1 || BH-2); // advance-encouraging table
+    PST[PST_WFLYER +s] = PST[PST_LANCE-s-1] = (i == zone-1)*40 + (i == zone-2)*20 - 20;
+    PST[PST_LANCE  +s] = (PST[PST_STEPPER+j] - PST[PST_STEPPER+s])/2; 
    }
-   if(zone > 0) PST[3*BW*BH+BW*(BH-1-zone) + j] += 10, PST[3*BW*BH+BH + BW*zone + j] += 10;
+   if(zone > 0) PST[PST_WPPROM+BW*(BH-1-zone) + j] += 10, PST[PST_BPPROM + BW*zone + j] += 10;
+   if(j > (BH-1)/2 - 3 && j < BH/2 + 3)
+	PST[PST_WPPROM + j] += 4, PST[PST_BPPROM + BW*(BH-1) + j] += 4; // fortress
+   if(j > (BH-1)/2 - 2 && j < BH/2 + 2)
+	PST[PST_WPPROM + BW + j] += 2, PST[PST_BPPROM + BW*(BH-2) + j] += 2; // fortress
 #if KYLIN
    // pre-promotion bonuses for jumpers
-   if(zone > 0) PST[BW*BH + BW*(BH-2-zone) + j] = PST[4*BW*BH + BW*(zone+1) + j] = 100,
-                PST[BW*BH + BW*(BH-1-zone) + j] = PST[4*BW*BH + BW*zone + j] = 200;
+   if(zone > 0) PST[PST_WJUMPER + BW*(BH-2-zone) + j] = PST[PST_BJUMPER + BW*(zone+1) + j] = 100,
+                PST[PST_WJUMPER + BW*(BH-1-zone) + j] = PST[PST_BJUMPER + BW*zone + j] = 200;
 #endif
   }
 
@@ -1529,9 +1564,26 @@ Guard (int sqr)
 int
 Fortress (int forward, int king, int lion)
 { // penalty for lack of Lion-proof fortress
-  int rank = PST[king], anchor, r, l, q;
-  if(!rank) return -300;
+  int rank = PST[king], anchor, r, l, q, res = 0;
+  if(rank != 2) return 25*(rank-2);
   anchor = king + forward*(rank-1);
+
+  q = Guard(anchor); l = Guard(anchor-1); r = Guard(anchor+1);
+  if(!q) return l > 1 || r > 1 ? 0 : -25;
+  if(q == 1) res = 40*(l > 1 && r > 1);           // TGT, EGT or TGE get 40
+  else { // T or E in front of King
+    if(l > 1) res = 30 + (r > 1)*(20 + 5*(q==2)); // TT., ET. or TE. (30), TET (50), TTE (55)
+    else if(r > 1) res = 30;                      // .TT, .ET or .TE (30)
+  }
+  q = 0;
+  if(filling > 32) {
+    if(r > 1 && Guard(king+2) == 1) q += 10;
+    if(l > 1 && Guard(king-2) == 1) q += 10; 
+    q += 5*(Guard(king+1) == 1);
+    q += 5*(Guard(king-1) == 1);
+    if(filling < 96) q = q*(filling - 32)>>6;
+  }
+  return res + q;
 
   if(Guard(anchor) == 3 || Guard(anchor+1) == 3 || Guard(anchor-1) == 3) return 0;
   if(rank == 2 && Guard(king+1) == 3 || Guard(king-1) == 3) return -50;
@@ -1561,7 +1613,7 @@ Fortress (int forward, int king, int lion)
 }
 
 int
-Surround (int stm, int king, int start)
+Surround (int stm, int king, int start, int max)
 {
   int i, s=0;
   for(i=start; i<9; i++) {
@@ -1571,7 +1623,7 @@ Surround (int stm, int king, int start)
     v = p[piece].value;
     s += -(v > 70) & v;
   }
-  return (s > 512 ? 512 : s);
+  return (s > max ? max : s);
 }
 
 int
@@ -1587,7 +1639,7 @@ Ftest (int side)
 int
 Evaluate (int difEval)
 {
-  int wLion = ABSENT, bLion = ABSENT, wKing, bKing, score=mobilityScore, f, i, j;
+  int wLion = ABSENT, bLion = ABSENT, wKing, bKing, score=mobilityScore, f, i, j, max=512;
 
   if(p[WHITE+2].value == LVAL) wLion = p[WHITE+2].pos;
   if(p[BLACK+2].value == LVAL) bLion = p[BLACK+2].pos;
@@ -1595,7 +1647,7 @@ Evaluate (int difEval)
   if(bLion == ABSENT && p[BLACK+4].value == LVAL) bLion = p[BLACK+4].pos;
 
 #ifdef LIONTRAP
-# define lionTrap (PST + 2*BH*BW)
+# define lionTrap (PST + PST_TRAP)
   // penalty for Lion in enemy corner, when enemy Lion is nearby
   if(wLion != ABSENT && bLion != ABSENT) { // both have a Lion
       static int distFac[36] = { 0, 0, 10, 9, 8, 7, 5, 3, 1 };
@@ -1622,24 +1674,25 @@ Evaluate (int difEval)
 
 #ifdef KINGSAFETY
   // basic centralization in end-game (also facilitates bare-King mating)
-  wKing = p[royal[WHITE]].pos; if(wKing == ABSENT) wKing = p[royal[WHITE]+1].pos;
-  bKing = p[royal[BLACK]].pos; if(bKing == ABSENT) bKing = p[royal[BLACK]+1].pos;
+  wKing = p[royal[WHITE]].pos; if(wKing == ABSENT) wKing = p[royal[WHITE]+2].pos;
+  bKing = p[royal[BLACK]].pos; if(bKing == ABSENT) bKing = p[royal[BLACK]+2].pos;
   if(filling < 32) {
     int lead = (stm == WHITE ? difEval : -difEval);
-    score += (PST[3*BW*BH+wKing] - PST[3*BW*BH+bKing])*(32 - filling) >> 7;
-    if(lead  > 100) score -= PST[3*BW*BH+bKing]*(32 - filling) >> 3; // white leads, drive black K to corner
-    if(lead < -100) score += PST[3*BW*BH+wKing]*(32 - filling) >> 3; // black leads, drive white K to corner
+    score += (PST[PST_CENTER+wKing] - PST[PST_CENTER+bKing])*(32 - filling) >> 7;
+    if(lead  > 100) score -= PST[PST_CENTER+bKing]*(32 - filling) >> 3; // white leads, drive black K to corner
+    if(lead < -100) score += PST[PST_CENTER+wKing]*(32 - filling) >> 3; // black leads, drive white K to corner
+    max = 16*filling;
   }
 
 # ifdef FORTRESS
   f = 0;
   if(bLion != ABSENT) f += Fortress( BW, wKing, bLion);
   if(wLion != ABSENT) f -= Fortress(-BW, bKing, wLion);
-  score += (filling < 96 ? f : f*(224 - filling) >> 7); // build up slowly
+  score += (filling < 192 ? f : f*(224 - filling) >> 5); // build up slowly
 # endif
 
 # ifdef KSHIELD
-  score += Surround(WHITE, wKing, 1) - Surround(BLACK, bKing, 1) >> 3;
+  score += Surround(WHITE, wKing, 1, max) - Surround(BLACK, bKing, 1, max) >> 3;
 # endif
 
 #endif
@@ -1650,18 +1703,18 @@ Evaluate (int difEval)
   if(filling < 128) {
     int sq;
     if((wLion = kylin[WHITE]) && (sq = p[wLion].pos) != ABSENT) {
-      int anchor = sq - PST[5*BW*BH - 1 - sq];
-      score += (512 - Surround(BLACK, anchor, 0))*(128 - filling)*PST[p[wLion].pst + sq] >> 15;
+      int anchor = sq - PST[5*BW*BH - 1 - sq]; // FIXME: PST_ZONDIST indexed backwards
+      score += (512 - Surround(BLACK, anchor, 0, 512))*(128 - filling)*PST[p[wLion].pst + sq] >> 15;
     }
     if((bLion = kylin[BLACK]) && (sq = p[bLion].pos) != ABSENT) {
-      int anchor = sq + PST[4*BW*BH + BH + sq];
-      score -= (512 - Surround(WHITE, anchor, 0))*(128 - filling)*PST[p[bLion].pst + sq] >> 15;
+      int anchor = sq + PST[PST_ZONDIST + sq];
+      score -= (512 - Surround(WHITE, anchor, 0, 512))*(128 - filling)*PST[p[bLion].pst + sq] >> 15;
     }
   }
 #endif
 
 #ifdef PAWNBLOCK
-  // penalty for blocking own P or GB: 20 by slider, 10 by other, but 50 if only retreat mode is straight back
+  // penalty for blocking own P or GB: 20 by slider, 10 by other, but 50 if only RETRACT mode is straight back
   for(i=last[WHITE]; i > 1 && p[i].value<=50; i-=2) {
     if((f = p[i].pos) != ABSENT) { // P present,
       if((j = board[f + BW])&1) // square before it white (odd) piece
@@ -1680,7 +1733,26 @@ Evaluate (int difEval)
   }
 #endif
 
-  return difEval - (filling*filling*promoDelta >> 16) + (stm ? score : -score);
+#ifdef TANDEM
+    if(zone > 0) {
+      int rw = BW*(BH-1-zone), rb = BW*zone, h=0;
+      for(f=0; f<BH; f++) {
+	if(p[board[rw+f]].pst == PST_ADVANCE) {
+	  h += (p[board[rw+f-BW]].pst == PST_ADVANCE);
+	  if(f > 0)    h += (p[board[rw+f-BW-1]].pst == PST_ADVANCE);
+	  if(f+1 < BH) h += (p[board[rw+f-BW+1]].pst == PST_ADVANCE);
+	}
+	if(p[board[rb+f]].pst == PST_ADVANCE) {
+	  h -= (p[board[rb+f+BW]].pst == PST_RETRACT);
+	  if(f > 0)    h -= (p[board[rb+f+BW-1]].pst == PST_RETRACT);
+	  if(f+1 < BH) h -= (p[board[rb+f+BW+1]].pst == PST_RETRACT);
+	}
+      }
+      score += h*TANDEM;
+    }
+#endif
+
+  return difEval - (filling*promoDelta >> 8) + (stm ? score : -score);
 }
 
 inline void
@@ -1738,7 +1810,7 @@ if(!level) {for(i=0; i<5; i++)printf("# %d %08x, %d\n", i, repStack[200-i], chec
     }
   } else { // he has no king! Test for attacks on Crown Prince
     k = p[king + 2].pos;
-    if(attacks[2*k + stm]) return INF; // we have attack on Crown Prince
+    if(k == ABSENT || attacks[2*k + stm]) return INF; // we have attack on Crown Prince
   }
 //printf("King safe\n");fflush(stdout);
   // EVALUATION & WINDOW SHIFT
@@ -1963,7 +2035,9 @@ MapFromScratch(attacks); // for as long as incremental update does not work.
 	  if(dist[tb.from-tb.to] != 1 && attacks[2*tb.to + stm] && p[tb.epVictim[0]].value <= 50)
 	    score = -INF;                           // our Lion is indeed made vulnerable and can be recaptured
 	} else {                                    // other x Ln
-	  if(promoSuppress & PROMOTE) score = -INF; // non-Lion captures Lion after opponent did same
+	  if(promoSuppress & PROMOTE) {             // non-Lion captures Lion after opponent did same
+	    if(!okazaki || attacks[2*tb.to + stm]) score = -INF;
+	  }
 	  defer |= PROMOTE;                         // if we started, flag  he cannot do it in reply
 	}
         if(score == -INF) {
@@ -1976,6 +2050,7 @@ MapFromScratch(attacks); // for as long as incremental update does not work.
       score = -Search(-beta, -iterAlpha, -difEval - tb.booty, iterDep-1+ext,
                        curMove >= late && iterDep > QSdepth + LMR,
                                                       promoSuppress & ~PROMOTE, defer, depth ? INF : tb.gain);
+
 #else
       score = 0;
 #endif
@@ -2078,7 +2153,7 @@ pplist()
 {
   int i, j;
   for(i=0; i<182; i++) {
-	printf("%3d. %3d %3d %4d   %02x %d %d %x %3d ", i, p[i].value, p[i].promo, p[i].pos, p[i].promoFlag&255, p[i].mobWeight, p[i].qval, p[i].bulk, p[i].promoGain);
+	printf("%3d. %3d %3d %4d   %02x %d %d %x %3d %4d ", i, p[i].value, p[i].promo, p[i].pos, p[i].promoFlag&255, p[i].mobWeight, p[i].qval, p[i].bulk, p[i].promoGain, p[i].pst);
 	for(j=0; j<8; j++) printf("  %2d", p[i].range[j]);
 	if(i<2 || i>11) printf("\n"); else printf("  %02x\n", fireFlags[i-2]&255);
   }
@@ -2476,7 +2551,7 @@ printf("# SearchBestMove\n");
 printf("# s=%d\n", startTime);fflush(stdout);
 MapFromScratch(attacks);
   retMove = INVALID; repCnt = 0;
-  score = Search(-INF-1, INF+1, rootEval, maxDepth, 0, sup1, sup2, INF);
+  score = Search(-INF-1, INF+1, rootEval, maxDepth + QSdepth, 0, sup1, sup2, INF);
   *move = retMove;
   *ponderMove = pv[1];
 printf("# best=%s\n", MoveToText(pv[0],0));
@@ -2506,6 +2581,7 @@ printf("# setup done");fflush(stdout);
 
     void GetLine(int root)
     {
+
       int i, c;
       while(1) {
         // wait for input, and read it until we have collected a complete line
@@ -2642,6 +2718,7 @@ pboard(board);
           printf("feature option=\"Full analysis PV -check 1\"\n"); // example of an engine-defined option
           printf("feature option=\"Allow repeats -check 0\"\n");
           printf("feature option=\"Promote on entry -check 0\"\n");
+          printf("feature option=\"Okazaki rule -check 0\"\n");
           printf("feature option=\"Resign -check 0\"\n");           // 
           printf("feature option=\"Contempt -spin 0 -200 200\"\n"); // and another one
           printf("feature option=\"Tsume -combo no /// Sente mates /// Gote mates\"\n");
@@ -2653,6 +2730,7 @@ pboard(board);
           if(sscanf(inBuf+7, "Allow repeats=%d", &allowRep)  == 1) continue;
           if(sscanf(inBuf+7, "Resign=%d",   &resign)         == 1) continue;
           if(sscanf(inBuf+7, "Contempt=%d", &contemptFactor) == 1) continue;
+          if(sscanf(inBuf+7, "Okazaki rule=%d", &okazaki)    == 1) continue;
           if(sscanf(inBuf+7, "Promote on entry=%d", &entryProm) == 1) continue;
           if(sscanf(inBuf+7, "Tsume=%s", command) == 1) {
 	    if(!strcmp(command, "no"))    tsume = 0; else
@@ -2664,6 +2742,7 @@ pboard(board);
         }
         if(!strcmp(command, "sd"))      { sscanf(inBuf, "sd %d", &maxDepth);    continue; }
         if(!strcmp(command, "st"))      { sscanf(inBuf, "st %d", &timePerMove); continue; }
+
         if(!strcmp(command, "memory"))  { SetMemorySize(atoi(inBuf+7)); continue; }
         if(!strcmp(command, "ping"))    { printf("pong%s", inBuf+4); continue; }
     //  if(!strcmp(command, ""))        { sscanf(inBuf, " %d", &); continue; }
