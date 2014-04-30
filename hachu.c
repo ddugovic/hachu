@@ -12,7 +12,7 @@
 
 #define VERSION "0.19"
 
-//define PATH level==0/* || path[0] == 0x1103a &&  (level==1 || path[1] == 0x6f0f6 && (level == 2 /*|| path[2] == 0x8710f && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5)))))*/
+//define PATH level==0 || path[0] == 0x590cb &&  (level==1 || path[1] == 0x4c0c9 && (level == 2 || path[2] == 0x8598ca && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5))*/)))
 #define PATH 0
 
 #define HASH
@@ -1787,8 +1787,10 @@ if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("search(%d) {%d,%d} eval=
   // in-check test and TSUME filter
   {
     k = p[king=royal[stm]].pos;
-    if( k == ABSENT) k = p[king + 2].pos;
-    else if(p[king + 2].pos != ABSENT) k = ABSENT; // two kings is no king...
+    if( k == ABSENT) {
+      if((k = p[king + 2].pos) == ABSENT && (!tsume || tsume & stm+1))
+        return -INF;   // lose when no King (in tsume only for side to be mated)
+    } else if(p[king + 2].pos != ABSENT) k = ABSENT; // two kings is no king...
     if( k != ABSENT) { // check is possible
       if(!attacks[2*k + xstm]) {
 	if(tsume && tsume & stm+1) {
