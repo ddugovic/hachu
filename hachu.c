@@ -1641,6 +1641,8 @@ Evaluate (int difEval)
 {
   int wLion = ABSENT, bLion = ABSENT, wKing, bKing, score=mobilityScore, f, i, j, max=512;
 
+  if(tsume) return difEval;
+
   if(p[WHITE+2].value == LVAL) wLion = p[WHITE+2].pos;
   if(p[BLACK+2].value == LVAL) bLion = p[BLACK+2].pos;
   if(wLion == ABSENT && p[WHITE+4].value == LVAL) wLion = p[WHITE+4].pos;
@@ -1812,7 +1814,7 @@ if(!level) {for(i=0; i<5; i++)printf("# %d %08x, %d\n", i, repStack[200-i], chec
     }
   } else { // he has no king! Test for attacks on Crown Prince
     k = p[king + 2].pos;
-    if(k == ABSENT || attacks[2*k + stm]) return INF; // we have attack on Crown Prince
+    if(k == ABSENT ? !tsume : attacks[2*k + stm]) return INF; // we have attack on Crown Prince
   }
 //printf("King safe\n");fflush(stdout);
   // EVALUATION & WINDOW SHIFT
