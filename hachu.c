@@ -1950,6 +1950,7 @@ if(PATH) printf("# autofail end (%d-%d)\n", firstMove, msp);
 	  case 6: // non-captures
 	    nonCapts = msp;
 	    nullMove = GenNonCapts(oldPromo);
+	    if(msp == nonCapts) goto cutoff;
 #ifdef KILLERS
 	    { // swap killers to front
 	      Move h = killer[level][0]; int j = curMove;
