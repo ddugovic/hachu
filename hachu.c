@@ -2027,6 +2027,7 @@ if(flag & depth >= 0) printf("%2d:%d found %d/%d %08x %s\n", depth, iterDep, cur
 
 if(flag & depth >= 0) printf("%2d:%d made %d/%d %s\n", depth, iterDep, curMove, msp, MoveToText(moveStack[curMove], 0));
       for(i=2; i<=cnt50; i+=2) if(repStack[level-i+200] == hashKeyH) {
+	retDep = iterDep;
 	if(repDraws) { score = 0; goto repetition; }
 	if(!allowRep) {
 	  moveStack[curMove] = 0;         // erase forbidden move
@@ -2146,7 +2147,7 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d  (%d)\n", level, depth, iterDep
 #ifdef HASH
     // hash store
     hashTable[index].lock[hit]  = hashKeyH;
-    hashTable[index].depth[hit] = iterDep;
+    hashTable[index].depth[hit] = resDep;
     hashTable[index].score[hit] = bestScore;
     hashTable[index].flag[hit]  = (bestScore < beta) * H_UPPER;
     if(bestScore > alpha) {
