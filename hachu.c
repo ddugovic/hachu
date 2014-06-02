@@ -2318,6 +2318,7 @@ Convert (char *fen)
         *p++ = table[2* (*fen - 'A' - n)+1] + n;
       }
     } else *p++ = *fen;
+    if(!*fen) break;
     fen++;
   }
   printf("# converted FEN '%s'\n", fenArray);
