@@ -1909,7 +1909,11 @@ if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp
 	      if(to == ABSENT) continue;              // ignore if absent
 	      if(!attacks[2*to + stm]) continue;      // skip if not attacked
 	      group = p[nextVictim].value;            // remember value of this found victim
-	      if(iterDep <= QSdepth + 1 && 2*group + curEval + 30 < alpha) { resDep = QSdepth + 1; goto cutoff; }
+	      if(iterDep <= QSdepth + 1 && 2*group + curEval + 30 < alpha) {
+		resDep = QSdepth + 1; nextVictim -= 2;
+		if(bestScore < 2*group + curEval + 30) bestScore = 2*group + curEval + 30;
+		goto cutoff;
+	      }
 if(PATH) printf("%d:%2d:%2d group=%d, to=%c%d\n",level,depth,iterDep,group,to%BW+'a',to/BW+ONE);
 	      GenCapts(to, 0);
 if(PATH) printf("%d:%2d:%2d first=%d msp=%d\n",level,depth,iterDep,firstMove,msp);
