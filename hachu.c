@@ -1796,7 +1796,12 @@ if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("search(%d) {%d,%d} eval=
     if( k == ABSENT) {
       if((k = p[king + 2].pos) == ABSENT && (!tsume || tsume & stm+1))
         return -INF;   // lose when no King (in tsume only for side to be mated)
-    } else if(p[king + 2].pos != ABSENT) k = ABSENT; // two kings is no king...
+    } else if(p[king + 2].pos != ABSENT) {
+      if(tsume && tsume & stm+1) {
+	retDep = 60; return INF; // we win when not in check
+      }
+      k = ABSENT; // two kings is no king...
+    }
     if( k != ABSENT) { // check is possible
       if(!attacks[2*k + xstm]) {
 	if(tsume && tsume & stm+1) {
