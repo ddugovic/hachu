@@ -166,7 +166,7 @@ int retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
 int ll, lr, ul, ur; // corner squares
 int nodes, startTime, lastRootMove, lastRootIter, tlim1, tlim2, tlim3, repCnt, comp, abortFlag;
 Move ponderMove;
-Move retMove, moveStack[10000], path[100], repStack[300], pv[1000], repeatMove[300], killer[100][2];
+Move retMove, moveStack[20000], path[100], repStack[300], pv[1000], repeatMove[300], killer[100][2];
 
       int maxDepth;                            // used by search
 
@@ -2239,7 +2239,7 @@ pmoves(int start, int end)
 
     // some parameter of your engine
     #define MAXMOVES 2000 /* maximum game length  */
-    #define MAXPLY   30   /* maximum search depth */
+    #define MAXPLY   60   /* maximum search depth */
 
     #define OFF 0
     #define ON  1
