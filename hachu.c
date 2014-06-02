@@ -820,6 +820,7 @@ SetUp(char *array, int var)
   char c, *q, name[3], prince = 0;
   PieceDesc *p1, *p2;
   last[WHITE] = 1; last[BLACK] = 0;
+  royal[WHITE] = royal[BLACK] = 0;
   for(i=0; ; i++) {
 //printf("next rank: %s\n", array);
     for(j = BW*i; ; j++) {
@@ -860,6 +861,9 @@ SetUp(char *array, int var)
     }
   }
  eos:
+  // add dummy Kings if not yet added (needed to set royal[] to valid value!)
+  if(!royal[WHITE]) p[AddPiece(WHITE, LookUp("K", V_CHU))].pos = ABSENT;
+  if(!royal[BLACK]) p[AddPiece(BLACK, LookUp("K", V_CHU))].pos = ABSENT;
   // add dummy Crown Princes if not yet added
   if(!(prince & WHITE+1)) p[AddPiece(WHITE, LookUp("CP", V_CHU))].pos = ABSENT;
   if(!(prince & BLACK+1)) p[AddPiece(BLACK, LookUp("CP", V_CHU))].pos = ABSENT;
