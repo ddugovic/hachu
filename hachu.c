@@ -2336,6 +2336,7 @@ Convert (char *fen)
     if(!*fen) break;
     fen++;
   }
+  *p = '\0';
   printf("# converted FEN '%s'\n", fenArray);
   return fenArray;
 }
