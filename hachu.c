@@ -1057,8 +1057,8 @@ NewNonCapture (int x, int y, int promoFlags)
 {
   if(board[y] != EMPTY) return 1; // edge, capture or own piece
 //if(flag) printf("# add %c%d%c%d, pf=%d\n", x%BW+'a',x/BW,y%BW+'a',y/BW, promoFlags);
-  if( (promoBoard[x] | promoBoard[y]) & promoFlags &&
-      (!entryProm || promoBoard[y] & ~promoBoard[x] & CAN_PROMOTE )){ // piece can promote with this move
+  if( (entryProm ? promoBoard[y] & ~promoBoard[x] & CAN_PROMOTE
+                 : promoBoard[y] |  promoBoard[x]       ) & promoFlags ){ // piece can promote with this move
     moveStack[msp++] = moveStack[nonCapts];           // create space for promotion
     moveStack[nonCapts++] = x<<SQLEN | y | PROMOTE;   // push promotion
     if((promoFlags & promoBoard[y] & (CANT_DEFER | DONT_DEFER | LAST_RANK)) == 0) { // deferral could be a better alternative
