@@ -10,7 +10,7 @@
 // promotions by pieces with Lion power stepping in & out the zone in same turn
 // promotion on capture
 
-#define VERSION "0.19"
+#define VERSION "0.20"
 
 //define PATH level==0 || path[0] == 0x590cb &&  (level==1 || path[1] == 0x4c0c9 && (level == 2 || path[2] == 0x8598ca && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5))*/)))
 #define PATH 0
