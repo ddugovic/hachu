@@ -1,0 +1,6 @@
+# WARNING: you don't want to --download this, the URL does not point
+# to a tarball.  This is only for monitoring of upstream git tags.
+
+version=3
+http://hgm.nubati.net/cgi-bin/gitweb.cgi?p=hachu.git;a=tags \
+  /cgi-bin/gitweb.cgi\?p=hachu.git;a=shortlog;h=refs/tags/(.+)
