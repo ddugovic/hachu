@@ -5,8 +5,8 @@ Maintainer: Yann Dirson <dirson@debian.org>
 Build-Depends: debhelper (>= 9.0.0), dh-buildinfo, perl
 Standards-Version: 3.9.5
 Homepage: http://hgm.nubati.net/cgi-bin/gitweb.cgi?p=hachu.git
-#Vcs-Git: git://git.debian.org/collab-maint/hachu.git
-#Vcs-Browser: http://git.debian.org/?p=collab-maint/hachu.git;a=summary
+Vcs-Git: git://git.debian.org/collab-maint/hachu.git
+Vcs-Browser: http://git.debian.org/?p=collab-maint/hachu.git;a=summary
 
 Package: hachu
 Architecture: any
