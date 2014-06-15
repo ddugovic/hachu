@@ -10,9 +10,9 @@
 // promotions by pieces with Lion power stepping in & out the zone in same turn
 // promotion on capture
 
-#define VERSION "0.19"
+#define VERSION "0.20"
 
-//define PATH level==0 || path[0] == 0x1103a &&  (level==1 || path[1] == 0x6f0f6 && (level == 2 /*|| path[2] == 0x8710f && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5)))*/))
+//define PATH level==0 || path[0] == 0x590cb &&  (level==1 || path[1] == 0x4c0c9 && (level == 2 || path[2] == 0x8598ca && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5))*/)))
 #define PATH 0
 
 #define HASH
@@ -166,7 +166,7 @@ int retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
 int ll, lr, ul, ur; // corner squares
 int nodes, startTime, lastRootMove, lastRootIter, tlim1, tlim2, tlim3, repCnt, comp, abortFlag;
 Move ponderMove;
-Move retMove, moveStack[10000], path[100], repStack[300], pv[1000], repeatMove[300], killer[100][2];
+Move retMove, moveStack[20000], path[100], repStack[300], pv[1000], repeatMove[300], killer[100][2];
 
       int maxDepth;                            // used by search
 
@@ -820,6 +820,7 @@ SetUp(char *array, int var)
   char c, *q, name[3], prince = 0;
   PieceDesc *p1, *p2;
   last[WHITE] = 1; last[BLACK] = 0;
+  royal[WHITE] = royal[BLACK] = 0;
   for(i=0; ; i++) {
 //printf("next rank: %s\n", array);
     for(j = BW*i; ; j++) {
@@ -860,6 +861,9 @@ SetUp(char *array, int var)
     }
   }
  eos:
+  // add dummy Kings if not yet added (needed to set royal[] to valid value!)
+  if(!royal[WHITE]) p[AddPiece(WHITE, LookUp("K", V_CHU))].pos = ABSENT;
+  if(!royal[BLACK]) p[AddPiece(BLACK, LookUp("K", V_CHU))].pos = ABSENT;
   // add dummy Crown Princes if not yet added
   if(!(prince & WHITE+1)) p[AddPiece(WHITE, LookUp("CP", V_CHU))].pos = ABSENT;
   if(!(prince & BLACK+1)) p[AddPiece(BLACK, LookUp("CP", V_CHU))].pos = ABSENT;
@@ -1053,8 +1057,8 @@ NewNonCapture (int x, int y, int promoFlags)
 {
   if(board[y] != EMPTY) return 1; // edge, capture or own piece
 //if(flag) printf("# add %c%d%c%d, pf=%d\n", x%BW+'a',x/BW,y%BW+'a',y/BW, promoFlags);
-  if( (promoBoard[x] | promoBoard[y]) & promoFlags &&
-      (!entryProm || promoBoard[y] & ~promoBoard[x] & CAN_PROMOTE )){ // piece can promote with this move
+  if( (entryProm ? promoBoard[y] & ~promoBoard[x] & CAN_PROMOTE
+                 : promoBoard[y] |  promoBoard[x]       ) & promoFlags ){ // piece can promote with this move
     moveStack[msp++] = moveStack[nonCapts];           // create space for promotion
     moveStack[nonCapts++] = x<<SQLEN | y | PROMOTE;   // push promotion
     if((promoFlags & promoBoard[y] & (CANT_DEFER | DONT_DEFER | LAST_RANK)) == 0) { // deferral could be a better alternative
@@ -1641,6 +1645,8 @@ Evaluate (int difEval)
 {
   int wLion = ABSENT, bLion = ABSENT, wKing, bKing, score=mobilityScore, f, i, j, max=512;
 
+  if(tsume) return difEval;
+
   if(p[WHITE+2].value == LVAL) wLion = p[WHITE+2].pos;
   if(p[BLACK+2].value == LVAL) bLion = p[BLACK+2].pos;
   if(wLion == ABSENT && p[WHITE+4].value == LVAL) wLion = p[WHITE+4].pos;
@@ -1787,8 +1793,15 @@ if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("search(%d) {%d,%d} eval=
   // in-check test and TSUME filter
   {
     k = p[king=royal[stm]].pos;
-    if( k == ABSENT) k = p[king + 2].pos;
-    else if(p[king + 2].pos != ABSENT) k = ABSENT; // two kings is no king...
+    if( k == ABSENT) {
+      if((k = p[king + 2].pos) == ABSENT && (!tsume || tsume & stm+1))
+        return -INF;   // lose when no King (in tsume only for side to be mated)
+    } else if(p[king + 2].pos != ABSENT) {
+      if(tsume && tsume & stm+1) {
+	retDep = 60; return INF; // we win when not in check
+      }
+      k = ABSENT; // two kings is no king...
+    }
     if( k != ABSENT) { // check is possible
       if(!attacks[2*k + xstm]) {
 	if(tsume && tsume & stm+1) {
@@ -1810,7 +1823,7 @@ if(!level) {for(i=0; i<5; i++)printf("# %d %08x, %d\n", i, repStack[200-i], chec
     }
   } else { // he has no king! Test for attacks on Crown Prince
     k = p[king + 2].pos;
-    if(k == ABSENT || attacks[2*k + stm]) return INF; // we have attack on Crown Prince
+    if(k == ABSENT ? !tsume : attacks[2*k + stm]) return INF; // we have attack on Crown Prince
   }
 //printf("King safe\n");fflush(stdout);
   // EVALUATION & WINDOW SHIFT
@@ -1905,7 +1918,11 @@ if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp
 	      if(to == ABSENT) continue;              // ignore if absent
 	      if(!attacks[2*to + stm]) continue;      // skip if not attacked
 	      group = p[nextVictim].value;            // remember value of this found victim
-	      if(iterDep <= QSdepth + 1 && 2*group + curEval + 30 < alpha) { resDep = QSdepth + 1; goto cutoff; }
+	      if(iterDep <= QSdepth + 1 && 2*group + curEval + 30 < alpha) {
+		resDep = QSdepth + 1; nextVictim -= 2;
+		if(bestScore < 2*group + curEval + 30) bestScore = 2*group + curEval + 30;
+		goto cutoff;
+	      }
 if(PATH) printf("%d:%2d:%2d group=%d, to=%c%d\n",level,depth,iterDep,group,to%BW+'a',to/BW+ONE);
 	      GenCapts(to, 0);
 if(PATH) printf("%d:%2d:%2d first=%d msp=%d\n",level,depth,iterDep,firstMove,msp);
@@ -1946,6 +1963,7 @@ if(PATH) printf("# autofail end (%d-%d)\n", firstMove, msp);
 	  case 6: // non-captures
 	    nonCapts = msp;
 	    nullMove = GenNonCapts(oldPromo);
+	    if(msp == nonCapts) goto cutoff;
 #ifdef KILLERS
 	    { // swap killers to front
 	      Move h = killer[level][0]; int j = curMove;
@@ -2009,6 +2027,7 @@ if(flag & depth >= 0) printf("%2d:%d found %d/%d %08x %s\n", depth, iterDep, cur
 
 if(flag & depth >= 0) printf("%2d:%d made %d/%d %s\n", depth, iterDep, curMove, msp, MoveToText(moveStack[curMove], 0));
       for(i=2; i<=cnt50; i+=2) if(repStack[level-i+200] == hashKeyH) {
+	retDep = iterDep;
 	if(repDraws) { score = 0; goto repetition; }
 	if(!allowRep) {
 	  moveStack[curMove] = 0;         // erase forbidden move
@@ -2128,7 +2147,7 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d  (%d)\n", level, depth, iterDep
 #ifdef HASH
     // hash store
     hashTable[index].lock[hit]  = hashKeyH;
-    hashTable[index].depth[hit] = iterDep;
+    hashTable[index].depth[hit] = resDep;
     hashTable[index].score[hit] = bestScore;
     hashTable[index].flag[hit]  = (bestScore < beta) * H_UPPER;
     if(bestScore > alpha) {
@@ -2220,7 +2239,7 @@ pmoves(int start, int end)
 
     // some parameter of your engine
     #define MAXMOVES 2000 /* maximum game length  */
-    #define MAXPLY   30   /* maximum search depth */
+    #define MAXPLY   60   /* maximum search depth */
 
     #define OFF 0
     #define ON  1
@@ -2314,8 +2333,10 @@ Convert (char *fen)
         *p++ = table[2* (*fen - 'A' - n)+1] + n;
       }
     } else *p++ = *fen;
+    if(!*fen) break;
     fen++;
   }
+  *p = '\0';
   printf("# converted FEN '%s'\n", fenArray);
   return fenArray;
 }
@@ -2334,7 +2355,7 @@ Setup2 (char *fen)
   SetUp(array, currentVariant);
   strcpy(startPos, array);
   sup0 = sup1 = sup2 = ABSENT;
-  hashKeyH = hashKeyL = 87620895*currentVariant;
+  hashKeyH = hashKeyL = 87620895*currentVariant + !!fen;
   return stm;
 }
 

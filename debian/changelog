@@ -1,12 +1,13 @@
-hachu (0.19-2) UNRELEASED; urgency=medium
+hachu (0.20-1) experimental; urgency=medium
 
+  * New upstream release.
   * Add a debian/watch to look at the tag list from gitweb.  Does not help
     with downloading anything obviously (and anyway there are no upstream
     tarballs and we're using the git repo directly), but should provide
     info to DEHS.
   * Add Vcs-* fields.
 
- -- Yann Dirson <dirson@debian.org>  Sun, 15 Jun 2014 15:07:37 +0200
+ -- Yann Dirson <dirson@debian.org>  Sun, 15 Jun 2014 20:10:38 +0200
 
 hachu (0.19-1) experimental; urgency=medium
 
