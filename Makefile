@@ -9,7 +9,7 @@ ALL= hachu hachu.6.gz
 all: ${ALL}
 
 hachu: hachu.c
-	$(CC) $(CFLAGS) hachu.c -o hachu
+	$(CC) $(CFLAGS) $(LDFLAGS) hachu.c -o hachu
 
 install: ${ALL} ${srcdir}/svg/*
 	cp -u ${srcdir}/hachu $(DESTDIR)/usr/games
@@ -19,6 +19,8 @@ install: ${ALL} ${srcdir}/svg/*
 	cp -u ${srcdir}/svg/*.svg `xboard --show-config Datadir`/themes/chu
 	install -d -m0755 `xboard --show-config Datadir`/themes/conf
 	cp -u ${srcdir}/svg/sho ${srcdir}/svg/chu `xboard --show-config Datadir`/themes/conf
+	install -d -m0755 $(DESTDIR)/usr/share/games/plugins/xboard
+	cp -u ${srcdir}/hachu.eng $(DESTDIR)/usr/share/games/plugins/xboard
 
 hachu.6.gz: hachu.pod
 	pod2man -s 6 hachu.pod > hachu.man
@@ -36,7 +38,7 @@ dist:
 	install -d -m0755 HaChu
 	install -d -m0755 HaChu/svg
 	rm -f hachu.tar hachu.tar.gz
-	cp hachu.c hachu.pod Makefile HaChu
+	cp hachu.c hachu.pod Makefile hachu.eng HaChu
 	cp chu/* HaChu/svg
 	(md5sum HaChu/* HaChu/svg/* > HaChu/md5sums) || true
 	tar -cvvf hachu.tar HaChu
@@ -49,4 +51,5 @@ dist:
 uninstall:
 	rm -f $(DESTDIR)/usr/share/man/man6/hachu.6.gz
 	rm -f $(DESTDIR)/usr/games/hachu
+	rm -f $(DESTDIR)/usr/share/games/plugins/xboard/hachu.eng
 
