@@ -2646,16 +2646,18 @@ printf("# ponder hit\n");
 
     main()
     {
-      int engineSide=NONE;                     // side played by engine
+      int engineSide=NONE;                // side played by engine
       MOVE move;
       int i, score, curVarNr;
 
-  Init(V_CHU); // Chu
+      setvbuf(stdin, NULL, _IOLBF, 1024); // buffering more than one line flaws test for pending input!
+
+      Init(V_CHU); // Chu
       seed = startTime = GetTickCount(); moveNr = 0; // initialize random
 
       while(1) { // infinite loop
 
-        fflush(stdout);                 // make sure everything is printed before we do something that might take time
+        fflush(stdout);                   // make sure everything is printed before we do something that might take time
         *inBuf = 0; if(moveNr >= 20) randomize = OFF;
 //if(moveNr >20) printf("resign\n");
 
