@@ -1,3 +1,10 @@
+hachu (0.20-2) unstable; urgency=medium
+
+  * Upload to unstable, xboard-4.8 being on the tracks for release in time
+    for jessie.
+
+ -- Yann Dirson <dirson@debian.org>  Mon, 13 Oct 2014 21:20:52 +0200
+
 hachu (0.20-1) experimental; urgency=medium
 
   * New upstream release.
