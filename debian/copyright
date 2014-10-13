@@ -5,11 +5,11 @@ Source: http://hgm.nubati.net/git/hachu.git
 
 Files: *
 Copyright: 2013 H.G. Muller <h.g.muller@hccnet.nl> 
-License: Public Domain
+License: public-domain
 
 Files: debian/*
 Copyright: 2013 Yann Dirson <dirson@debian.org>
-License: Public Domain
+License: public-domain
 
-License: Public Domain
+License: public-domain
  This source code is released into the public domain.
