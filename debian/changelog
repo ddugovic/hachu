@@ -2,9 +2,10 @@ hachu (0.20-2) unstable; urgency=medium
 
   * Upload to unstable, xboard-4.8 being on the tracks for release in time
     for jessie.
+  * Override dh_auto_clean to call "dist-clean" target.
   * Update Vcs URLs.
 
- -- Yann Dirson <dirson@debian.org>  Mon, 13 Oct 2014 21:24:21 +0200
+ -- Yann Dirson <dirson@debian.org>  Mon, 13 Oct 2014 21:34:36 +0200
 
 hachu (0.20-1) experimental; urgency=medium
 
