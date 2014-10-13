@@ -4,6 +4,7 @@ hachu (0.20-2) unstable; urgency=medium
     for jessie.
   * Override dh_auto_clean to call "dist-clean" target.
   * Use DEP5-standard "public-domain" tag in debian/copyright.
+  * Bumped Standards-Version to 3.9.6, no change.
   * Update Vcs URLs.
 
  -- Yann Dirson <dirson@debian.org>  Mon, 13 Oct 2014 21:34:36 +0200
