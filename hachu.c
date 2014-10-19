@@ -128,6 +128,7 @@ char *MoveToText(Move move, int m);     // from WB driver
 void pmap(int *m, int col);
 void pboard(int *b);
 void pbytes(unsigned char *b);
+int myRandom();
 
 typedef struct {
   int lock[5];
@@ -621,7 +622,7 @@ int rawBoard[BSIZE + 11*BHMAX + 6];
 int attackMaps[200*BSIZE], *attacks = attackMaps;
 char distance[2*BSIZE]; // distance table
 char promoBoard[BSIZE]; // flags to indicate promotion zones
-char rawFire[BSIZE+2*BWMAX]; // flags to indicate squares controlled by Fire Demons
+unsigned char rawFire[BSIZE+2*BWMAX]; // flags to indicate squares controlled by Fire Demons
 signed char PST[7*BSIZE];
 
 #define board     (rawBoard + 6*BHMAX + 3)
@@ -708,7 +709,6 @@ Lance (signed char *r)
 int
 EasyProm (signed char *r)
 {
-  int i;
   if(r[0] == X) return 30 + PROMO*((unsigned int)(r[1] | r[2] | r[3] | r[5] | r[6] | r[7]) <= 1);
   if(r[1] == X || r[7] == X) return 30 + PROMO/2;
   return 0;
@@ -763,7 +763,7 @@ StackMultis (int col)
 void
 Compactify (int stm)
 { // remove pieces that are permanently gone (captured or promoted) from one side's piece list
-  int i, j, k;
+  int i, k;
   for(i=stm+2; i<=last[stm]; i+=2) { // first pass: unpromoted pieces
     if((k = p[i].promo) >= 0 && p[i].pos == ABSENT) { // unpromoted piece no longer there
       p[k].promo = -2; // orphan promoted version
@@ -815,10 +815,10 @@ AddPiece (int stm, PieceDesc *list)
 }
 
 void
-SetUp(char *array, int var)
+SetUp (char *array, int var)
 {
-  int i, j, n, m, nr, color;
-  char c, *q, name[3], prince = 0;
+  int i, j, n, m, color;
+  char c, name[3], prince = 0;
   PieceDesc *p1, *p2;
   last[WHITE] = 1; last[BLACK] = 0;
   royal[WHITE] = royal[BLACK] = 0;
@@ -1100,7 +1100,7 @@ char mapStep[] = { 7, 8, 1, -6, -7, -8, -1, 6 };
 char rowMask[] = { 0100, 0140, 0160, 070, 034, 016, 07, 03, 01 };
 char rows[9];
 
-int
+void
 AreaStep (int from, int x, int flags, int n, int d)
 {
   int i;
@@ -1114,7 +1114,7 @@ AreaStep (int from, int x, int flags, int n, int d)
   }
 }
 
-int
+void
 AreaMoves (int from, int piece, int range)
 {
   int i;
@@ -1199,7 +1199,7 @@ report (int x, int y, int i)
 int
 MapOneColor (int start, int last, int *map)
 {
-  int i, j, k, totMob = 0;
+  int i, j, totMob = 0;
   for(i=start+2; i<=last; i+=2) {
     int mob = 0;
     if(p[i].pos == ABSENT) continue;
@@ -1464,13 +1464,13 @@ UnMake(UndoInfo *u)
 }
 	
 void
-GenCapts(int sqr, int victimValue)
+GenCapts (int sqr, int victimValue)
 { // generate all moves that capture the piece on the given square
-  int i, range, att = attacks[2*sqr + stm];
+  int i, att = attacks[2*sqr + stm];
 //printf("GenCapts(%c%d,%d) %08x\n",sqr%BW+'a',sqr/BW,victimValue,att);
   if(!att) return; // no attackers at all!
   for(i=0; i<8; i++) {               // try all rays
-    int x, v, jumper, jcapt=0;
+    int x, v, jcapt=0;
     if(att & attackMask[i]) {        // attacked by move in this direction
       v = -kStep[i]; x = sqr;
       while( board[x+=v] == EMPTY ); // scan towards source until we encounter a 'stop'
@@ -2440,7 +2440,7 @@ MoveToText (MOVE move, int multiLine)
 int
 ReadSquare (char *p, int *sqr)
 {
-  int i=0, f, r;
+  int f, r;
   f = p[0] - 'a';
   r = atoi(p + 1) - ONE;
   *sqr = r*BW + f;
@@ -2607,7 +2607,7 @@ printf("# limits %d, %d, %d mode = %d\n", tlim1, tlim2, tlim3, abortFlag);
 int
 SearchBestMove (MOVE *move, MOVE *ponderMove)
 {
-  int score, i;
+  int score;
 printf("# SearchBestMove\n");
   startTime = GetTickCount();
   nodes = 0;
@@ -2686,6 +2686,7 @@ printf("# ponder hit\n");
       }
     }
 
+    int
     main()
     {
       int engineSide=NONE;                // side played by engine
@@ -2871,5 +2872,6 @@ pboard(board);
         if(!strcmp(command, "remove"))  { stm = TakeBack(2); continue; }
         printf("Error: unknown command\n");
       }
+      return 0;
     }
 
