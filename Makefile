@@ -3,6 +3,7 @@ srcdir = .
 CC?=gcc
 CFLAGS?= -O2 -s
 
+prefix=/usr
 DATADIR=`xboard --show-config Datadir`
 
 ALL= hachu hachu.6.gz
@@ -13,10 +14,10 @@ hachu: hachu.c
 	$(CC) $(CFLAGS) $(LDFLAGS) hachu.c -o hachu
 
 install: ${ALL} ${srcdir}/svg/*
-	install -d -m0755 $(DESTDIR)/usr/games
-	cp -u ${srcdir}/hachu $(DESTDIR)/usr/games
-	install -d -m0755 $(DESTDIR)/usr/share/man/man6
-	cp -u ${srcdir}/hachu.6.gz $(DESTDIR)/usr/share/man/man6
+	install -d -m0755 $(DESTDIR)$(prefix)/games
+	cp -u ${srcdir}/hachu $(DESTDIR)$(prefix)/games
+	install -d -m0755 $(DESTDIR)$(prefix)/share/man/man6
+	cp -u ${srcdir}/hachu.6.gz $(DESTDIR)$(prefix)/share/man/man6
 	install -d -m0755 $(DESTDIR)$(DATADIR)/themes/chu
 	cp -u ${srcdir}/svg/*.svg $(DESTDIR)$(DATADIR)/themes/chu
 	install -d -m0755 $(DESTDIR)$(DATADIR)/themes/conf
@@ -50,8 +51,8 @@ dist:
 	rmdir HaChu
 
 uninstall:
-	rm -f $(DESTDIR)/usr/share/man/man6/hachu.6.gz
-	rm -f $(DESTDIR)/usr/games/hachu
+	rm -f $(DESTDIR)$(prefix)/share/man/man6/hachu.6.gz
+	rm -f $(DESTDIR)$(prefix)/games/hachu
 	rm -f $(DESTDIR)/usr/share/games/plugins/logos/hachu.png
 	rm -f $(DESTDIR)/usr/share/games/plugins/xboard/hachu.eng
 
