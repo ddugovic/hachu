@@ -1,3 +1,10 @@
+hachu (0.21~200141020-1) unstable; urgency=medium
+
+  * New upstream snapshot.
+  * All patches included upstream, dropped.
+
+ -- Yann Dirson <dirson@debian.org>  Wed, 22 Oct 2014 22:23:24 +0200
+
 hachu (0.20-2) unstable; urgency=medium
 
   * Upload to unstable, xboard-4.8 being on the tracks for release in time

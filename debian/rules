@@ -4,8 +4,10 @@
 %:
 	dh $@ 
 
+override_dh_auto_make:
+	dh_auto_make -- prefix=/usr
 override_dh_auto_install:
-	dh_auto_install -- DATADIR=/usr/share/games/xboard
+	dh_auto_install -- prefix=/usr DATADIR=/usr/share/games/xboard
 	dh_buildinfo
 
 override_dh_auto_clean:

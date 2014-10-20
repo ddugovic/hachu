@@ -89,6 +89,7 @@
 #define PROMOTE (1<<2*SQLEN+1)     /* promotion bit in move   */
 #define SPECIAL  1400              /* start of special moves  */
 #define BURN    (SPECIAL + 96)     /* start of burn encodings */
+#define CASTLE  (SPECIAL + 100)    /* castling encodings      */
 #define STEP(X,Y) (BW*(X)+ (Y))
 #define SORTKEY(X) 0
 
@@ -127,6 +128,7 @@ char *MoveToText(Move move, int m);     // from WB driver
 void pmap(int *m, int col);
 void pboard(int *b);
 void pbytes(unsigned char *b);
+int myRandom();
 
 typedef struct {
   int lock[5];
@@ -153,7 +155,7 @@ typedef struct {
 } PieceDesc;
 
 typedef struct {
-  int from, to, piece, victim, new, booty, epSquare, epVictim[8], ep2Square, revMoveCount;
+  int from, to, piece, victim, new, booty, epSquare, epVictim[9], ep2Square, revMoveCount;
   int savKeyL, savKeyH, gain, loss, filling, saveDelta;
   char fireMask;
 } UndoInfo;
@@ -498,7 +500,7 @@ Vector direction[] = { // clockwise!
   { 2,-1}
 };
 
-int epList[96], ep2List[96], toList[96], reverse[96];  // decoding tables for double and triple moves
+int epList[104], ep2List[104], toList[104], reverse[104];  // decoding tables for double and triple moves
 int kingStep[10], knightStep[10];         // raw tables for step vectors (indexed as -1 .. 8)
 int neighbors[9];   // similar to kingStep, but starts with null-step
 char fireFlags[10]; // flags for Fire-Demon presence (last two are dummies, which stay 0, for compactify)
@@ -620,7 +622,7 @@ int rawBoard[BSIZE + 11*BHMAX + 6];
 int attackMaps[200*BSIZE], *attacks = attackMaps;
 char distance[2*BSIZE]; // distance table
 char promoBoard[BSIZE]; // flags to indicate promotion zones
-char rawFire[BSIZE+2*BWMAX]; // flags to indicate squares controlled by Fire Demons
+unsigned char rawFire[BSIZE+2*BWMAX]; // flags to indicate squares controlled by Fire Demons
 signed char PST[7*BSIZE];
 
 #define board     (rawBoard + 6*BHMAX + 3)
@@ -707,7 +709,6 @@ Lance (signed char *r)
 int
 EasyProm (signed char *r)
 {
-  int i;
   if(r[0] == X) return 30 + PROMO*((unsigned int)(r[1] | r[2] | r[3] | r[5] | r[6] | r[7]) <= 1);
   if(r[1] == X || r[7] == X) return 30 + PROMO/2;
   return 0;
@@ -762,7 +763,7 @@ StackMultis (int col)
 void
 Compactify (int stm)
 { // remove pieces that are permanently gone (captured or promoted) from one side's piece list
-  int i, j, k;
+  int i, k;
   for(i=stm+2; i<=last[stm]; i+=2) { // first pass: unpromoted pieces
     if((k = p[i].promo) >= 0 && p[i].pos == ABSENT) { // unpromoted piece no longer there
       p[k].promo = -2; // orphan promoted version
@@ -814,10 +815,10 @@ AddPiece (int stm, PieceDesc *list)
 }
 
 void
-SetUp(char *array, int var)
+SetUp (char *array, int var)
 {
-  int i, j, n, m, nr, color;
-  char c, *q, name[3], prince = 0;
+  int i, j, n, m, color;
+  char c, name[3], prince = 0;
   PieceDesc *p1, *p2;
   last[WHITE] = 1; last[BLACK] = 0;
   royal[WHITE] = royal[BLACK] = 0;
@@ -959,6 +960,11 @@ Init (int var)
     toList[88+i] =   kStep[i]; epList[88+i] = 2*kStep[i];
   }
 
+  toList[100]   = BH - 2; epList[100]   = BH - 1; ep2List[100]   = BH - 3;
+  toList[100+1] =      2; epList[100+1] =      0; ep2List[100+1] =      3;
+  toList[100+2] = bsize - BH - 2; epList[100+2] = bsize - BH - 1; ep2List[100+2] = bsize - BH - 3;
+  toList[100+3] = bsize - BW + 2; epList[100+3] = bsize - BW;     ep2List[100+3] = bsize - BW + 3;
+
   // fill distance table
   for(i=0; i<2*BSIZE; i++) {
     distance[i] = 0;
@@ -1094,7 +1100,7 @@ char mapStep[] = { 7, 8, 1, -6, -7, -8, -1, 6 };
 char rowMask[] = { 0100, 0140, 0160, 070, 034, 016, 07, 03, 01 };
 char rows[9];
 
-int
+void
 AreaStep (int from, int x, int flags, int n, int d)
 {
   int i;
@@ -1108,7 +1114,7 @@ AreaStep (int from, int x, int flags, int n, int d)
   }
 }
 
-int
+void
 AreaMoves (int from, int piece, int range)
 {
   int i;
@@ -1133,6 +1139,17 @@ MarkBurns (int x)
     rows[r+2] = mask;
   }
   for(r=b; r<=t-2; r++) rows[r] |= rows[r+1] | rows[r+2]; // smear vertically
+}
+
+void
+GenCastlings ()
+{ // castings for Lion Chess. Assumes board width = 8 and Kings on e-file, and K/R value = 280/300!
+    int f = BH>>1, t = CASTLE;
+    if(stm != WHITE) f += bsize - BW, t += 2;
+    if(p[board[f]].value = 280) {
+      if(p[board[f-4]].value == 300 && board[f-3] == EMPTY && board[f-2] == EMPTY && board[f-1] == EMPTY) moveStack[msp++] = f<<SQLEN | t+1;
+      if(p[board[f+3]].value == 300 && board[f+1] == EMPTY && board[f+2] == EMPTY) moveStack[msp++] = f<<SQLEN | t;
+    }
 }
 
 int
@@ -1182,7 +1199,7 @@ report (int x, int y, int i)
 int
 MapOneColor (int start, int last, int *map)
 {
-  int i, j, k, totMob = 0;
+  int i, j, totMob = 0;
   for(i=start+2; i<=last; i+=2) {
     int mob = 0;
     if(p[i].pos == ABSENT) continue;
@@ -1309,6 +1326,21 @@ MakeMove(Move m, UndoInfo *u)
   } else u->new = u->piece;
 
   if(u->to >= SPECIAL) { // two-step Lion move
+   if(u->to >= CASTLE) { // move Rook, faking it was an e.p. victim so that UnMake works automatically
+    u->epSquare  = epList[u->to - SPECIAL];
+    u->ep2Square = ep2List[u->to - SPECIAL];
+    u->epVictim[0] = board[u->epSquare];  // kludgy: fake that King e.p. captured the Rook!
+    u->epVictim[1] = board[u->ep2Square]; // should be EMPTY (but you never know, so save as well).
+    board[u->ep2Square] = u->epVictim[0]; // but put Rook back
+    board[u->epSquare]  = EMPTY;
+    p[u->epVictim[0]].pos = u->ep2Square;
+    p[u->epVictim[1]].pos = ABSENT;
+    u->to       = toList[u->to - SPECIAL];
+    hashKeyL ^= p[u->epVictim[0]].pieceKey * squareKey[u->epSquare];
+    hashKeyH ^= p[u->epVictim[0]].pieceKey * squareKey[u->epSquare+BH];
+    hashKeyL ^= p[u->epVictim[0]].pieceKey * squareKey[u->ep2Square];
+    hashKeyH ^= p[u->epVictim[0]].pieceKey * squareKey[u->ep2Square+BH];
+   } else {
     // take care of first e.p. victim
     u->epSquare = u->from + epList[u->to - SPECIAL]; // decode
     u->epVictim[0] = board[u->epSquare]; // remember for takeback
@@ -1335,6 +1367,7 @@ MakeMove(Move m, UndoInfo *u)
     hashKeyH ^= p[u->epVictim[1]].pieceKey * squareKey[u->ep2Square+BH];
     if(p[u->piece].value != LVAL && p[u->epVictim[0]].value == LVAL) deferred |= PROMOTE; // flag non-Lion x Lion
     cnt50 = 0; // double capture irreversible
+   }
   }
 
   if(u->fireMask & fireBoard[u->to]) { // we moved next to enemy Fire Demon (must be done after SPECIAL, to decode to-sqr)
@@ -1431,13 +1464,13 @@ UnMake(UndoInfo *u)
 }
 	
 void
-GenCapts(int sqr, int victimValue)
+GenCapts (int sqr, int victimValue)
 { // generate all moves that capture the piece on the given square
-  int i, range, att = attacks[2*sqr + stm];
+  int i, att = attacks[2*sqr + stm];
 //printf("GenCapts(%c%d,%d) %08x\n",sqr%BW+'a',sqr/BW,victimValue,att);
   if(!att) return; // no attackers at all!
   for(i=0; i<8; i++) {               // try all rays
-    int x, v, jumper, jcapt=0;
+    int x, v, jcapt=0;
     if(att & attackMask[i]) {        // attacked by move in this direction
       v = -kStep[i]; x = sqr;
       while( board[x+=v] == EMPTY ); // scan towards source until we encounter a 'stop'
@@ -2384,7 +2417,8 @@ MoveToText (MOVE move, int multiLine)
   char *promoChar = "";
   if(f == t) { sprintf(buf, "@@@@"); return buf; } // null-move notation in WB protocol
   buf[0] = '\0';
-  if(t >= SPECIAL) { // kludgy! Print as side effect non-standard WB command to remove victims from double-capture (breaks hint command!)
+  if(t >= SPECIAL) {
+   if(t < CASTLE) { // castling is printed as a single move, implying its side effects
     int e = f + epList[t - SPECIAL];
 //    printf("take %c%d\n", e%BW+'a', e/BW+ONE);
     sprintf(buf, "%c%d%c%d,", f%BW+'a', f/BW+ONE, e%BW+'a', e/BW+ONE); f = e;
@@ -2395,6 +2429,7 @@ MoveToText (MOVE move, int multiLine)
       sprintf(buf+strlen(buf), "%c%d%c%d,", f%BW+'a', f/BW+ONE, e%BW+'a', e/BW+ONE); f = e;
     if(multiLine) printf("move %s\n", buf), buf[0] = '\0';
     }
+   }
     t = g + toList[t - SPECIAL];
   }
   if(move & PROMOTE) promoChar = currentVariant == V_MAKRUK ? "m" : repDraws ? "q" : "+";
@@ -2405,7 +2440,7 @@ MoveToText (MOVE move, int multiLine)
 int
 ReadSquare (char *p, int *sqr)
 {
-  int i=0, f, r;
+  int f, r;
   f = p[0] - 'a';
   r = atoi(p + 1) - ONE;
   *sqr = r*BW + f;
@@ -2425,7 +2460,8 @@ MapFromScratch(attacks);
   Search(-INF-1, INF+1, 0, QSdepth+1, 0, sup1 & ~PROMOTE, sup2, INF);
   postThinking++;
 
-  listStart = retFirst; listEnd = msp = retMSP;
+  listStart = retFirst; msp = retMSP;
+  if(currentVariant == V_LION) GenCastlings(); listEnd = msp;
 }
 
 MOVE
@@ -2451,6 +2487,11 @@ ParseMove (char *moveText)
       if(t == f + BW - 1) t2 = SPECIAL + 48; else
       if(t == f - BW + 1) t2 = SPECIAL + 20; else
       if(t == f - BW - 1) t2 = SPECIAL + 52; // fake double-move
+  } else if(currentVariant == V_LION && board[f] != EMPTY && p[board[f]].value == 280 && (t-f == 2 || f-t == 2)) { // castling
+      if(t == f+2 && f < BW) t2 = CASTLE;     else
+      if(t == f-2 && f < BW) t2 = CASTLE + 1; else
+      if(t == f+2 && f > BW) t2 = CASTLE + 2; else
+      if(t == f-2 && f > BW) t2 = CASTLE + 3;
   }
   ret = f<<SQLEN | t2;
   if(*moveText != '\n' && *moveText != '=') ret |= PROMOTE;
@@ -2500,6 +2541,7 @@ Highlight(char *coords)
   for(i=listStart; i<listEnd; i++) {
     if(sqr == (moveStack[i]>>SQLEN & SQUARE)) {
       int t = moveStack[i] & SQUARE;
+      if(t >= CASTLE) t = toList[t - SPECIAL]; else  // decode castling
       if(t >= SPECIAL) {
 	int e = sqr + epList[t - SPECIAL]; // decode
 	b[e] = 'C';
@@ -2565,7 +2607,7 @@ printf("# limits %d, %d, %d mode = %d\n", tlim1, tlim2, tlim3, abortFlag);
 int
 SearchBestMove (MOVE *move, MOVE *ponderMove)
 {
-  int score, i;
+  int score;
 printf("# SearchBestMove\n");
   startTime = GetTickCount();
   nodes = 0;
@@ -2644,18 +2686,21 @@ printf("# ponder hit\n");
       }
     }
 
+    int
     main()
     {
-      int engineSide=NONE;                     // side played by engine
+      int engineSide=NONE;                // side played by engine
       MOVE move;
       int i, score, curVarNr;
 
-  Init(V_CHU); // Chu
+      setvbuf(stdin, NULL, _IOLBF, 1024); // buffering more than one line flaws test for pending input!
+
+      Init(V_CHU); // Chu
       seed = startTime = GetTickCount(); moveNr = 0; // initialize random
 
       while(1) { // infinite loop
 
-        fflush(stdout);                 // make sure everything is printed before we do something that might take time
+        fflush(stdout);                   // make sure everything is printed before we do something that might take time
         *inBuf = 0; if(moveNr >= 20) randomize = OFF;
 //if(moveNr >20) printf("resign\n");
 
@@ -2827,5 +2872,6 @@ pboard(board);
         if(!strcmp(command, "remove"))  { stm = TakeBack(2); continue; }
         printf("Error: unknown command\n");
       }
+      return 0;
     }
 
