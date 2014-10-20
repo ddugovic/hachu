@@ -3,7 +3,7 @@ srcdir = .
 CC?=gcc
 CFLAGS?= -O2 -s
 
-prefix=/usr
+prefix=/usr/local
 DATADIR=`xboard --show-config Datadir`
 
 ALL= hachu hachu.6.gz
