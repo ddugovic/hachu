@@ -27,16 +27,13 @@ install: ${ALL} ${srcdir}/svg/*
 	cp -u ${srcdir}/hachu.eng $(DESTDIR)/usr/share/games/plugins/xboard
 
 hachu.6.gz: hachu.pod
-	pod2man -s 6 hachu.pod > hachu.man
-	cp hachu.man hachu.6
-	rm -f hachu.6.gz
-	gzip hachu.6
+	pod2man -s 6 hachu.pod | gzip -9n > hachu.6.gz
 
 clean:
 	rm -f ${ALL}
 
 dist-clean:
-	rm -f ${ALL} *~ chu/*~ *.man md5sums
+	rm -f ${ALL} *~ chu/*~ md5sums
 
 dist:
 	install -d -m0755 HaChu
