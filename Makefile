@@ -30,7 +30,7 @@ hachu.6.gz: hachu.pod
 	pod2man -s 6 hachu.pod | gzip -9n > hachu.6.gz
 
 clean:
-	rm -f ${ALL}
+	rm -f ${ALL} *.o
 
 dist-clean:
 	rm -f ${ALL} *~ chu/*~ md5sums
