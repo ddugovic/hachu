@@ -176,11 +176,12 @@ Move retMove, moveStack[20000], path[100], repStack[300], pv[1000], repeatMove[3
 #define R 37 /* jump capture        */
 #define N -1 /* Knight              */
 #define J -2 /* jump                */
-#define D -3 /* linear double move  */
-#define T -4 /* linear triple move  */
-#define L -5 /* true Lion move      */
-#define F -6 /* Lion + 3-step       */
-#define S -7 /* Lion + range        */
+#define I -3 /* jump + step         */
+#define D -4 /* linear double move  */
+#define T -5 /* linear triple move  */
+#define L -6 /* true Lion move      */
+#define F -7 /* Lion + 3-step       */
+#define S -8 /* Lion + range        */
 #define H -9 /* hook move           */
 #define C -10 /* capture only       */
 #define M -11 /* non-capture only   */
@@ -1168,14 +1169,14 @@ GenNonCapts (int promoSuppress)
 	} else
 	if(r >= S) { // in any case, do a jump of 2
 	  int occup = NewNonCapture(x, x + 2*v, pFlag);
-	  if(r < J) { // Lion power, also single step
+	  if(r < I) { // Lion power, also single step
 	    if(!NewNonCapture(x, x + v, pFlag)) nullMove = x; else occup = 1;
 	    if(r <= L) { // true Lion, also Knight jump
 	      if(!occup & r < L) for(y=x+2*v; !NewNonCapture(x, y+=v, pFlag) && r == S; ); // BS and FF moves
 	      v = nStep[j];
 	      NewNonCapture(x, x + v, pFlag);
 	    }
-	  }
+	  } else if(r == I) NewNonCapture(x, x + v, pFlag); // also do step
 	} else
 	if(r == M) { // FIDE Pawn; check double-move
 	  if(!NewNonCapture(x, x+v, pFlag) && chessFlag && promoBoard[x-v] & LAST_RANK)
@@ -1217,6 +1218,7 @@ MapOneColor (int start, int last, int *map)
 	  if(r < J) { // Lion power, also single step
 	    if(board[x + v] != EMPTY && board[x + v] != EDGE)
 	      map[2*(x + v) + start] += one[j];
+	    if(r < I) {
 	    if(r == T) { // Lion Dog, also jump of 3
 	      if(board[x + 3*v] != EMPTY && board[x + 3*v] != EDGE)
 		map[2*(x + 3*v) + start] += one[j];
@@ -1236,6 +1238,7 @@ MapOneColor (int start, int last, int *map)
 	      v = nStep[j];
 	      if(board[x + v] != EMPTY && board[x + v] != EDGE)
 		map[2*(x + v) + start] += one[8];
+	    }
 	    }
 	  }
 	} else
@@ -1281,6 +1284,7 @@ MapFromScratch (int *map)
   int i;
   for(i=0; i<2*bsize; i++) map[i] = 0;
   mobilityScore  = MapOneColor(1, last[WHITE], map);
+
   mobilityScore -= MapOneColor(0, last[BLACK], map);
 }
 
@@ -1548,6 +1552,8 @@ GenCapts (int sqr, int victimValue)
 	      break;
 	    case J: // plain jump (as in KY, PH)
 	      if(d != 2) break;
+	    case I: // jump + step (as in Wa TF)
+	      if(d > 2) break;
 	      NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
 	      att -= one[i];
 	      break;
@@ -2230,6 +2236,7 @@ pbytes (unsigned char *b)
   for(i=BH-1; i>=0; i--) {
     for(j=0; j<BH; j++) printf("%3x", b[BW*i+j]);
     printf("\n");
+
   }
 }
 
