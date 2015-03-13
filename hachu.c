@@ -250,6 +250,33 @@ PieceDesc daiPieces[] = {
   { NULL }  // sentinel
 };
 
+PieceDesc waPieces[] = {
+  {"TE", "",   720, { X,X,1,X,X,X,1,X }, 4 }, // Tenacious Falcon
+  {"GS", "",   500, { X,0,X,0,X,0,X,0 }, 4 }, // Gliding Swallow (R)
+  {"DE", "",   430, { X,3,1,1,X,1,1,3 }, 3 }, // Cloud Eagle
+  {"K",  "",   410, { 1,1,1,1,1,1,1,1 }, 2 }, // Crane King (K)
+  {"BT", "",   390, { I,I,0,I,I,I,0,I }, 4 }, // Treacherous Fox
+  {"FL", "TE", 380, { 1,X,0,X,0,X,0,X }, 4 }, // Flying Falcon
+  {"FS", "",   290, { X,1,1,0,X,0,1,1 }, 3 }, // Raiding Falcon
+  {"S",  "GS", 260, { 1,0,X,0,1,0,X,0 }, 6 }, // Swallow's Wing (SM)
+  {"PO", "",   260, { 1,1,1,1,1,1,1,1 }, 2 }, // Plodding Ox (K)
+  {"R",  "BT", 260, { X,1,0,1,1,1,0,1 }, 2 }, // Running Rabit
+  {"B",  "",   240, { 1,1,1,1,0,1,1,1 }, 2 }, // Roaming Boar
+  {"HH", "",   220, { N,0,0,N,N,0,0,N }, 1 }, // Heavenly Horse
+  {"EW", "PO", 220, { 1,1,1,0,1,0,1,1 }, 2 }, // Violent Wolf (G)
+  {"VM", "B",  200, { 1,1,0,1,0,1,0,1 }, 2 }, // Violent Stag (S)
+  {"G",  "S",  190, { 1,1,0,0,1,0,0,1 }, 2 }, // Flying Goose (C)
+  {"SM", "VM", 175, { 1,1,0,0,1,0,0,1 }, 2 }, // Climbing Monkey (C)
+  {"DH", "HH", 170, { X,0,0,0,2,0,0,0 }, 1 }, // Liberated Horse
+  {"DK", "EW", 150, { 0,1,1,0,1,0,1,1 }, 2 }, // Blind Dog
+  {"PH", "PO", 150, { X,0,0,0,0,0,0,0 }, 1 }, // Oxcart (L)
+  {"L",  "FS", 130, { 0,1,1,0,0,0,1,1 }, 2 }, // Flying Cock
+  {"KN", "DE", 115, { 1,0,0,1,0,1,0,0 }, 2 }, // Swooping Owl
+  {"C",  "FL", 105, { 1,0,0,1,0,1,0,0 }, 2 }, // Strutting Crow
+  {"P",  "EW",  80, { 1,0,0,0,0,0,0,0 }, 2 }, // Sparrow Pawn (P)
+  { NULL }  // sentinel
+};
+
 PieceDesc ddPieces[] = {
   {"LO", "",   10, { 1,H,1,H,1,H,1,H } }, // Long-Nosed Goblin
   {"OK", "LO", 10, { 2,1,2,0,2,0,2,1 } }, // Old Kite
@@ -444,6 +471,9 @@ char tenArray[] = "LN:FLICSGK:DEGSCI:FLNL/:RV.:CS:CS.:BT:KN:LN:FK:PH:BT.:CS:CS.:
 		  "....d......d..../pppppppppppppppp/:sm:vmr:hf:se:bg:rg:vg:gg:rg:bg:se:hfr:vm:sm/"
 		  ":ss:vsb:dh:dk:wb:fi:fe:lh:fi:wb:dk:dhb:vs:ss/:rv.:cs:cs.:bt:ph:fk:ln:kn:bt.:cs:cs.:rv/ln:flicsg:dekgsci:flnl";
 char shoArray[] = "LNSGKGSNL/.B..:DE..R./PPPPPPPPP/........./........./........./ppppppppp/.r..:de..b./lnsgkgsnl";
+char waArray[] = ":PH:DKCG:EWK:VML:KN:SM:DH/.:FL...S...:DE./PPP:BTPPPRPPP/...P...P..."
+		 "/.........../.........../..........."
+		 "/...p...p.../ppprppp:btppp/.:de...s...:fl./:dh:sm:knl:vmk:ewgc:dk:ph";
 char chessArray[] = "RNB:FKKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnb:fkkbnr";
 char lionArray[]  = "R:LNB:FKKBNR/PPPPPPPP/......../......../......../......../pppppppp/r:lnb:fkkbnr";
 char shatArray[]= "RNBK:FKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnbk:fkbnr";
@@ -455,7 +485,7 @@ typedef struct {
   char *array; // initial position
 } VariantDesc;
 
-typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_TENJIKU, V_SHATRANJ, V_MAKRUK, V_LION } Variant;
+typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_TENJIKU, V_SHATRANJ, V_MAKRUK, V_LION, V_WA } Variant;
 
 #define SAME (-1)
 
@@ -469,6 +499,7 @@ VariantDesc variants[] = {
   { 16,  8,  8, 1, V_SHATRANJ,"shatranj",shatArray}, // Shatranj
   { 16,  8,  8, 3, V_MAKRUK,  "makruk",  thaiArray}, // Makruk
   { 16,  8,  8, 1, V_LION,    "lion",    lionArray}, // Mighty Lion
+  { 22, 11, 11, 3, V_WA,      "washogi", waArray},   // Wa
 
   { 0, 0, 0, 0, 0 }, // sentinel
   { 34, 17, 17, 0, V_DADA,    "dada",    chuArray }, // Dai Dai
@@ -661,6 +692,8 @@ LookUp (char *name, int var)
       return ListLookUp(name, makrukPieces);
     case V_LION: // Mighty Lion
       return ListLookUp(name, lionPieces);
+    case V_WA: // Wa
+      return ListLookUp(name, waPieces);
   }
   return NULL;
 }
@@ -810,7 +843,7 @@ AddPiece (int stm, PieceDesc *list)
   }
   if(royal[stm] >= i) royal[stm] += 2;
   if(kylin[stm] >= i) kylin[stm] += 2;
-  if(p[i].value == (currentVariant == V_SHO ? 410 : 280) ) royal[stm] = i, p[i].pst = 0;
+  if(p[i].value == (currentVariant == V_SHO || currentVariant == V_WA ? 410 : 280) ) royal[stm] = i, p[i].pst = 0;
   p[i].qval = (currentVariant == V_TENJIKU ? list->ranking : 0); // jump-capture hierarchy
   return i;
 }
@@ -2341,7 +2374,7 @@ UnMake2 (MOVE move)
   sup2 = sup1; sup1 = sup0;
 }
 
-char fenNames[] = "RV....DKDEFL..DHGB......SMLNKN..FK....BT..VM..PH..LN"; // pairs of char
+char fenNames[] = "RV....DKDEFL..DHGB......SMLNKN..FK....BT..VMSWPH..LN"; // pairs of char
 char fenPromo[] = "WLDHSMSECPB R HFDE....WHFB..LNG ..DKVMFS..FO..FK...."; // pairs of char
 
 char *
@@ -2871,6 +2904,9 @@ pboard(board);
 	  }
           if(currentVariant == V_SHO)
             printf("setup (PNBRLSE..G.+++++++Kpnbrlse..g.+++++++k) 9x9+0_shogi lnsgkgsnl/1r2e2b1/ppppppppp/9/9/9/PPPPPPPPP/1B2E2R1/LNSGKGSNL w 0 1\n");
+          if(currentVariant == V_WA)
+            printf("setup (P.C.EVLO.WGHDF.TRSXOM.+.+..+++.+++++..+++++Kp.c.evlo.wghdf.trsxom.+.+..+++.+++++..+++++k) 11x11+0_chu "
+							"hmolvkwgcdx/1e3s3f1/ppprppptppp/3p3p3/11/11/11/3P3P3/PPPTPPPRPPP/1F3S3E1/XDCGWKVLOMH w 0 1\n");
 	  repStack[199] = hashKeyH, checkStack[199] = 0;
           continue;
         }
