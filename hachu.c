@@ -1208,7 +1208,7 @@ GenNonCapts (int promoSuppress)
 	      if(!occup & r < L) for(y=x+2*v; !NewNonCapture(x, y+=v, pFlag) && r == S; ); // BS and FF moves
 	      v = nStep[j];
 	      NewNonCapture(x, x + v, pFlag);
-	    }
+	    } else if(r == T) NewNonCapture(x, x+3*v, pFlag); // Lion Dog, also triple step
 	  } else if(r == I) NewNonCapture(x, x + v, pFlag); // also do step
 	} else
 	if(r == M) { // FIDE Pawn; check double-move
@@ -1581,6 +1581,42 @@ GenCapts (int sqr, int victimValue)
 		NewCapture(x, SPECIAL + 8*i + (i^4) + victimValue, p[attacker].promoFlag); // igui
 		if(board[sqr-v] == EMPTY || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
 		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // hit and run
+	      }
+	      break;
+	    case T: // Lion-Dog move (awful!)
+	      if(d > 3) break;
+	      NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
+	      att -= one[i];
+	      if(d == 3) { // check if we can take one or two intermediates (with higher piece index) with it
+		if((board[x-v] & TYPE) == xstm && board[x-v] > board[sqr]) {
+		  NewCapture(x, SPECIAL + 64 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. first
+		  if((board[x-2*v] & TYPE) == xstm && board[x-2*v] > board[sqr])
+		    NewCapture(x, SPECIAL + 80 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. both
+		} else if((board[x-2*v] & TYPE) == xstm && board[x-2*v] > board[sqr])
+		  NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. second
+	      } else if(d == 2) { // check if we can take intermediate with it
+		if((board[x-v] & TYPE) == xstm && board[x-v] > board[sqr]) {
+		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. first, stop at 2nd
+		  NewCapture(x, SPECIAL + 88 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // shoot 2nd, take 1st
+		  if(board[sqr-v] == EMPTY || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
+		    NewCapture(x, SPECIAL + 80 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st and 2nd
+		} else if(board[sqr-v] == EMPTY || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
+		  NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 2nd
+	      } else { // d=1; can move on to second, or move back for igui
+		NewCapture(x, SPECIAL + 8*i + (i^4) + victimValue, p[attacker].promoFlag); // igui
+		if(board[sqr-v] == EMPTY) { // 2nd empty
+		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st and run to 2nd
+		  if(board[sqr-2*v] == EMPTY || (board[sqr-2*v] & TYPE) == xstm && board[sqr-2*v] > board[sqr])
+		    NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st, end on 3rd
+		} else if((board[sqr-v] & TYPE) == stm) { // 2nd own
+		  if(board[sqr-2*v] == EMPTY || (board[sqr-2*v] & TYPE) == xstm && board[sqr-2*v] > board[sqr])
+		    NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st, end on 3rd
+		} else if((board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr]) {
+		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st, capture and stop at 2nd
+		  NewCapture(x, SPECIAL + 88 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // shoot 2nd
+		  if(board[sqr-2*v] == EMPTY || (board[sqr-2*v] & TYPE) == xstm && board[sqr-2*v] > board[sqr])
+		    NewCapture(x, SPECIAL + 80 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st and 2nd
+		}
 	      }
 	      break;
 	    case J: // plain jump (as in KY, PH)
@@ -2374,7 +2410,7 @@ UnMake2 (MOVE move)
   sup2 = sup1; sup1 = sup0;
 }
 
-char fenNames[] = "RV....DKDEFL..DHGB......SMLNKN..FK....BT..VMSWPH..LN"; // pairs of char
+char fenNames[] = "RV....DKDEFL..DHGB......SMLNKN..FK....BT..VMEWPH..LN"; // pairs of char
 char fenPromo[] = "WLDHSMSECPB R HFDE....WHFB..LNG ..DKVMFS..FO..FK...."; // pairs of char
 
 char *
