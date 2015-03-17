@@ -190,7 +190,8 @@ Move retMove, moveStack[20000], path[100], repStack[300], pv[1000], repeatMove[3
 #define FVAL 5000 /* piece value of Fire Demon. Used in code for recognizing moves with it and do burns */
 
 PieceDesc chuPieces[] = {
-  {"LN", "",  LVAL, { L,L,L,L,L,L,L,L }, 4 }, // lion
+  {"LN", "",  LVAL, { T,T,T,T,T,T,T,T }, 4 }, // lion
+//  {"LN", "",  LVAL, { L,L,L,L,L,L,L,L }, 4 }, // lion
   {"FK", "",   600, { X,X,X,X,X,X,X,X }, 4 }, // free king
   {"SE", "",   550, { X,D,X,X,X,X,X,D }, 4 }, // soaring eagle
   {"HF", "",   500, { D,X,X,X,X,X,X,X }, 4 }, // horned falcon
@@ -990,7 +991,7 @@ Init (int var)
     // Lion-Dog triple moves
     toList[64+i] = 3*kStep[i]; epList[64+i] =   kStep[i];
     toList[72+i] = 3*kStep[i]; epList[72+i] = 2*kStep[i];
-    toList[80+i] = 3*kStep[i]; epList[80+i] =   kStep[i]; ep2List[80+i] = 2*kStep[i];
+    toList[80+i] = 3*kStep[i]; epList[80+i] = 2*kStep[i]; ep2List[80+i] = kStep[i];
     toList[88+i] =   kStep[i]; epList[88+i] = 2*kStep[i];
   }
 
@@ -2496,15 +2497,15 @@ MoveToText (MOVE move, int multiLine)
   if(t >= SPECIAL) {
    if(t < CASTLE) { // castling is printed as a single move, implying its side effects
     int e = f + epList[t - SPECIAL];
+    if(ep2List[t - SPECIAL]) {
+      int e2 = f + ep2List[t - SPECIAL];
+//      printf("take %c%d\n", e%BW+'a', e/BW+ONE);
+      sprintf(buf+strlen(buf), "%c%d%c%d,", f%BW+'a', f/BW+ONE, e2%BW+'a', e2/BW+ONE); f = e2;
+      if(multiLine) printf("move %s\n", buf), buf[0] = '\0';
+    }
 //    printf("take %c%d\n", e%BW+'a', e/BW+ONE);
     sprintf(buf, "%c%d%c%d,", f%BW+'a', f/BW+ONE, e%BW+'a', e/BW+ONE); f = e;
     if(multiLine) printf("move %s\n", buf), buf[0] = '\0';
-    if(ep2List[t - SPECIAL]) {
-      e = g + ep2List[t - SPECIAL];
-//      printf("take %c%d\n", e%BW+'a', e/BW+ONE);
-      sprintf(buf+strlen(buf), "%c%d%c%d,", f%BW+'a', f/BW+ONE, e%BW+'a', e/BW+ONE); f = e;
-    if(multiLine) printf("move %s\n", buf), buf[0] = '\0';
-    }
    }
     t = g + toList[t - SPECIAL];
   }
@@ -2554,10 +2555,27 @@ ParseMove (char *moveText)
     e = t;
     moveText += ReadSquare(moveText, &t);
     for(i=0; i<8; i++) if(f + kStep[i] == e) break;
-    if(i >= 8) return INVALID; // this rejects Lion Dog 2+1 and 2-1 moves!
-    for(j=0; j<8; j++) if(e + kStep[j] == t) break;
-    if(j >= 8) return INVALID; // this rejects Lion Dog 1+2 moves!
-    t2 = SPECIAL + 8*i + j;
+    if(i >= 8) { // first leg not King step. Try Lion Dog 2+1 or 2-1
+      for(i=0; i<8; i++) if(f + 2*kStep[i] == e) break;
+      if(i >= 8) return INVALID; // not even that
+      if(f + 3*kStep[i] == t)    t2 = SPECIAL + 72 + i; // 2+1
+      else if(f + kStep[i] == t) t2 = SPECIAL + 88 + i; // 2-1
+      else return INVALID;
+    } else if(f + 3*kStep[i] == t) { // Lion Dog 1+2 move
+      t2 = SPECIAL + 64 + i;
+    } else if(*moveText == ',') { // 3rd leg follows!
+      if(f + 2*kStep[i] != t) return INVALID; // 3-leg moves must be linear!
+      moveText += ReadSquare(moveText, &e);
+      if(e != t) return INVALID; // must again continue with same piece
+      moveText += ReadSquare(moveText, &t);
+      if(f + 3*kStep[i] == t)    t2 = SPECIAL + 80 + i; // 1+1+1
+      else if(f + kStep[i] == t) t2 = SPECIAL + 88 + i; // 2-1 entered as 1+1-1
+      else return INVALID;
+    } else {
+      for(j=0; j<8; j++) if(e + kStep[j] == t) break;
+      if(j >= 8) return INVALID; // this rejects Lion Dog 1+2 moves!
+      t2 = SPECIAL + 8*i + j;
+    }
   } else if(chessFlag && board[f] != EMPTY && p[board[f]].value == pVal && board[t] == EMPTY) { // Pawn to empty, could be e.p.
       if(t == f + BW + 1) t2 = SPECIAL + 16; else
       if(t == f + BW - 1) t2 = SPECIAL + 48; else
@@ -2635,9 +2653,13 @@ Highlight(char *coords)
 	int e, t = moveStack[i] & SQUARE;
 	if(t < SPECIAL) continue; // only special moves
 	e = lastLift + epList[t - SPECIAL]; // decode
+	if(sqr == lastLift + ep2List[t - SPECIAL]) { // second leg of 3-leg move
+	  b[e] = 'C'; cnt++;
+	  continue;
+	}
 	t = lastLift + toList[t - SPECIAL];
 	if(e != sqr) continue;
-	b[t] = (!boardCopy[t] ? 'Y' : 'R'); cnt++;
+	if(!b[t]) b[t] = (!boardCopy[t] ? 'Y' : 'R'); cnt++;
       }
     }
     if(!cnt) return;
