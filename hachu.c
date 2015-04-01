@@ -180,17 +180,19 @@ Move retMove, moveStack[20000], path[100], repStack[300], pv[1000], repeatMove[3
 #define D -4 /* linear double move  */
 #define T -5 /* linear triple move  */
 #define L -6 /* true Lion move      */
-#define F -7 /* Lion + 3-step       */
-#define S -8 /* Lion + range        */
-#define H -9 /* hook move           */
-#define C -10 /* capture only       */
-#define M -11 /* non-capture only   */
+#define W -7 /* Werewolf move       */
+#define F -8 /* Lion + 3-step       */
+#define S -9 /* Lion + range        */
+#define H -10 /* hook move           */
+#define C -11 /* capture only       */
+#define M -12 /* non-capture only   */
 
 #define LVAL 1000 /* piece value of Lion. Used in chu for recognizing it to implement Lion-trade rules  */
 #define FVAL 5000 /* piece value of Fire Demon. Used in code for recognizing moves with it and do burns */
 
 PieceDesc chuPieces[] = {
-  {"LN", "",  LVAL, { T,T,T,T,T,T,T,T }, 4 }, // lion
+  {"LN", "",  LVAL, { W,W,W,W,W,W,W,W }, 4 }, // lion
+//  {"LN", "",  LVAL, { T,T,T,T,T,T,T,T }, 4 }, // lion
 //  {"LN", "",  LVAL, { L,L,L,L,L,L,L,L }, 4 }, // lion
   {"FK", "",   600, { X,X,X,X,X,X,X,X }, 4 }, // free king
   {"SE", "",   550, { X,D,X,X,X,X,X,D }, 4 }, // soaring eagle
@@ -1204,11 +1206,11 @@ GenNonCapts (int promoSuppress)
 	if(r >= S) { // in any case, do a jump of 2
 	  int occup = NewNonCapture(x, x + 2*v, pFlag);
 	  if(r < I) { // Lion power, also single step
-	    if(!NewNonCapture(x, x + v, pFlag)) nullMove = x; else occup = 1;
+	    if(!NewNonCapture(x, x + v, pFlag)) nullMove = x*(r != W); else occup = 1;
 	    if(r <= L) { // true Lion, also Knight jump
 	      if(!occup & r < L) for(y=x+2*v; !NewNonCapture(x, y+=v, pFlag) && r == S; ); // BS and FF moves
 	      v = nStep[j];
-	      NewNonCapture(x, x + v, pFlag);
+	      if(r != W) NewNonCapture(x, x + v, pFlag);
 	    } else if(r == T) NewNonCapture(x, x+3*v, pFlag); // Lion Dog, also triple step
 	  } else if(r == I) NewNonCapture(x, x + v, pFlag); // also do step
 	} else
@@ -1260,8 +1262,8 @@ MapOneColor (int start, int last, int *map)
 	    if(r <= L) {  // true Lion, also Knight jump
 	      if(r < L) { // Lion plus (limited) range
 		int y = x, n = 0;
-		r = (r == S ? 36 : 3);
-		while(n++ <= r) {
+		int rg = (r == S ? 36 : 3);
+		while(n++ < rg) {
 		  if(board[y+=v] == EDGE) break;
 		  if(board[y] != EMPTY) {
 		    if(n > 2) map[2*y + start] += one[j]; // outside Lion range
@@ -1270,7 +1272,7 @@ MapOneColor (int start, int last, int *map)
 		}
 	      }
 	      v = nStep[j];
-	      if(board[x + v] != EMPTY && board[x + v] != EDGE)
+	      if(board[x + v] != EMPTY && board[x + v] != EDGE && r != W)
 		map[2*(x + v) + start] += one[8];
 	    }
 	    }
@@ -1626,6 +1628,18 @@ GenCapts (int sqr, int victimValue)
 	      if(d > 2) break;
 	      NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
 	      att -= one[i];
+	      break;
+	    case W: // jump + locust jump + 3-slide (Werewolf)
+	      if(d > 2) break;
+	      NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
+	      att -= one[i];
+	      if(d == 2) { // check if we can take intermediate with it
+		if((board[x-v] & TYPE) == xstm && board[x-v] > board[sqr])
+		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p.
+	      } else { // d=1; can move on to second
+		if(board[sqr-v] == EMPTY || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
+		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // hit and run
+	      }
 	      break;
 	    case C: // FIDE Pawn
 	      if(d != 1) break;
@@ -2396,6 +2410,8 @@ MakeMove2 (int stm, MOVE move)
   if(chuFlag && p[undoInfo.victim].value == LVAL && p[undoInfo.piece].value != LVAL) sup2 |= PROMOTE;
   rootEval = -rootEval - undoInfo.booty;
   for(i=0; i<200; i++) repStack[i] = repStack[i+1], checkStack[i] = checkStack[i+1];
+
+
   repStack[199] = hashKeyH, checkStack[199] = inCheck;
 printf("# makemove %08x %c%d %c%d\n", move, sup1%BW+'a', sup1/BW, sup2%BW+'a', sup2/BW);
   return stm ^ WHITE;
