@@ -1685,7 +1685,7 @@ GenCapts (int sqr, int victimValue)
     for(i=0; i<8; i++) {    // scan all knight jumps to locate source
       int x = sqr - nStep[i], attacker = board[x];
       if(attacker == EMPTY || (attacker & TYPE) != stm) continue;
-      if(p[attacker].range[i] <= L && p[attacker].range[i] >= S || p[attacker].range[i] == N) { // has Knight jump in our direction
+      if(p[attacker].range[i] == L || p[attacker].range[i] < W && p[attacker].range[i] >= S || p[attacker].range[i] == N) { // has Knight jump in our direction
 	NewCapture(x, sqr + victimValue, p[attacker].promoFlag);   // plain jump (as in N)
 	if(p[attacker].range[i] < N) { // Lion power; generate double captures over two possible intermediates
 	  int v = kStep[i]; // leftish path
