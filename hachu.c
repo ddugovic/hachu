@@ -10,7 +10,7 @@
 // promotions by pieces with Lion power stepping in & out the zone in same turn
 // promotion on capture
 
-#define VERSION "0.20"
+#define VERSION "0.21"
 
 //define PATH level==0 || path[0] == 0x590cb &&  (level==1 || path[1] == 0x4c0c9 && (level == 2 || path[2] == 0x8598ca && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5))*/)))
 #define PATH 0
@@ -176,20 +176,24 @@ Move retMove, moveStack[20000], path[100], repStack[300], pv[1000], repeatMove[3
 #define R 37 /* jump capture        */
 #define N -1 /* Knight              */
 #define J -2 /* jump                */
-#define D -3 /* linear double move  */
-#define T -4 /* linear triple move  */
-#define L -5 /* true Lion move      */
-#define F -6 /* Lion + 3-step       */
-#define S -7 /* Lion + range        */
-#define H -9 /* hook move           */
-#define C -10 /* capture only       */
-#define M -11 /* non-capture only   */
+#define I -3 /* jump + step         */
+#define D -4 /* linear double move  */
+#define T -5 /* linear triple move  */
+#define L -6 /* true Lion move      */
+#define W -7 /* Werewolf move       */
+#define F -8 /* Lion + 3-step       */
+#define S -9 /* Lion + range        */
+#define H -10 /* hook move           */
+#define C -11 /* capture only       */
+#define M -12 /* non-capture only   */
 
 #define LVAL 1000 /* piece value of Lion. Used in chu for recognizing it to implement Lion-trade rules  */
 #define FVAL 5000 /* piece value of Fire Demon. Used in code for recognizing moves with it and do burns */
 
 PieceDesc chuPieces[] = {
-  {"LN", "",  LVAL, { L,L,L,L,L,L,L,L }, 4 }, // lion
+  {"LN", "",  LVAL, { W,W,W,W,W,W,W,W }, 4 }, // lion
+//  {"LN", "",  LVAL, { T,T,T,T,T,T,T,T }, 4 }, // lion
+//  {"LN", "",  LVAL, { L,L,L,L,L,L,L,L }, 4 }, // lion
   {"FK", "",   600, { X,X,X,X,X,X,X,X }, 4 }, // free king
   {"SE", "",   550, { X,D,X,X,X,X,X,D }, 4 }, // soaring eagle
   {"HF", "",   500, { D,X,X,X,X,X,X,X }, 4 }, // horned falcon
@@ -246,6 +250,33 @@ PieceDesc daiPieces[] = {
   {"I",  "G",  80, { 1,1,0,0,0,0,0,1 }, 2 }, // Iron
   {"N",  "G",  60, { N,0,0,0,0,0,0,N }, 0 }, // Knight
   {"ST", "G",  50, { 0,1,0,0,0,0,0,1 }, 0 }, // Stone
+  { NULL }  // sentinel
+};
+
+PieceDesc waPieces[] = {
+  {"TE", "",   720, { X,X,1,X,X,X,1,X }, 4 }, // Tenacious Falcon
+  {"GS", "",   500, { X,0,X,0,X,0,X,0 }, 4 }, // Gliding Swallow (R)
+  {"DE", "",   430, { X,3,1,1,X,1,1,3 }, 3 }, // Cloud Eagle
+  {"K",  "",   410, { 1,1,1,1,1,1,1,1 }, 2 }, // Crane King (K)
+  {"BT", "",   390, { I,I,0,I,I,I,0,I }, 4 }, // Treacherous Fox
+  {"FL", "TE", 380, { 1,X,0,X,0,X,0,X }, 4 }, // Flying Falcon
+  {"FS", "",   290, { X,1,1,0,X,0,1,1 }, 3 }, // Raiding Falcon
+  {"S",  "GS", 260, { 1,0,X,0,1,0,X,0 }, 6 }, // Swallow's Wing (SM)
+  {"PO", "",   260, { 1,1,1,1,1,1,1,1 }, 2 }, // Plodding Ox (K)
+  {"R",  "BT", 260, { X,1,0,1,1,1,0,1 }, 2 }, // Running Rabit
+  {"B",  "",   240, { 1,1,1,1,0,1,1,1 }, 2 }, // Roaming Boar
+  {"HH", "",   220, { N,0,0,N,N,0,0,N }, 1 }, // Heavenly Horse
+  {"EW", "PO", 220, { 1,1,1,0,1,0,1,1 }, 2 }, // Violent Wolf (G)
+  {"VM", "B",  200, { 1,1,0,1,0,1,0,1 }, 2 }, // Violent Stag (S)
+  {"G",  "S",  190, { 1,1,0,0,1,0,0,1 }, 2 }, // Flying Goose (C)
+  {"SM", "VM", 175, { 1,1,0,0,1,0,0,1 }, 2 }, // Climbing Monkey (C)
+  {"DH", "HH", 170, { X,0,0,0,2,0,0,0 }, 1 }, // Liberated Horse
+  {"DK", "EW", 150, { 0,1,1,0,1,0,1,1 }, 2 }, // Blind Dog
+  {"PH", "PO", 150, { X,0,0,0,0,0,0,0 }, 1 }, // Oxcart (L)
+  {"L",  "FS", 130, { 0,1,1,0,0,0,1,1 }, 2 }, // Flying Cock
+  {"KN", "DE", 115, { 1,0,0,1,0,1,0,0 }, 2 }, // Swooping Owl
+  {"C",  "FL", 105, { 1,0,0,1,0,1,0,0 }, 2 }, // Strutting Crow
+  {"P",  "EW",  80, { 1,0,0,0,0,0,0,0 }, 2 }, // Sparrow Pawn (P)
   { NULL }  // sentinel
 };
 
@@ -431,6 +462,16 @@ PieceDesc makrukPieces[] = {
   { NULL }  // sentinel
 };
 
+PieceDesc wolfPieces[] = {
+  {"EW","EW",1050,{ W,W,W,W,W,W,W,W }, 6, 5 }, // kludge to get extra Werewolves
+  {"R", "",  500, { X,0,X,0,X,0,X,0 }, 3 },
+  {"B", "",  320, { 0,X,0,X,0,X,0,X }, 1 },
+  {"N", "",  300, { N,N,N,N,N,N,N,N }, 1 },
+  {"K", "",  280, { 1,1,1,1,1,1,1,1 } },
+  {"P", "R",  80, { M,C,0,0,0,0,0,C } },
+  { NULL }  // sentinel
+};
+
 char chuArray[] = "L:FLCSGK:DEGSC:FLL/:RV.B.:BT:KN:PH:BT.B.:RV/:SM:VMR:DH:DK:LN:FK:DK:DHR:VM:SM/PPPPPPPPPPPP/...:GB....:GB..."
 		  "/............/............/"
 		  "...:gb....:gb.../pppppppppppp/:sm:vmr:dh:dk:fk:ln:dk:dhr:vm:sm/:rv.b.:bt:ph:kn:bt.b.:rv/l:flcsg:dekgsc:fll";
@@ -443,10 +484,14 @@ char tenArray[] = "LN:FLICSGK:DEGSCI:FLNL/:RV.:CS:CS.:BT:KN:LN:FK:PH:BT.:CS:CS.:
 		  "....d......d..../pppppppppppppppp/:sm:vmr:hf:se:bg:rg:vg:gg:rg:bg:se:hfr:vm:sm/"
 		  ":ss:vsb:dh:dk:wb:fi:fe:lh:fi:wb:dk:dhb:vs:ss/:rv.:cs:cs.:bt:ph:fk:ln:kn:bt.:cs:cs.:rv/ln:flicsg:dekgsci:flnl";
 char shoArray[] = "LNSGKGSNL/.B..:DE..R./PPPPPPPPP/........./........./........./ppppppppp/.r..:de..b./lnsgkgsnl";
+char waArray[] = ":PH:DKCG:EWK:VML:KN:SM:DH/.:FL...S...:DE./PPP:BTPPPRPPP/...P...P..."
+		 "/.........../.........../..........."
+		 "/...p...p.../ppprppp:btppp/.:de...s...:fl./:dh:sm:knl:vmk:ewgc:dk:ph";
 char chessArray[] = "RNB:FKKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnb:fkkbnr";
 char lionArray[]  = "R:LNB:FKKBNR/PPPPPPPP/......../......../......../......../pppppppp/r:lnb:fkkbnr";
 char shatArray[]= "RNBK:FKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnbk:fkbnr";
 char thaiArray[]= "RNSK:SMSNR/......../PPPPPPPP/......../......../pppppppp/......../rns:smksnr";
+char wolfArray[]= "RNB:EWKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnb:ewkbnr";
 
 typedef struct {
   int boardWidth, boardFiles, boardRanks, zoneDepth, varNr; // board sizes
@@ -454,7 +499,7 @@ typedef struct {
   char *array; // initial position
 } VariantDesc;
 
-typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_TENJIKU, V_SHATRANJ, V_MAKRUK, V_LION } Variant;
+typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_TENJIKU, V_SHATRANJ, V_MAKRUK, V_LION, V_WA, V_WOLF } Variant;
 
 #define SAME (-1)
 
@@ -468,6 +513,8 @@ VariantDesc variants[] = {
   { 16,  8,  8, 1, V_SHATRANJ,"shatranj",shatArray}, // Shatranj
   { 16,  8,  8, 3, V_MAKRUK,  "makruk",  thaiArray}, // Makruk
   { 16,  8,  8, 1, V_LION,    "lion",    lionArray}, // Mighty Lion
+  { 22, 11, 11, 3, V_WA,      "washogi", waArray},   // Wa
+  { 16,  8,  8, 1, V_WOLF,    "werewolf",wolfArray},   // Wa
 
   { 0, 0, 0, 0, 0 }, // sentinel
   { 34, 17, 17, 0, V_DADA,    "dada",    chuArray }, // Dai Dai
@@ -590,6 +637,7 @@ typedef struct {
   char mobWeight;
   unsigned char promoGain;
   char bulk;
+  char ranking;
 } PieceInfo; // piece-list entry
 
 int last[2], royal[2], kylin[2];
@@ -660,6 +708,10 @@ LookUp (char *name, int var)
       return ListLookUp(name, makrukPieces);
     case V_LION: // Mighty Lion
       return ListLookUp(name, lionPieces);
+    case V_WA: // Wa
+      return ListLookUp(name, waPieces);
+    case V_WOLF: // Werewolf
+      return ListLookUp(name, wolfPieces);
   }
   return NULL;
 }
@@ -801,6 +853,7 @@ AddPiece (int stm, PieceDesc *list)
   p[i].pieceKey = *key;
   p[i].promoFlag = 0;
   p[i].bulk = list->bulk;
+  p[i].ranking = list->ranking;
   p[i].mobWeight = v > 600 ? 0 : v >= 400 ? 1 : v >= 300 ? 2 : v > 150 ? 3 : v >= 100 ? 2 : 0;
   if(Lance(list->range))
     p[i].mobWeight = 0, p[i].pst = list->range[4] ? PST_NEUTRAL : PST_LANCE; // keep back
@@ -809,7 +862,7 @@ AddPiece (int stm, PieceDesc *list)
   }
   if(royal[stm] >= i) royal[stm] += 2;
   if(kylin[stm] >= i) kylin[stm] += 2;
-  if(p[i].value == (currentVariant == V_SHO ? 410 : 280) ) royal[stm] = i, p[i].pst = 0;
+  if(p[i].value == (currentVariant == V_SHO || currentVariant == V_WA ? 410 : 280) ) royal[stm] = i, p[i].pst = 0;
   p[i].qval = (currentVariant == V_TENJIKU ? list->ranking : 0); // jump-capture hierarchy
   return i;
 }
@@ -875,6 +928,7 @@ SetUp (char *array, int var)
     if(x != ABSENT) for(j=0; j<8; j++) fireBoard[x+kStep[j]] |= n;
     n <<= 1;
   }
+  for(i=2; i<6; i++) if(p[i].ranking == 5) p[i].promo = -1, p[i].promoFlag = 0; // take promotability away from Werewolves
   for(i=0; i<BH; i++) for(j=0; j<BH; j++) board[BW*i+j] = EMPTY;
   for(i=WHITE+2; i<=last[WHITE]; i+=2) if(p[i].pos != ABSENT) {
     int g = p[i].promoGain;
@@ -933,8 +987,8 @@ Init (int var)
   bsize = bWidth*bHeight;
   chuFlag = (currentVariant == V_CHU || currentVariant == V_LION);
   tenFlag = (currentVariant == V_TENJIKU);
-  chessFlag = (currentVariant == V_CHESS || currentVariant == V_LION);
-  stalemate = (currentVariant == V_CHESS || currentVariant == V_MAKRUK || currentVariant == V_LION);
+  chessFlag = (currentVariant == V_CHESS || currentVariant == V_LION || currentVariant == V_WOLF);
+  stalemate = (currentVariant == V_CHESS || currentVariant == V_MAKRUK || currentVariant == V_LION || currentVariant == V_WOLF);
   repDraws  = (stalemate || currentVariant == V_SHATRANJ);
   ll = 0; lr = bHeight - 1; ul = (bHeight - 1)*bWidth; ur = ul + bHeight - 1;
   pawn = LookUp("P", currentVariant); pVal = pawn ? pawn->value : 0; // get Pawn value
@@ -956,7 +1010,7 @@ Init (int var)
     // Lion-Dog triple moves
     toList[64+i] = 3*kStep[i]; epList[64+i] =   kStep[i];
     toList[72+i] = 3*kStep[i]; epList[72+i] = 2*kStep[i];
-    toList[80+i] = 3*kStep[i]; epList[80+i] =   kStep[i]; ep2List[80+i] = 2*kStep[i];
+    toList[80+i] = 3*kStep[i]; epList[80+i] = 2*kStep[i]; ep2List[80+i] = kStep[i];
     toList[88+i] =   kStep[i]; epList[88+i] = 2*kStep[i];
   }
 
@@ -1168,14 +1222,14 @@ GenNonCapts (int promoSuppress)
 	} else
 	if(r >= S) { // in any case, do a jump of 2
 	  int occup = NewNonCapture(x, x + 2*v, pFlag);
-	  if(r < J) { // Lion power, also single step
-	    if(!NewNonCapture(x, x + v, pFlag)) nullMove = x; else occup = 1;
+	  if(r < I) { // Lion power, also single step
+	    if(!NewNonCapture(x, x + v, pFlag)) nullMove = (r == W ? ABSENT : x); else occup = 1;
 	    if(r <= L) { // true Lion, also Knight jump
 	      if(!occup & r < L) for(y=x+2*v; !NewNonCapture(x, y+=v, pFlag) && r == S; ); // BS and FF moves
 	      v = nStep[j];
-	      NewNonCapture(x, x + v, pFlag);
-	    }
-	  }
+	      if(r != W) NewNonCapture(x, x + v, pFlag);
+	    } else if(r == T) NewNonCapture(x, x+3*v, pFlag); // Lion Dog, also triple step
+	  } else if(r == I) NewNonCapture(x, x + v, pFlag); // also do step
 	} else
 	if(r == M) { // FIDE Pawn; check double-move
 	  if(!NewNonCapture(x, x+v, pFlag) && chessFlag && promoBoard[x-v] & LAST_RANK)
@@ -1217,6 +1271,7 @@ MapOneColor (int start, int last, int *map)
 	  if(r < J) { // Lion power, also single step
 	    if(board[x + v] != EMPTY && board[x + v] != EDGE)
 	      map[2*(x + v) + start] += one[j];
+	    if(r < I) {
 	    if(r == T) { // Lion Dog, also jump of 3
 	      if(board[x + 3*v] != EMPTY && board[x + 3*v] != EDGE)
 		map[2*(x + 3*v) + start] += one[j];
@@ -1224,8 +1279,8 @@ MapOneColor (int start, int last, int *map)
 	    if(r <= L) {  // true Lion, also Knight jump
 	      if(r < L) { // Lion plus (limited) range
 		int y = x, n = 0;
-		r = (r == S ? 36 : 3);
-		while(n++ <= r) {
+		int rg = (r == S ? 36 : 3);
+		while(n++ < rg) {
 		  if(board[y+=v] == EDGE) break;
 		  if(board[y] != EMPTY) {
 		    if(n > 2) map[2*y + start] += one[j]; // outside Lion range
@@ -1234,8 +1289,9 @@ MapOneColor (int start, int last, int *map)
 		}
 	      }
 	      v = nStep[j];
-	      if(board[x + v] != EMPTY && board[x + v] != EDGE)
+	      if(board[x + v] != EMPTY && board[x + v] != EDGE && r != W)
 		map[2*(x + v) + start] += one[8];
+	    }
 	    }
 	  }
 	} else
@@ -1281,6 +1337,7 @@ MapFromScratch (int *map)
   int i;
   for(i=0; i<2*bsize; i++) map[i] = 0;
   mobilityScore  = MapOneColor(1, last[WHITE], map);
+
   mobilityScore -= MapOneColor(0, last[BLACK], map);
 }
 
@@ -1397,10 +1454,17 @@ MakeMove(Move m, UndoInfo *u)
     u->epVictim[0] = EDGE; // kludge to flag to UnMake this is special move
   }
 
-  u->booty += PST[p[u->new].pst + u->to] - PST[p[u->piece].pst + u->from];
-
   u->victim = board[u->to];
   p[u->victim].pos = ABSENT;
+  if(p[u->victim].ranking == 5 && p[u->piece].ranking != 4) { // contageous piece captured by non-royal
+    u->new = u->piece & 1 | 2;    // promote to it
+    p[u->piece].pos = ABSENT;
+    u->booty += p[u->new].value - p[u->piece].value;
+    if(p[u->new].pos != ABSENT) u->new += 2;
+  }
+
+  u->booty += PST[p[u->new].pst + u->to] - PST[p[u->piece].pst + u->from];
+
   filling += p[u->new].bulk - p[u->piece].bulk - p[u->victim].bulk;
   promoDelta += p[u->new].promoGain - p[u->piece].promoGain + p[u->victim].promoGain;
   u->booty += p[u->victim].value + PST[p[u->victim].pst + u->to];
@@ -1546,10 +1610,60 @@ GenCapts (int sqr, int victimValue)
 		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // hit and run
 	      }
 	      break;
-	    case J: // plain jump (as in KY, PH)
-	      if(d != 2) break;
+	    case T: // Lion-Dog move (awful!)
+	      if(d > 3) break;
 	      NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
 	      att -= one[i];
+	      if(d == 3) { // check if we can take one or two intermediates (with higher piece index) with it
+		if((board[x-v] & TYPE) == xstm && board[x-v] > board[sqr]) {
+		  NewCapture(x, SPECIAL + 64 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. first
+		  if((board[x-2*v] & TYPE) == xstm && board[x-2*v] > board[sqr])
+		    NewCapture(x, SPECIAL + 80 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. both
+		} else if((board[x-2*v] & TYPE) == xstm && board[x-2*v] > board[sqr])
+		  NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. second
+	      } else if(d == 2) { // check if we can take intermediate with it
+		if((board[x-v] & TYPE) == xstm && board[x-v] > board[sqr]) {
+		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. first, stop at 2nd
+		  NewCapture(x, SPECIAL + 88 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // shoot 2nd, take 1st
+		  if(board[sqr-v] == EMPTY || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
+		    NewCapture(x, SPECIAL + 80 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st and 2nd
+		} else if(board[sqr-v] == EMPTY || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
+		  NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 2nd
+	      } else { // d=1; can move on to second, or move back for igui
+		NewCapture(x, SPECIAL + 8*i + (i^4) + victimValue, p[attacker].promoFlag); // igui
+		if(board[sqr-v] == EMPTY) { // 2nd empty
+		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st and run to 2nd
+		  if(board[sqr-2*v] == EMPTY || (board[sqr-2*v] & TYPE) == xstm && board[sqr-2*v] > board[sqr])
+		    NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st, end on 3rd
+		} else if((board[sqr-v] & TYPE) == stm) { // 2nd own
+		  if(board[sqr-2*v] == EMPTY || (board[sqr-2*v] & TYPE) == xstm && board[sqr-2*v] > board[sqr])
+		    NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st, end on 3rd
+		} else if((board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr]) {
+		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st, capture and stop at 2nd
+		  NewCapture(x, SPECIAL + 88 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // shoot 2nd
+		  if(board[sqr-2*v] == EMPTY || (board[sqr-2*v] & TYPE) == xstm && board[sqr-2*v] > board[sqr])
+		    NewCapture(x, SPECIAL + 80 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st and 2nd
+		}
+	      }
+	      break;
+	    case J: // plain jump (as in KY, PH)
+	      if(d != 2) break;
+	    case I: // jump + step (as in Wa TF)
+	      if(d > 2) break;
+	      NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
+	      att -= one[i];
+	      break;
+	    case W: // jump + locust jump + 3-slide (Werewolf)
+	      if(d > 2) break;
+	      NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
+	      att -= one[i];
+	      if(d == 2) { // check if we can take intermediate with it
+		if((board[x-v] & TYPE) == xstm && board[x-v] > board[sqr])
+		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p.
+	      } else { // d=1; can move on to second
+		if(board[sqr-v] == EMPTY || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
+		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // hit and run
+	      }
 	      break;
 	    case C: // FIDE Pawn
 	      if(d != 1) break;
@@ -2207,7 +2321,7 @@ pplist()
   for(i=0; i<182; i++) {
 	printf("%3d. %3d %3d %4d   %02x %d %d %x %3d %4d ", i, p[i].value, p[i].promo, p[i].pos, p[i].promoFlag&255, p[i].mobWeight, p[i].qval, p[i].bulk, p[i].promoGain, p[i].pst);
 	for(j=0; j<8; j++) printf("  %2d", p[i].range[j]);
-	if(i<2 || i>11) printf("\n"); else printf("  %02x\n", fireFlags[i-2]&255);
+	if(i<2 || i>11) printf("\n"); else printf("  %02x %d\n", fireFlags[i-2]&255, p[i].ranking);
   }
   printf("last: %d / %d\nroyal %d / %d\n", last[WHITE], last[BLACK], royal[WHITE], royal[BLACK]);
 }
@@ -2230,6 +2344,7 @@ pbytes (unsigned char *b)
   for(i=BH-1; i>=0; i--) {
     for(j=0; j<BH; j++) printf("%3x", b[BW*i+j]);
     printf("\n");
+
   }
 }
 
@@ -2319,6 +2434,8 @@ MakeMove2 (int stm, MOVE move)
   if(chuFlag && p[undoInfo.victim].value == LVAL && p[undoInfo.piece].value != LVAL) sup2 |= PROMOTE;
   rootEval = -rootEval - undoInfo.booty;
   for(i=0; i<200; i++) repStack[i] = repStack[i+1], checkStack[i] = checkStack[i+1];
+
+
   repStack[199] = hashKeyH, checkStack[199] = inCheck;
 printf("# makemove %08x %c%d %c%d\n", move, sup1%BW+'a', sup1/BW, sup2%BW+'a', sup2/BW);
   return stm ^ WHITE;
@@ -2334,7 +2451,7 @@ UnMake2 (MOVE move)
   sup2 = sup1; sup1 = sup0;
 }
 
-char fenNames[] = "RV....DKDEFL..DHGB......SMLNKN..FK....BT..VM..PH..LN"; // pairs of char
+char fenNames[] = "RV....DKDEFL..DHGB......SMLNKN..FK....BT..VMEWPH..LN"; // pairs of char
 char fenPromo[] = "WLDHSMSECPB R HFDE....WHFB..LNG ..DKVMFS..FO..FK...."; // pairs of char
 
 char *
@@ -2420,15 +2537,15 @@ MoveToText (MOVE move, int multiLine)
   if(t >= SPECIAL) {
    if(t < CASTLE) { // castling is printed as a single move, implying its side effects
     int e = f + epList[t - SPECIAL];
+    if(ep2List[t - SPECIAL]) {
+      int e2 = f + ep2List[t - SPECIAL];
+//      printf("take %c%d\n", e%BW+'a', e/BW+ONE);
+      sprintf(buf+strlen(buf), "%c%d%c%d,", f%BW+'a', f/BW+ONE, e2%BW+'a', e2/BW+ONE); f = e2;
+      if(multiLine) printf("move %s\n", buf), buf[0] = '\0';
+    }
 //    printf("take %c%d\n", e%BW+'a', e/BW+ONE);
     sprintf(buf, "%c%d%c%d,", f%BW+'a', f/BW+ONE, e%BW+'a', e/BW+ONE); f = e;
     if(multiLine) printf("move %s\n", buf), buf[0] = '\0';
-    if(ep2List[t - SPECIAL]) {
-      e = g + ep2List[t - SPECIAL];
-//      printf("take %c%d\n", e%BW+'a', e/BW+ONE);
-      sprintf(buf+strlen(buf), "%c%d%c%d,", f%BW+'a', f/BW+ONE, e%BW+'a', e/BW+ONE); f = e;
-    if(multiLine) printf("move %s\n", buf), buf[0] = '\0';
-    }
    }
     t = g + toList[t - SPECIAL];
   }
@@ -2462,6 +2579,11 @@ MapFromScratch(attacks);
 
   listStart = retFirst; msp = retMSP;
   if(currentVariant == V_LION) GenCastlings(); listEnd = msp;
+  for(i=listStart; i<msp && currentVariant == V_WOLF; i++) { // mark Werewolf captures as promotions
+    int to = moveStack[i] & SQUARE, from = moveStack[i] >> SQLEN & SQUARE;
+    if(to >= SPECIAL) continue;
+    if(p[board[to]].ranking == 5 && p[board[from]].ranking != 4) moveStack[i] |= PROMOTE;
+  }
 }
 
 MOVE
@@ -2478,10 +2600,27 @@ ParseMove (char *moveText)
     e = t;
     moveText += ReadSquare(moveText, &t);
     for(i=0; i<8; i++) if(f + kStep[i] == e) break;
-    if(i >= 8) return INVALID; // this rejects Lion Dog 2+1 and 2-1 moves!
-    for(j=0; j<8; j++) if(e + kStep[j] == t) break;
-    if(j >= 8) return INVALID; // this rejects Lion Dog 1+2 moves!
-    t2 = SPECIAL + 8*i + j;
+    if(i >= 8) { // first leg not King step. Try Lion Dog 2+1 or 2-1
+      for(i=0; i<8; i++) if(f + 2*kStep[i] == e) break;
+      if(i >= 8) return INVALID; // not even that
+      if(f + 3*kStep[i] == t)    t2 = SPECIAL + 72 + i; // 2+1
+      else if(f + kStep[i] == t) t2 = SPECIAL + 88 + i; // 2-1
+      else return INVALID;
+    } else if(f + 3*kStep[i] == t) { // Lion Dog 1+2 move
+      t2 = SPECIAL + 64 + i;
+    } else if(*moveText == ',') { // 3rd leg follows!
+      if(f + 2*kStep[i] != t) return INVALID; // 3-leg moves must be linear!
+      moveText += ReadSquare(moveText, &e);
+      if(e != t) return INVALID; // must again continue with same piece
+      moveText += ReadSquare(moveText, &t);
+      if(f + 3*kStep[i] == t)    t2 = SPECIAL + 80 + i; // 1+1+1
+      else if(f + kStep[i] == t) t2 = SPECIAL + 88 + i; // 2-1 entered as 1+1-1
+      else return INVALID;
+    } else {
+      for(j=0; j<8; j++) if(e + kStep[j] == t) break;
+      if(j >= 8) return INVALID; // this rejects Lion Dog 1+2 moves!
+      t2 = SPECIAL + 8*i + j;
+    }
   } else if(chessFlag && board[f] != EMPTY && p[board[f]].value == pVal && board[t] == EMPTY) { // Pawn to empty, could be e.p.
       if(t == f + BW + 1) t2 = SPECIAL + 16; else
       if(t == f + BW - 1) t2 = SPECIAL + 48; else
@@ -2559,9 +2698,13 @@ Highlight(char *coords)
 	int e, t = moveStack[i] & SQUARE;
 	if(t < SPECIAL) continue; // only special moves
 	e = lastLift + epList[t - SPECIAL]; // decode
+	if(sqr == lastLift + ep2List[t - SPECIAL]) { // second leg of 3-leg move
+	  b[e] = 'C'; cnt++;
+	  continue;
+	}
 	t = lastLift + toList[t - SPECIAL];
 	if(e != sqr) continue;
-	b[t] = (!boardCopy[t] ? 'Y' : 'R'); cnt++;
+	if(!b[t]) b[t] = (!boardCopy[t] ? 'Y' : 'R'); cnt++;
       }
     }
     if(!cnt) return;
@@ -2747,7 +2890,7 @@ pboard(board);
             }
             stm = MakeMove2(stm, move);  // assumes MakeMove returns new side to move
             gameMove[moveNr++] = move;   // remember game
-            printf("move %s\n", MoveToText(pMove, 1));
+            printf("move %s%s\n", MoveToText(pMove, 1), p[undoInfo.victim].ranking == 5 && p[undoInfo.piece].ranking != 4 ? "w" : "");
             listEnd = 0;
             continue;                    // go check if we should ponder
           }
@@ -2862,8 +3005,13 @@ pboard(board);
               Init(curVarNr = i); stm = Setup2(NULL); break;
             }
 	  }
+          if(currentVariant == V_WOLF)
+            printf("setup (PNBR...........WKpnbr...........wk) 8x8+0_fairy rnbwkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBWKBNR w 0 1\n");
           if(currentVariant == V_SHO)
             printf("setup (PNBRLSE..G.+++++++Kpnbrlse..g.+++++++k) 9x9+0_shogi lnsgkgsnl/1r2e2b1/ppppppppp/9/9/9/PPPPPPPPP/1B2E2R1/LNSGKGSNL w 0 1\n");
+          if(currentVariant == V_WA)
+            printf("setup (P.C.EVLO.WGHDF.TRSXOM.+.+..+++.+++++..+++++Kp.c.evlo.wghdf.trsxom.+.+..+++.+++++..+++++k) 11x11+0_chu "
+							"hmolvkwgcdx/1e3s3f1/ppprppptppp/3p3p3/11/11/11/3P3P3/PPPTPPPRPPP/1F3S3E1/XDCGWKVLOMH w 0 1\n");
 	  repStack[199] = hashKeyH, checkStack[199] = 0;
           continue;
         }
