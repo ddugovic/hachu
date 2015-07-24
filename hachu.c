@@ -191,9 +191,7 @@ Move retMove, moveStack[20000], path[100], repStack[300], pv[1000], repeatMove[3
 #define FVAL 5000 /* piece value of Fire Demon. Used in code for recognizing moves with it and do burns */
 
 PieceDesc chuPieces[] = {
-  {"LN", "",  LVAL, { W,W,W,W,W,W,W,W }, 4 }, // lion
-//  {"LN", "",  LVAL, { T,T,T,T,T,T,T,T }, 4 }, // lion
-//  {"LN", "",  LVAL, { L,L,L,L,L,L,L,L }, 4 }, // lion
+  {"LN", "",  LVAL, { L,L,L,L,L,L,L,L }, 4 }, // lion
   {"FK", "",   600, { X,X,X,X,X,X,X,X }, 4 }, // free king
   {"SE", "",   550, { X,D,X,X,X,X,X,D }, 4 }, // soaring eagle
   {"HF", "",   500, { D,X,X,X,X,X,X,X }, 4 }, // horned falcon
@@ -1456,11 +1454,12 @@ MakeMove(Move m, UndoInfo *u)
 
   u->victim = board[u->to];
   p[u->victim].pos = ABSENT;
-  if(p[u->victim].ranking == 5 && p[u->piece].ranking != 4) { // contageous piece captured by non-royal
+  if(p[u->victim].ranking == 5 && p[u->piece].ranking < 4) { // contageous piece captured by non-royal
+    u->booty -= p[u->new].value;
     u->new = u->piece & 1 | 2;    // promote to it
-    p[u->piece].pos = ABSENT;
-    u->booty += p[u->new].value - p[u->piece].value;
     if(p[u->new].pos != ABSENT) u->new += 2;
+    p[u->piece].pos = ABSENT;
+    u->booty += p[u->new].value;
   }
 
   u->booty += PST[p[u->new].pst + u->to] - PST[p[u->piece].pst + u->from];
@@ -1995,6 +1994,7 @@ if(PATH) printf("# probe hash index=%x hit=%d\n", index, hit),fflush(stdout);
   if(hit >= 0) {
     bestScore = hashTable[index].score[hit];
     hashMove = hashTable[index].move[hit];
+
     if((bestScore <= alpha || hashTable[index].flag[hit] & H_LOWER) &&
        (bestScore >= beta  || hashTable[index].flag[hit] & H_UPPER)   ) {
       iterDep = resDep = hashTable[index].depth[hit]; bestMoveNr = 0;
@@ -2549,7 +2549,7 @@ MoveToText (MOVE move, int multiLine)
    }
     t = g + toList[t - SPECIAL];
   }
-  if(move & PROMOTE) promoChar = currentVariant == V_MAKRUK ? "m" : repDraws ? "q" : "+";
+  if(move & PROMOTE) promoChar = currentVariant == V_MAKRUK ? "m" : currentVariant == V_WOLF ? "r" : repDraws ? "q" : "+";
   sprintf(buf+strlen(buf), "%c%d%c%d%s", f%BW+'a', f/BW+ONE, t%BW+'a', t/BW+ONE,  promoChar);
   return buf;
 }
@@ -2582,7 +2582,7 @@ MapFromScratch(attacks);
   for(i=listStart; i<msp && currentVariant == V_WOLF; i++) { // mark Werewolf captures as promotions
     int to = moveStack[i] & SQUARE, from = moveStack[i] >> SQLEN & SQUARE;
     if(to >= SPECIAL) continue;
-    if(p[board[to]].ranking == 5 && p[board[from]].ranking != 4) moveStack[i] |= PROMOTE;
+    if(p[board[to]].ranking == 5 && p[board[from]].ranking < 4) moveStack[i] |= PROMOTE;
   }
 }
 
@@ -2633,6 +2633,7 @@ ParseMove (char *moveText)
       if(t == f-2 && f > BW) t2 = CASTLE + 3;
   }
   ret = f<<SQLEN | t2;
+  if(currentVariant == V_WOLF && *moveText == 'w') *moveText = '\n';
   if(*moveText != '\n' && *moveText != '=') ret |= PROMOTE;
 printf("# suppress = %c%d\n", sup1%BW+'a', sup1/BW);
 //  ListMoves();
@@ -2651,7 +2652,7 @@ printf("# deferral of %d\n", deferred);
       if(!(flags & promoBoard[t] & (CANT_DEFER | LAST_RANK))) { // but change it into a deferral if that is allowed
 	moveStack[i] &= ~PROMOTE;
 	if(p[board[f]].value == 40) p[board[f]].promoFlag &= LAST_RANK; else
-	if(!(flags & promoBoard[f])) moveStack[i] |= DEFER; // came from outside zone, so essential deferral
+	if(!(flags & promoBoard[f]) && currentVariant != V_WOLF) moveStack[i] |= DEFER; // came from outside zone, so essential deferral
       }
     }
     if(i >= listEnd) {
@@ -2890,7 +2891,7 @@ pboard(board);
             }
             stm = MakeMove2(stm, move);  // assumes MakeMove returns new side to move
             gameMove[moveNr++] = move;   // remember game
-            printf("move %s%s\n", MoveToText(pMove, 1), p[undoInfo.victim].ranking == 5 && p[undoInfo.piece].ranking != 4 ? "w" : "");
+            printf("move %s%s\n", MoveToText(pMove, 1), p[undoInfo.victim].ranking == 5 && p[undoInfo.piece].ranking < 4 ? "w" : "");
             listEnd = 0;
             continue;                    // go check if we should ponder
           }
