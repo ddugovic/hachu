@@ -2792,8 +2792,10 @@ printf("# setup done");fflush(stdout);
       int i, c;
       while(1) {
         // wait for input, and read it until we have collected a complete line
-        for(i = 0; (inBuf[i] = c = getchar()) != '\n'; i++) if(c == EOF || i>7997) exit(0);
-        inBuf[i+1] = 0;
+        do {
+          for(i = 0; (inBuf[i] = c = getchar()) != '\n'; i++) if(c == EOF || i>7997) exit(0);
+          inBuf[i+1] = 0;
+        } while(!i); // ignore empty lines
 
         // extract the first word
         sscanf(inBuf, "%s", command);
