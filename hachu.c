@@ -3011,8 +3011,9 @@ pboard(board);
           if(currentVariant == V_SHO)
             printf("setup (PNBRLSE..G.+++++++Kpnbrlse..g.+++++++k) 9x9+0_shogi lnsgkgsnl/1r2e2b1/ppppppppp/9/9/9/PPPPPPPPP/1B2E2R1/LNSGKGSNL w 0 1\n");
           if(currentVariant == V_WA)
-            printf("setup (P.C.EVLO.WGHDF.TRSXOM.+.+..+++.+++++..+++++Kp.c.evlo.wghdf.trsxom.+.+..+++.+++++..+++++k) 11x11+0_chu "
-							"hmolvkwgcdx/1e3s3f1/ppprppptppp/3p3p3/11/11/11/3P3P3/PPPTPPPRPPP/1F3S3E1/XDCGWKVLOMH w 0 1\n");
+            printf("setup (P..^S^FV..^LW^OH.F.^R.E....R...D.GOL^M..^H.M.C.^CU.^W/.......^V.^P.^U..^DS.^GXK"
+                          "p..^s^fv..^lw^oh.f.^r.e....r...d.gol^m..^h.m.c.^cu.^w/.......^v.^p.^u..^ds.^gxk) 11x11+0_chu "
+							"hmlcvkwgudo/1e3s3f1/ppprpppxppp/3p3p3/11/11/11/3P3P3/PPPXPPPRPPP/1F3S3E1/ODUGWKVCLMH w 0 1\n");
 	  repStack[199] = hashKeyH, checkStack[199] = 0;
           continue;
         }
