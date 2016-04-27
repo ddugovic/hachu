@@ -511,7 +511,7 @@ VariantDesc variants[] = {
   { 16,  8,  8, 1, V_SHATRANJ,"shatranj",shatArray}, // Shatranj
   { 16,  8,  8, 3, V_MAKRUK,  "makruk",  thaiArray}, // Makruk
   { 16,  8,  8, 1, V_LION,    "lion",    lionArray}, // Mighty Lion
-  { 22, 11, 11, 3, V_WA,      "washogi", waArray},   // Wa
+  { 22, 11, 11, 3, V_WA,      "wa-shogi",waArray},   // Wa
   { 16,  8,  8, 1, V_WOLF,    "werewolf",wolfArray},   // Wa
 
   { 0, 0, 0, 0, 0 }, // sentinel
