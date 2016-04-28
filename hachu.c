@@ -470,26 +470,26 @@ PieceDesc wolfPieces[] = {
   { NULL }  // sentinel
 };
 
-char chuArray[] = "L:FLCSGK:DEGSC:FLL/:RV.B.:BT:KN:PH:BT.B.:RV/:SM:VMR:DH:DK:LN:FK:DK:DHR:VM:SM/PPPPPPPPPPPP/...:GB....:GB..."
-		  "/............/............/"
-		  "...:gb....:gb.../pppppppppppp/:sm:vmr:dh:dk:fk:ln:dk:dhr:vm:sm/:rv.b.:bt:ph:kn:bt.b.:rv/l:flcsg:dekgsc:fll";
-char daiArray[] = "LN:STICSGKGSCI:STNL/:RV.:CS.:FL.:BT:DE:BT.:FL.:CS.:RV/.:VO.:AB.:EW:KN:LN:PH:EW.:AB.:VO./R:FD:SM:VMB:DH:DK:FK:DK:DHB:VM:SM:FDR"
-		  "/PPPPPPPPPPPPPPP/....:GB.....:GB..../.............../.............../.............../....:gb.....:gb..../ppppppppppppppp/"
-		  "r:fd:sm:vmb:dh:dk:fk:dk:dhb:vm:sm:fdr/.:vo.:ab.:ew:ph:ln:kn:ew.:ab.:vo./:rv.:cs.:fl.:bt:de:bt.:fl.:cs.:rv/ln:sticsgkgsci:stnl";
-char tenArray[] = "LN:FLICSGK:DEGSCI:FLNL/:RV.:CS:CS.:BT:KN:LN:FK:PH:BT.:CS:CS.:RV/:SS:VSB:DH:DK:WB:FI:LH:FE:FI:WB:DK:DHB:VS:SS/"
-		  ":SM:VMR:HF:SE:BG:RG:GG:VG:RG:BG:SE:HFR:VM:SM/PPPPPPPPPPPPPPPP/....D......D..../"
-		  "................/................/................/................/"
-		  "....d......d..../pppppppppppppppp/:sm:vmr:hf:se:bg:rg:vg:gg:rg:bg:se:hfr:vm:sm/"
-		  ":ss:vsb:dh:dk:wb:fi:fe:lh:fi:wb:dk:dhb:vs:ss/:rv.:cs:cs.:bt:ph:fk:ln:kn:bt.:cs:cs.:rv/ln:flicsg:dekgsci:flnl";
-char shoArray[] = "LNSGKGSNL/.B..:DE..R./PPPPPPPPP/........./........./........./ppppppppp/.r..:de..b./lnsgkgsnl";
-char waArray[] = ":PH:DKCG:EWK:VML:KN:SM:DH/.:FL...S...:DE./PPP:BTPPPRPPP/...P...P..."
-		 "/.........../.........../..........."
-		 "/...p...p.../ppprppp:btppp/.:de...s...:fl./:dh:sm:knl:vmk:ewgc:dk:ph";
-char chessArray[] = "RNB:FKKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnb:fkkbnr";
-char lionArray[]  = "R:LNB:FKKBNR/PPPPPPPP/......../......../......../......../pppppppp/r:lnb:fkkbnr";
-char shatArray[]= "RNBK:FKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnbk:fkbnr";
-char thaiArray[]= "RNSK:SMSNR/......../PPPPPPPP/......../......../pppppppp/......../rns:smksnr";
-char wolfArray[]= "RNB:EWKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnb:ewkbnr";
+char chuArray[] = "L:FLCSGK:DEGSC:FLL/:RV1B1:BT:KN:PH:BT1B1:RV/:SM:VMR:DH:DK:LN:FK:DK:DHR:VM:SM/PPPPPPPPPPPP/3:GB4:GB3"
+		  "/12/12/"
+		  "3:gb4:gb3/pppppppppppp/:sm:vmr:dh:dk:fk:ln:dk:dhr:vm:sm/:rv1b1:bt:ph:kn:bt1b1:rv/l:flcsg:dekgsc:fll";
+char daiArray[] = "LN:STICSGKGSCI:STNL/:RV1:CS1:FL1:BT:DE:BT1:FL1:CS1:RV/1:VO1:AB1:EW:KN:LN:PH:EW1:AB1:VO1/R:FD:SM:VMB:DH:DK:FK:DK:DHB:VM:SM:FDR"
+		  "/PPPPPPPPPPPPPPP/4:GB5:GB4/15/15/15/4:gb5:gb4/ppppppppppppppp/"
+		  "r:fd:sm:vmb:dh:dk:fk:dk:dhb:vm:sm:fdr/1:vo1:ab1:ew:ph:ln:kn:ew1:ab1:vo1/:rv1:cs1:fl1:bt:de:bt1:fl1:cs1:rv/ln:sticsgkgsci:stnl";
+char tenArray[] = "LN:FLICSGK:DEGSCI:FLNL/:RV1:CS:CS1:BT:KN:LN:FK:PH:BT1:CS:CS1:RV/:SS:VSB:DH:DK:WB:FI:LH:FE:FI:WB:DK:DHB:VS:SS/"
+		  ":SM:VMR:HF:SE:BG:RG:GG:VG:RG:BG:SE:HFR:VM:SM/PPPPPPPPPPPPPPPP/4D6D4/"
+		  "16/16/16/16/"
+		  "4d6d4/pppppppppppppppp/:sm:vmr:hf:se:bg:rg:vg:gg:rg:bg:se:hfr:vm:sm/"
+		  ":ss:vsb:dh:dk:wb:fi:fe:lh:fi:wb:dk:dhb:vs:ss/:rv1:cs:cs1:bt:ph:fk:ln:kn:bt1:cs:cs1:rv/ln:flicsg:dekgsci:flnl";
+char shoArray[] = "LNSGKGSNL/1B2:DE2R1/PPPPPPPPP/9/9/9/ppppppppp/1r2:de2b1/lnsgkgsnl";
+char waArray[] = ":PH:DKCG:EWK:VML:KN:SM:DH/1:FL3S3:DE1/PPP:BTPPPRPPP/3P3P3"
+		 "/11/11/11"
+		 "/3p3p3/ppprppp:btppp/1:de3s3:fl1/:dh:sm:knl:vmk:ewgc:dk:ph";
+char chessArray[] = "RNB:FKKBNR/PPPPPPPP/8/8/8/8/pppppppp/rnb:fkkbnr";
+char lionArray[]  = "R:LNB:FKKBNR/PPPPPPPP/8/8/8/8/pppppppp/r:lnb:fkkbnr";
+char shatArray[]= "RNBK:FKBNR/PPPPPPPP/8/8/8/8/pppppppp/rnbk:fkbnr";
+char thaiArray[]= "RNSK:SMSNR/8/PPPPPPPP/8/8/pppppppp/8/rns:smksnr";
+char wolfArray[]= "RNB:EWKBNR/PPPPPPPP/8/8/8/8/pppppppp/rnb:ewkbnr";
 
 typedef struct {
   int boardWidth, boardFiles, boardRanks, zoneDepth, varNr; // board sizes
@@ -881,6 +881,10 @@ SetUp (char *array, int var)
       c = name[0] = *array++;
       if(!c) goto eos;
       if(c == '.') continue;
+      if(c > '0' && c <= '9') {
+        c -= '0'; if(*array >= '0' && *array <= '9') c = 10*c + *array++ - '0';
+        j += c - 1; continue;
+      }
       if(c == '/') break;
       name[1] = name[2] = 0;
       if(c == ':') name[0] = *array++, name[1] = *array++;
