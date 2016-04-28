@@ -470,26 +470,26 @@ PieceDesc wolfPieces[] = {
   { NULL }  // sentinel
 };
 
-char chuArray[] = "L:FLCSGK:DEGSC:FLL/:RV1B1:BT:KN:PH:BT1B1:RV/:SM:VMR:DH:DK:LN:FK:DK:DHR:VM:SM/PPPPPPPPPPPP/3:GB4:GB3"
+char chuArray[] = "l:flcsg:dekgsc:fll/:rv1b1:bt:ph:kn:bt1b1:rv/:sm:vmr:dh:dk:fk:ln:dk:dhr:vm:sm/pppppppppppp/3:gb4:gb3"
 		  "/12/12/"
-		  "3:gb4:gb3/pppppppppppp/:sm:vmr:dh:dk:fk:ln:dk:dhr:vm:sm/:rv1b1:bt:ph:kn:bt1b1:rv/l:flcsg:dekgsc:fll";
-char daiArray[] = "LN:STICSGKGSCI:STNL/:RV1:CS1:FL1:BT:DE:BT1:FL1:CS1:RV/1:VO1:AB1:EW:KN:LN:PH:EW1:AB1:VO1/R:FD:SM:VMB:DH:DK:FK:DK:DHB:VM:SM:FDR"
-		  "/PPPPPPPPPPPPPPP/4:GB5:GB4/15/15/15/4:gb5:gb4/ppppppppppppppp/"
-		  "r:fd:sm:vmb:dh:dk:fk:dk:dhb:vm:sm:fdr/1:vo1:ab1:ew:ph:ln:kn:ew1:ab1:vo1/:rv1:cs1:fl1:bt:de:bt1:fl1:cs1:rv/ln:sticsgkgsci:stnl";
-char tenArray[] = "LN:FLICSGK:DEGSCI:FLNL/:RV1:CS:CS1:BT:KN:LN:FK:PH:BT1:CS:CS1:RV/:SS:VSB:DH:DK:WB:FI:LH:FE:FI:WB:DK:DHB:VS:SS/"
-		  ":SM:VMR:HF:SE:BG:RG:GG:VG:RG:BG:SE:HFR:VM:SM/PPPPPPPPPPPPPPPP/4D6D4/"
+		  "3:GB4:GB3/PPPPPPPPPPPP/:SM:VMR:DH:DK:LN:FK:DK:DHR:VM:SM/:RV1B1:BT:KN:PH:BT1B1:RV/L:FLCSGK:DEGSC:FLL";
+char daiArray[] = "ln:sticsgkgsci:stnl/:rv1:cs1:fl1:bt:de:bt1:fl1:cs1:rv/1:vo1:ab1:ew:ph:ln:kn:ew1:ab1:vo1/r:fd:sm:vmb:dh:dk:fk:dk:dhb:vm:sm:fdr/"
+		  "ppppppppppppppp/4:gb5:gb4/15/15/15/4:GB5:GB4/PPPPPPPPPPPPPPP/"
+		  "R:FD:SM:VMB:DH:DK:FK:DK:DHB:VM:SM:FDR/1:VO1:AB1:EW:KN:LN:PH:EW1:AB1:VO1/:RV1:CS1:FL1:BT:DE:BT1:FL1:CS1:RV/LN:STICSGKGSCI:STNL";
+char tenArray[] = "ln:flicsg:dekgsci:flnl/:rv1:cs:cs1:bt:ph:fk:ln:kn:bt1:cs:cs1:rv/:ss:vsb:dh:dk:wb:fi:fe:lh:fi:wb:dk:dhb:vs:ss/"
+		  ":sm:vmr:hf:se:bg:rg:vg:gg:rg:bg:se:hfr:vm:sm/pppppppppppppppp/4d6d4/"
 		  "16/16/16/16/"
-		  "4d6d4/pppppppppppppppp/:sm:vmr:hf:se:bg:rg:vg:gg:rg:bg:se:hfr:vm:sm/"
-		  ":ss:vsb:dh:dk:wb:fi:fe:lh:fi:wb:dk:dhb:vs:ss/:rv1:cs:cs1:bt:ph:fk:ln:kn:bt1:cs:cs1:rv/ln:flicsg:dekgsci:flnl";
-char shoArray[] = "LNSGKGSNL/1B2:DE2R1/PPPPPPPPP/9/9/9/ppppppppp/1r2:de2b1/lnsgkgsnl";
-char waArray[] = ":PH:DKCG:EWK:VML:KN:SM:DH/1:FL3S3:DE1/PPP:BTPPPRPPP/3P3P3"
-		 "/11/11/11"
-		 "/3p3p3/ppprppp:btppp/1:de3s3:fl1/:dh:sm:knl:vmk:ewgc:dk:ph";
-char chessArray[] = "RNB:FKKBNR/PPPPPPPP/8/8/8/8/pppppppp/rnb:fkkbnr";
-char lionArray[]  = "R:LNB:FKKBNR/PPPPPPPP/8/8/8/8/pppppppp/r:lnb:fkkbnr";
-char shatArray[]= "RNBK:FKBNR/PPPPPPPP/8/8/8/8/pppppppp/rnbk:fkbnr";
-char thaiArray[]= "RNSK:SMSNR/8/PPPPPPPP/8/8/pppppppp/8/rns:smksnr";
-char wolfArray[]= "RNB:EWKBNR/PPPPPPPP/8/8/8/8/pppppppp/rnb:ewkbnr";
+		  "4D6D4/PPPPPPPPPPPPPPPP/:SM:VMR:HF:SE:BG:RG:GG:VG:RG:BG:SE:HFR:VM:SM/"
+		  ":SS:VSB:DH:DK:WB:FI:LH:FE:FI:WB:DK:DHB:VS:SS/:RV1:CS:CS1:BT:KN:LN:FK:PH:BT1:CS:CS1:RV/LN:FLICSGK:DEGSCI:FLNL";
+char shoArray[] = "lnsgkgsnl/1r2:de2b1/ppppppppp/9/9/9/PPPPPPPPP/1B2:DE2R1/LNSGKGSNL";
+char waArray[] = ":dh:sm:knl:vmk:ewgc:dk:ph/1:de3s3:fl1/ppprppp:btppp/3p3p3"
+		 "/11/11/11/"
+		 "3P3P3/PPP:BTPPPRPPP/1:FL3S3:DE1/:PH:DKCG:EWK:VML:KN:SM:DH";
+char chessArray[] = "rnb:fkkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB:FKKBNR";
+char lionArray[]  = "r:lnb:fkkbnr/pppppppp/8/8/8/8/PPPPPPPP/R:LNB:FKKBNR";
+char shatArray[]= "rnbk:fkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBK:FKBNR";
+char thaiArray[]= "rns:smksnr/8/pppppppp/8/8/PPPPPPPP/8/RNSK:SMSNR";
+char wolfArray[]= "rnb:ewkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB:EWKBNR";
 
 typedef struct {
   int boardWidth, boardFiles, boardRanks, zoneDepth, varNr; // board sizes
@@ -873,7 +873,7 @@ SetUp (char *array, int var)
   PieceDesc *p1, *p2;
   last[WHITE] = 1; last[BLACK] = 0;
   royal[WHITE] = royal[BLACK] = 0;
-  for(i=0; ; i++) {
+  for(i=BH-1; ; i--) {
 //printf("next rank: %s\n", array);
     for(j = BW*i; ; j++) {
       int pflag=0;
