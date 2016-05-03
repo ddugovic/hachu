@@ -247,81 +247,81 @@ PieceDesc daiPieces[] = {
   {"AB", "G",  60, { 1,0,1,0,1,0,1,0 }, 1 }, // Angry Boar
   {"I",  "G",  80, { 1,1,0,0,0,0,0,1 }, 2 }, // Iron
   {"N",  "G",  60, { N,0,0,0,0,0,0,N }, 0 }, // Knight
-  {"ST", "G",  50, { 0,1,0,0,0,0,0,1 }, 0 }, // Stone
+  {"SG", "G",  50, { 0,1,0,0,0,0,0,1 }, 0 }, // Stone
   { NULL }  // sentinel
 };
 
 PieceDesc waPieces[] = {
   {"TE", "",   720, { X,X,1,X,X,X,1,X }, 4 }, // Tenacious Falcon
   {"GS", "",   500, { X,0,X,0,X,0,X,0 }, 4 }, // Gliding Swallow (R)
-  {"DE", "",   430, { X,3,1,1,X,1,1,3 }, 3 }, // Cloud Eagle
+  {"CE", "",   430, { X,3,1,1,X,1,1,3 }, 3 }, // Cloud Eagle
   {"K",  "",   410, { 1,1,1,1,1,1,1,1 }, 2 }, // Crane King (K)
-  {"BT", "",   390, { I,I,0,I,I,I,0,I }, 4 }, // Treacherous Fox
-  {"FL", "TE", 380, { 1,X,0,X,0,X,0,X }, 4 }, // Flying Falcon
-  {"FS", "",   290, { X,1,1,0,X,0,1,1 }, 3 }, // Raiding Falcon
-  {"S",  "GS", 260, { 1,0,X,0,1,0,X,0 }, 6 }, // Swallow's Wing (SM)
+  {"TF", "",   390, { I,I,0,I,I,I,0,I }, 4 }, // Treacherous Fox
+  {"FF", "TE", 380, { 1,X,0,X,0,X,0,X }, 4 }, // Flying Falcon
+  {"RF", "",   290, { X,1,1,0,X,0,1,1 }, 3 }, // Raiding Falcon
+  {"SW", "GS", 260, { 1,0,X,0,1,0,X,0 }, 6 }, // Swallow's Wing (SM)
   {"PO", "",   260, { 1,1,1,1,1,1,1,1 }, 2 }, // Plodding Ox (K)
-  {"R",  "BT", 260, { X,1,0,1,1,1,0,1 }, 2 }, // Running Rabit
-  {"B",  "",   240, { 1,1,1,1,0,1,1,1 }, 2 }, // Roaming Boar
+  {"RR", "TF", 260, { X,1,0,1,1,1,0,1 }, 2 }, // Running Rabit
+  {"RB", "",   240, { 1,1,1,1,0,1,1,1 }, 2 }, // Roaming Boar
   {"HH", "",   220, { N,0,0,N,N,0,0,N }, 1 }, // Heavenly Horse
-  {"EW", "PO", 220, { 1,1,1,0,1,0,1,1 }, 2 }, // Violent Wolf (G)
-  {"VM", "B",  200, { 1,1,0,1,0,1,0,1 }, 2 }, // Violent Stag (S)
-  {"G",  "S",  190, { 1,1,0,0,1,0,0,1 }, 2 }, // Flying Goose (C)
-  {"SM", "VM", 175, { 1,1,0,0,1,0,0,1 }, 2 }, // Climbing Monkey (C)
-  {"DH", "HH", 170, { X,0,0,0,2,0,0,0 }, 1 }, // Liberated Horse
-  {"DK", "EW", 150, { 0,1,1,0,1,0,1,1 }, 2 }, // Blind Dog
-  {"PH", "PO", 150, { X,0,0,0,0,0,0,0 }, 1 }, // Oxcart (L)
-  {"L",  "FS", 130, { 0,1,1,0,0,0,1,1 }, 2 }, // Flying Cock
-  {"KN", "DE", 115, { 1,0,0,1,0,1,0,0 }, 2 }, // Swooping Owl
-  {"C",  "FL", 105, { 1,0,0,1,0,1,0,0 }, 2 }, // Strutting Crow
-  {"P",  "EW",  80, { 1,0,0,0,0,0,0,0 }, 2 }, // Sparrow Pawn (P)
+  {"VW", "PO", 220, { 1,1,1,0,1,0,1,1 }, 2 }, // Violent Wolf (G)
+  {"VS", "RB", 200, { 1,1,0,1,0,1,0,1 }, 2 }, // Violent Stag (S)
+  {"FG", "SW"  190, { 1,1,0,0,1,0,0,1 }, 2 }, // Flying Goose (C)
+  {"CM", "VS", 175, { 1,1,0,0,1,0,0,1 }, 2 }, // Climbing Monkey (C)
+  {"LH", "HH", 170, { X,0,0,0,2,0,0,0 }, 1 }, // Liberated Horse
+  {"BD", "VW", 150, { 0,1,1,0,1,0,1,1 }, 2 }, // Blind Dog
+  {"OC", "PO", 150, { X,0,0,0,0,0,0,0 }, 1 }, // Oxcart (L)
+  {"FC", "RF", 130, { 0,1,1,0,0,0,1,1 }, 2 }, // Flying Cock
+  {"SO", "CE", 115, { 1,0,0,1,0,1,0,0 }, 2 }, // Swooping Owl
+  {"SC", "FF", 105, { 1,0,0,1,0,1,0,0 }, 2 }, // Strutting Crow
+  {"P",  "GB",  80, { 1,0,0,0,0,0,0,0 }, 2 }, // Sparrow Pawn (P)
   { NULL }  // sentinel
 };
 
 PieceDesc ddPieces[] = {
-  {"LO", "",   10, { 1,H,1,H,1,H,1,H } }, // Long-Nosed Goblin
-  {"OK", "LO", 10, { 2,1,2,0,2,0,2,1 } }, // Old Kite
-  {"PS", "HM", 10, { J,0,1,J,0,J,1,0 } }, // Poisonous Snake
-  {"GE", "",   10, { 3,3,5,5,3,5,5,3 } }, // Great Elephant
-  {"WS", "LD", 10, { 1,1,2,0,1,0,2,1 } }, // Western Barbarian
-  {"EA", "LN", 10, { 2,1,1,0,2,0,1,1 } }, // Eastern Barbarian
-  {"NO", "FE", 10, { 0,2,1,1,0,1,1,2 } }, // Northern Barbarian
-  {"SO", "WE", 10, { 0,1,1,2,0,2,1,1 } }, // Southern Barbarian
-  {"FE", "",   10, { 2,X,2,2,2,2,2,X } }, // Fragrant Elephant
-  {"WE", "",   10, { 2,2,2,X,2,X,2,2 } }, // White Elephant
-  {"FT", "",   10, { X,X,5,0,X,0,5,X } }, // Free Dream-Eater
-  {"FR", "",   10, { 5,X,X,0,5,0,X,X } }, // Free Demon
-  {"WB", "FT", 10, { 2,X,X,X,2,X,X,X } }, // Water Buffalo
-  {"RB", "FR", 10, { X,X,X,X,0,X,X,X } }, // Rushing Bird
-  {"SB", "",   10, { X,X,2,2,2,2,2,X } }, // Standard Bearer
+  {"LO", "",   10, { 1,H,1,H,1,H,1,H } }, // Long-Nosed Goblin G!
+  {"OK", "LO", 10, { 2,1,2,0,2,0,2,1 } }, // Old Kite K'
+  {"PS", "HM", 10, { J,0,1,J,0,J,1,0 } }, // Poisonous Snake S'
+  {"GE", "",   10, { 3,3,5,5,3,5,5,3 } }, // Great Elephant +W!
+  {"WS", "LD", 10, { 1,1,2,0,1,0,2,1 } }, // Western Barbarian W'
+  {"EA", "LN", 10, { 2,1,1,0,2,0,1,1 } }, // Eastern Barbarian E'
+  {"NO", "FE", 10, { 0,2,1,1,0,1,1,2 } }, // Northern Barbarian N'
+  {"SO", "WE", 10, { 0,1,1,2,0,2,1,1 } }, // Southern Barbarian S'
+  {"FE", "",   10, { 2,X,2,2,2,2,2,X } }, // Fragrant Elephant +N'
+  {"WE", "",   10, { 2,2,2,X,2,X,2,2 } }, // White Elephant +S'
+  {"FT", "",   10, { X,X,5,0,X,0,5,X } }, // Free Dream-Eater +W
+  {"FR", "",   10, { 5,X,X,0,5,0,X,X } }, // Free Demon +U
+  {"WB", "FT", 10, { 2,X,X,X,2,X,X,X } }, // Water Buffalo W
+  {"RU", "FR", 10, { X,X,X,X,0,X,X,X } }, // Rushing Bird U
+  {"SB", "",   10, { X,X,2,2,2,2,2,X } }, // Standard Bearer +N
 
-  {"FH", "FK", 10, { 1,2,1,0,1,0,1,2 } }, // Flying Horse
-  {"NK", "SB", 10, { 1,1,1,1,1,1,1,1 } }, // Neighbor King
+  {"FH", "FK", 10, { 1,2,1,0,1,0,1,2 } }, // Flying Horse  H'
+  {"NK", "SB", 10, { 1,1,1,1,1,1,1,1 } }, // Neighbor King N
   {"BM", "MW", 10, { 0,1,1,1,0,1,1,1 } }, // Blind Monkey
   {"DO", "",   10, { 2,X,2,X,2,X,2,X } }, // Dove
-  {"EB", "DO", 10, { 2,0,2,0,0,0,2,0 } }, // Enchanted Badger
-  {"EF", "SD", 10, { 0,2,0,0,2,0,0,2 } }, // Enchanted Fox
-  {"RA", "",   10, { X,0,X,1,X,1,X,0 } }, // Racing Chariot
-  {"SQ", "",   10, { X,1,X,0,X,0,X,1 } }, // Square Mover
+  {"EB", "DO", 10, { 2,0,2,0,0,0,2,0 } }, // Enchanted Badger B'
+  {"EF", "SD", 10, { 0,2,0,0,2,0,0,2 } }, // Enchanted Fox X'
+  {"RA", "",   10, { X,0,X,1,X,1,X,0 } }, // Racing Chariot A
+  {"SQ", "",   10, { X,1,X,0,X,0,X,1 } }, // Square Mover Q'
   {"PR", "SQ", 10, { 1,1,2,1,0,1,2,1 } }, // Prancing Stag
-  {"WT", "",   10, { X,1,2,0,X,0,2,X } }, // White Tiger
-  {"BD", "",   10, { 2,X,X,0,2,0,X,1 } }, // Blue Dragon
-  {"HD", "",   10, { X,0,0,0,1,0,0,0 } }, // Howling Dog
-  {"VB", "",   10, { 0,2,1,0,0,0,1,2 } }, // Violent Bear
-  {"SA", "",   10, { 2,1,0,0,2,0,0,1 } }, // Savage Tiger
-  {"W",  "",   10, { 0,2,0,0,0,0,0,2 } }, // Wood
-  {"CS", "DH",  70, { 0,1,0,1,0,1,0,1 } }, // cat sword
-  {"FD", "DK", 150, { 0,2,0,2,0,2,0,2 } }, // flying dragon
-  {"KN", "GD", 150, { J,1,J,1,J,1,J,1 } }, // kirin
-  {"PH", "GB", 150, { 1,J,1,J,1,J,1,J } }, // phoenix
-  {"LN", "FF",  1000, { L,L,L,L,L,L,L,L } }, // lion
-  {"LD", "GE", 10, { T,T,T,T,T,T,T,T } }, // Lion Dog
-  {"AB", "", 10, { 1,0,1,0,1,0,1,0 } }, // Angry Boar
-  {"B",  "", 10, { 0,X,0,X,0,X,0,X } }, // Bishop
-  {"C",  "", 10, { 1,1,0,0,1,0,0,1 } }, // Copper
-  {"DH", "", 10, { 1,X,1,X,1,X,1,X } }, // Dragon Horse
-  {"DK", "", 10, { X,1,X,1,X,1,X,1 } }, // Dragon King
-  {"FK", "", 10, {  } }, // 
+  {"WT", "",   10, { X,1,2,0,X,0,2,X } }, // White Tiger T!
+  {"BD", "",   10, { 2,X,X,0,2,0,X,1 } }, // Blue Dragon D!
+  {"HD", "",   10, { X,0,0,0,1,0,0,0 } }, // Howling Dog D'
+  {"VB", "",   10, { 0,2,1,0,0,0,1,2 } }, // Violent Bear V
+  {"ST", "",   10, { 2,1,0,0,2,0,0,1 } }, // Savage Tiger T'
+  {"W",  "",   10, { 0,2,0,0,0,0,0,2 } }, // Wood General V'
+  {"CS", "DH",  70, { 0,1,0,1,0,1,0,1 } }, // Cat Sword C'
+  {"FD", "DK", 150, { 0,2,0,2,0,2,0,2 } }, // Flying Dragon F'
+  {"KN", "GD", 150, { J,1,J,1,J,1,J,1 } }, // Kirin O
+  {"PH", "GB", 150, { 1,J,1,J,1,J,1,J } }, // Phoenix X
+  {"LN", "FF",  1000, { L,L,L,L,L,L,L,L } }, // lion L!
+  {"LD", "GE", 10, { T,T,T,T,T,T,T,T } }, // Lion Dog W!
+  {"AB", "", 10, { 1,0,1,0,1,0,1,0 } }, // Angry Boar A'
+  {"B",  "", 10, { 0,X,0,X,0,X,0,X } }, // Bishop B
+  {"C",  "", 10, { 1,1,0,0,1,0,0,1 } }, // Copper C
+  {"DH", "", 10, { 1,X,1,X,1,X,1,X } }, // Dragon Horse H
+  {"DK", "", 10, { X,1,X,1,X,1,X,1 } }, // Dragon King D
+  {"FK", "", 10, {  } }, // Free King Q
   {"EW", "", 10, { 1,1,1,0,0,0,1,1 } }, // Evil Wolf
   {"FL", "", 10, {  } }, // 
   {"", "", 10, {  } }, // 
@@ -331,38 +331,41 @@ PieceDesc ddPieces[] = {
   { NULL }  // sentinel
 };
 
+char makaIDs[] =  "RVB C DKDEFLG DHI ..K L SMN KYP FKR S BT..VMEWPH...."  // L
+                  "ABBBCS    FDGB  DVDS    OM  OR      STT   VOWR      "  // L'
+                  "    CP        HM      LN                    LD      "; // L!
 PieceDesc makaPieces[] = {
-  {"DV", "", 10, { 0,1,0,1,0,0,1,1 } }, // Deva
-  {"DS", "", 10, { 0,1,1,0,0,1,0,1 } }, // Dark Spirit
-  {"T",  "", 10, { 0,1,0,0,1,0,0,1 } }, // Tile
-  {"CS", "", 10, { 1,0,0,1,1,1,0,0 } }, // Coiled Serpent
-  {"RD", "", 10, { 1,0,1,1,1,1,1,0 } }, // Reclining Dragon
-  {"CC", "", 10, { 0,1,1,0,1,0,1,1 } }, // Chinese Cock
-  {"OM", "", 10, { 0,1,0,1,1,1,0,1 } }, // Old Monkey
-  {"BB", "", 10, { 0,1,0,1,X,1,0,1 } }, // Blind Bear
-  {"OR", "", 10, { 0,2,0,0,2,0,0,2 } }, // Old Rat
-  {"LD", "WS", 10, { T,T,T,T,T,T,T,T } }, // Lion Dog
-  {"WR", "", 10, { 0,3,1,3,0,3,1,3 } }, // Wrestler
-  {"GG", "", 10, { 3,1,3,0,3,0,3,1 } }, // Guardian of the Gods
-  {"BD", "", 10, { 0,3,1,0,1,0,1,3 } }, // Budhist Devil
-  {"SD", "", 10, { 5,2,5,2,5,2,5,2 } }, // She-Devil
-  {"DY", "", 10, { J,0,1,0,J,0,1,0 } }, // Donkey
-  {"CP", "", 10, { 0,H,0,2,0,2,0,H } }, // Capricorn
-  {"HM", "", 10, { H,0,H,0,H,0,H,0 } }, // Hook Mover
-  {"SF", "", 10, { 0,1,X,1,0,1,0,1 } }, // Side Flier
-  {"LC", "", 10, { X,0,0,X,1,0,0,X } }, // Left Chariot
-  {"RC", "", 10, { X,X,0,0,1,X,0,0 } }, // Right Chariot
-  {"FG", "", 10, { X,X,X,0,X,0,X,X } }, // Free Gold
-  {"FS", "", 10, { X,X,0,X,0,X,0,X } }, // Free Silver
-  {"FC", "", 10, { X,X,0,0,X,0,0,X } }, // Free Copper
-  {"FI", "", 10, { X,X,0,0,0,0,0,X } }, // Free Iron
-  {"FT", "", 10, { 0,X,0,0,X,0,0,X } }, // Free Tile
-  {"FN", "", 10, { 0,X,0,0,0,0,0,X } }, // Free Stone
-  {"FTg", "", 10, { 0,X,X,X,X,X,X,X } }, // Free Tiger
-  {"FLp", "", 10, { X,X,0,X,X,X,0,X } }, // Free Leopard (Free Boar?)
-  {"FSp", "", 10, { X,0,0,X,X,X,0,0 } }, // Free Serpent (Whale?)
-  {"FrD", "", 10, { X,0,X,X,X,X,X,0 } }, // Free Dragon
-  {"FC", "", 10, { 0,X,0,X,0,X,0,X } }, // Free Cat (Bishop?)
+  {"DV", "TK", 10, { 0,1,0,1,0,0,1,1 } }, // Deva
+  {"DS", "BS", 10, { 0,1,1,0,0,1,0,1 } }, // Dark Spirit
+  {"T",  "fT", 10, { 0,1,0,0,1,0,0,1 } }, // Tile General
+  {"CS", "fS", 10, { 1,0,0,1,1,1,0,0 } }, // Coiled Serpent
+  {"RD", "fD", 10, { 1,0,1,1,1,1,1,0 } }, // Reclining Dragon
+  {"CC", "WS", 10, { 0,1,1,0,1,0,1,1 } }, // Chinese Cock
+  {"OM", "MW", 10, { 0,1,0,1,1,1,0,1 } }, // Old Monkey
+  {"BB", "fB", 10, { 0,1,0,1,X,1,0,1 } }, // Blind Bear
+  {"OR", "BA", 10, { 0,2,0,0,2,0,0,2 } }, // Old Rat
+  {"LD", "WS", 10, { T,T,T,T,T,T,T,T } }, // Lion Dog W!
+  {"WR", "G", 10, { 0,3,1,3,0,3,1,3 } }, // Wrestler
+  {"GG", "G", 10, { 3,1,3,0,3,0,3,1 } }, // Guardian of the Gods
+  {"BD", "G", 10, { 0,3,1,0,1,0,1,3 } }, // Budhist Devil
+  {"SD", "G", 10, { 5,2,5,2,5,2,5,2 } }, // She-Devil
+  {"DY", "G", 10, { J,0,1,0,J,0,1,0 } }, // Donkey
+  {"CA", "G", 10, { 0,H,0,2,0,2,0,H } }, // Capricorn C!
+  {"HM", "G", 10, { H,0,H,0,H,0,H,0 } }, // Hook Mover H!
+  {"SF", "G", 10, { 0,1,X,1,0,1,0,1 } }, // Side Flier
+  {"LC", "G", 10, { X,0,0,X,1,0,0,X } }, // Left Chariot L!
+  {"RC", "G", 10, { X,X,0,0,1,X,0,0 } }, // Right Chariot R!
+  {"fG", "", 10, { X,X,X,0,X,0,X,X } }, // Free Gold
+  {"fS", "", 10, { X,X,0,X,0,X,0,X } }, // Free Silver
+  {"WH", "", 10, { X,X,0,0,X,0,0,X } }, // Free Copper
+  {"fI", "", 10, { X,X,0,0,0,0,0,X } }, // Free Iron
+  {"fY", "", 10, { 0,X,0,0,X,0,0,X } }, // Free Tile
+  {"fU", "", 10, { 0,X,0,0,0,0,0,X } }, // Free Stone
+  {"fT", "", 10, { 0,X,X,X,X,X,X,X } }, // Free Tiger
+  {"fL", "", 10, { X,X,0,X,X,X,0,X } }, // Free Leopard (Free Boar?)
+  {"WL", "", 10, { X,0,0,X,X,X,0,0 } }, // Free Serpent (Whale?)
+  {"fD", "", 10, { X,0,X,X,X,X,X,0 } }, // Free Dragon
+  {"B",  "", 10, { 0,X,0,X,0,X,0,X } }, // Free Cat (Bishop?)
   {"EM", "", 10, {  } }, // Emperor
   {"TK", "", 10, {  } }, // Teaching King
   {"BS", "", 10, {  } }, // Budhist Spirit
@@ -371,9 +374,9 @@ PieceDesc makaPieces[] = {
   {"FF", "", 10, {  } }, // Furious Fiend
   {"GD", "", 10, { 2,3,X,3,2,3,X,3 } }, // Great Dragon
   {"GB", "", 10, { X,3,2,3,X,3,2,3 } }, // Golden Bird
-  {"FrW", "", 10, {  } }, // Free Wolf
-  {"FrB", "", 10, {  } }, // Free Bear
-  {"BT", "", 10, { X,0,0,X,0,X,0,0 } }, // Bat
+  {"fW", "", 10, {  } }, // Free Wolf
+  {"fB", "", 10, {  } }, // Free Bear
+  {"BA", "", 10, { X,0,0,X,0,X,0,0 } }, // Bat
   {"", "", 10, {  } }, // 
   { NULL }  // sentinel
 };
@@ -420,48 +423,48 @@ PieceDesc taikyokuPieces[] = {
 };
 
 PieceDesc chessPieces[] = {
-  {"FK", "", 950, { X,X,X,X,X,X,X,X } },
+  {"Q", "",  950, { X,X,X,X,X,X,X,X } },
   {"R", "",  500, { X,0,X,0,X,0,X,0 } },
   {"B", "",  320, { 0,X,0,X,0,X,0,X } },
   {"N", "",  300, { N,N,N,N,N,N,N,N } },
   {"K", "",  280, { 1,1,1,1,1,1,1,1 } },
-  {"P", "FK", 80, { M,C,0,0,0,0,0,C } },
+  {"P", "Q",  80, { M,C,0,0,0,0,0,C } },
   { NULL }  // sentinel
 };
 
 PieceDesc lionPieces[] = {
-  {"LN","", LVAL, { L,L,L,L,L,L,L,L } },
-  {"FK", "", 600, { X,X,X,X,X,X,X,X } },
+  {"L", "", LVAL, { L,L,L,L,L,L,L,L } },
+  {"Q", "",  600, { X,X,X,X,X,X,X,X } },
   {"R", "",  300, { X,0,X,0,X,0,X,0 } },
   {"K", "",  280, { 1,1,1,1,1,1,1,1 } },
   {"B", "",  190, { 0,X,0,X,0,X,0,X } },
   {"N", "",  180, { N,N,N,N,N,N,N,N } },
-  {"P", "FK", 50, { M,C,0,0,0,0,0,C } },
+  {"P", "Q",  50, { M,C,0,0,0,0,0,C } },
   { NULL }  // sentinel
 };
 
 PieceDesc shatranjPieces[] = {
-  {"FK", "", 150, { 0,1,0,1,0,1,0,1 } },
+  {"F", "",  150, { 0,1,0,1,0,1,0,1 } },
   {"R", "",  500, { X,0,X,0,X,0,X,0 } },
-  {"B", "",   90, { 0,J,0,J,0,J,0,J } },
+  {"E", "",   90, { 0,J,0,J,0,J,0,J } },
   {"N", "",  300, { N,N,N,N,N,N,N,N } },
   {"K", "",  280, { 1,1,1,1,1,1,1,1 } },
-  {"P", "FK", 80, { M,C,0,0,0,0,0,C } },
+  {"P", "F",  80, { M,C,0,0,0,0,0,C } },
   { NULL }  // sentinel
 };
 
 PieceDesc makrukPieces[] = {
-  {"SM","",  150, { 0,1,0,1,0,1,0,1 } },
+  {"M", "",  150, { 0,1,0,1,0,1,0,1 } },
   {"R", "",  500, { X,0,X,0,X,0,X,0 } },
   {"S", "",  200, { 1,1,0,1,0,1,0,1 } }, // silver
   {"N", "",  300, { N,N,N,N,N,N,N,N } },
   {"K", "",  280, { 1,1,1,1,1,1,1,1 } },
-  {"P", "SM", 80, { M,C,0,0,0,0,0,C } },
+  {"P", "M",  80, { M,C,0,0,0,0,0,C } },
   { NULL }  // sentinel
 };
 
 PieceDesc wolfPieces[] = {
-  {"EW","EW",1050,{ W,W,W,W,W,W,W,W }, 6, 5 }, // kludge to get extra Werewolves
+  {"W", "W",1050,{ W,W,W,W,W,W,W,W }, 6, 5 }, // kludge to get extra Werewolves
   {"R", "",  500, { X,0,X,0,X,0,X,0 }, 3 },
   {"B", "",  320, { 0,X,0,X,0,X,0,X }, 1 },
   {"N", "",  300, { N,N,N,N,N,N,N,N }, 1 },
@@ -482,14 +485,32 @@ char tenArray[] = "ln:flicsg:dekgsci:flnl/:rv1:cs:cs1:bt:ph:fk:ln:kn:bt1:cs:cs1:
 		  "4D6D4/PPPPPPPPPPPPPPPP/:SM:VMR:HF:SE:BG:RG:GG:VG:RG:BG:SE:HFR:VM:SM/"
 		  ":SS:VSB:DH:DK:WB:FI:LH:FE:FI:WB:DK:DHB:VS:SS/:RV1:CS:CS1:BT:KN:LN:FK:PH:BT1:CS:CS1:RV/LN:FLICSGK:DEGSCI:FLNL";
 char shoArray[] = "lnsgkgsnl/1r2:de2b1/ppppppppp/9/9/9/PPPPPPPPP/1B2:DE2R1/LNSGKGSNL";
-char waArray[] = ":dh:sm:knl:vmk:ewgc:dk:ph/1:de3s3:fl1/ppprppp:btppp/3p3p3"
+char waArray[] = ":lh:cm:so:fc:vsk:vw:fg:sc:bd:oc/1:ce3:sw3:ff1/ppp:rrppp:tfppp/3p3p3"
 		 "/11/11/11/"
-		 "3P3P3/PPP:BTPPPRPPP/1:FL3S3:DE1/:PH:DKCG:EWK:VML:KN:SM:DH";
-char chessArray[] = "rnb:fkkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB:FKKBNR";
-char lionArray[]  = "r:lnb:fkkbnr/pppppppp/8/8/8/8/PPPPPPPP/R:LNB:FKKBNR";
-char shatArray[]= "rnbk:fkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBK:FKBNR";
-char thaiArray[]= "rns:smksnr/8/pppppppp/8/8/PPPPPPPP/8/RNSK:SMSNR";
-char wolfArray[]= "rnb:ewkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB:EWKBNR";
+		 "3P3P3/PPP:TFPPP:RRPPP/1:FF3:SW3:CE1/:OC:BD:SC:FG:VWK:VS:FC:SO:CM:LH";
+char chessArray[] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+char lionArray[]  = "rlbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RLBQKBNR";
+char shatArray[]= "rnekfenr/pppppppp/8/8/8/8/PPPPPPPP/RNEKFENR";
+char thaiArray[]= "rnsmksnr/8/pppppppp/8/8/PPPPPPPP/8/RNSKMSNR";
+char wolfArray[]= "rnbwkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBWKBNR";
+
+// translation tables for single-(dressed-)letter IDs to multi-letter names, per variant
+//                 A.B.C.D.E.F.G.H.I.J.K.L.M.N.O.P.Q.R.S.T.U.V.W.X.Y.Z.
+char chuIDs[] =   "RVB C DKDEFLG DHGB..K L SMLNKYP FKR S BT..VM..PH....";
+char daiIDs[] =   "RVB C DKDEFLG DHI ..K L SMN KYP FKR S BTSGVMEWPH...."  // L
+                  "AB  CS    FD                  GB              VO    "  // L'
+                  "                      LN                            "; // L!
+char tenIDs[] =   "RVB C DKDEFLG DHI ..K L SMN KYP FKR S BT..VM..PH...."  // L
+                  "..  ..D   ..                        SS    VS        "  // L'
+                  "  BGCSFISEHFGGLH      LN        FERG      VGWB      "; // L!
+char waIDs[] =    "....FCBDCEFFFGLH....K SOBM..OCP ..RRSW..SCVSVWTF....";
+char chessIDs[] = "A B ....E F ........K L M N ..P Q R S ......W ......"; // covers all chess-like variants
+char makaIDs[]  = "RVB C DKDEFLG DHI ..K L SMN KYP FKR S BTSG..EWPHT .."  // L (also for Macadamia)
+                  "ABBBCSBDE FDGG  DVDS  LCBMCCORGB  RCSD      WRVODY  "  // L'
+                  "    CARD      HM      LN            CO    VMLD      "; // L!
+char dadaIDs[]  = "RVB C DKEFFLG DHI ..K L SMNKKYP FKR S ..SGVBEWPH...."  // L (also for Cashew)
+                  "ABEBCSHDEBFDPRFHLGRGOKLCOMNBORPS  RCSBST  W WBVO    "  // L'
+                  "RAWB  BD    GOHM      LN        SQ    WTRUVMLD      "; // L!
 
 typedef struct {
   int boardWidth, boardFiles, boardRanks, zoneDepth, varNr; // board sizes
