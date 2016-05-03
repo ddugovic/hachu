@@ -179,13 +179,14 @@ Move retMove, moveStack[20000], path[100], repStack[300], pv[1000], repeatMove[3
 #define I -3 /* jump + step         */
 #define D -4 /* linear double move  */
 #define T -5 /* linear triple move  */
-#define L -6 /* true Lion move      */
-#define W -7 /* Werewolf move       */
-#define F -8 /* Lion + 3-step       */
-#define S -9 /* Lion + range        */
-#define H -10 /* hook move           */
-#define C -11 /* capture only       */
-#define M -12 /* non-capture only   */
+#define K -6 /* triple + range      */
+#define L -7 /* true Lion move      */
+#define W -8 /* Werewolf move       */
+#define F -9 /* Lion + 3-step       */
+#define S -10 /* Lion + range        */
+#define H -11 /* hook move           */
+#define C -12 /* capture only       */
+#define M -13 /* non-capture only   */
 
 #define LVAL 1000 /* piece value of Lion. Used in chu for recognizing it to implement Lion-trade rules  */
 #define FVAL 5000 /* piece value of Fire Demon. Used in code for recognizing moves with it and do burns */
@@ -279,8 +280,8 @@ PieceDesc waPieces[] = {
 };
 
 PieceDesc ddPieces[] = {
-  {"LO", "",   10, { 1,H,1,H,1,H,1,H } }, // Long-Nosed Goblin G!
-  {"OK", "LO", 10, { 2,1,2,0,2,0,2,1 } }, // Old Kite K'
+  {"LG", "",   10, { 1,H,1,H,1,H,1,H } }, // Long-Nosed Goblin G!
+  {"OK", "LG", 10, { 2,1,2,0,2,0,2,1 } }, // Old Kite K'
   {"PS", "HM", 10, { J,0,1,J,0,J,1,0 } }, // Poisonous Snake S'
   {"GE", "",   10, { 3,3,5,5,3,5,5,3 } }, // Great Elephant +W!
   {"WS", "LD", 10, { 1,1,2,0,1,0,2,1 } }, // Western Barbarian W'
@@ -294,11 +295,10 @@ PieceDesc ddPieces[] = {
   {"WB", "FT", 10, { 2,X,X,X,2,X,X,X } }, // Water Buffalo W
   {"RU", "FR", 10, { X,X,X,X,0,X,X,X } }, // Rushing Bird U
   {"SB", "",   10, { X,X,2,2,2,2,2,X } }, // Standard Bearer +N
-
   {"FH", "FK", 10, { 1,2,1,0,1,0,1,2 } }, // Flying Horse  H'
   {"NK", "SB", 10, { 1,1,1,1,1,1,1,1 } }, // Neighbor King N
   {"BM", "MW", 10, { 0,1,1,1,0,1,1,1 } }, // Blind Monkey
-  {"DO", "",   10, { 2,X,2,X,2,X,2,X } }, // Dove
+  {"DO", "",   10, { 2,5,2,5,2,5,2,5 } }, // Dove
   {"EB", "DO", 10, { 2,0,2,0,0,0,2,0 } }, // Enchanted Badger B'
   {"EF", "SD", 10, { 0,2,0,0,2,0,0,2 } }, // Enchanted Fox X'
   {"RA", "",   10, { X,0,X,1,X,1,X,0 } }, // Racing Chariot A
@@ -312,68 +312,101 @@ PieceDesc ddPieces[] = {
   {"W",  "",   10, { 0,2,0,0,0,0,0,2 } }, // Wood General V'
   {"CS", "DH",  70, { 0,1,0,1,0,1,0,1 } }, // Cat Sword C'
   {"FD", "DK", 150, { 0,2,0,2,0,2,0,2 } }, // Flying Dragon F'
-  {"KN", "GD", 150, { J,1,J,1,J,1,J,1 } }, // Kirin O
-  {"PH", "GB", 150, { 1,J,1,J,1,J,1,J } }, // Phoenix X
-  {"LN", "FF",  1000, { L,L,L,L,L,L,L,L } }, // lion L!
   {"LD", "GE", 10, { T,T,T,T,T,T,T,T } }, // Lion Dog W!
-  {"AB", "", 10, { 1,0,1,0,1,0,1,0 } }, // Angry Boar A'
-  {"B",  "", 10, { 0,X,0,X,0,X,0,X } }, // Bishop B
-  {"C",  "", 10, { 1,1,0,0,1,0,0,1 } }, // Copper C
-  {"DH", "", 10, { 1,X,1,X,1,X,1,X } }, // Dragon Horse H
-  {"DK", "", 10, { X,1,X,1,X,1,X,1 } }, // Dragon King D
-  {"FK", "", 10, {  } }, // Free King Q
-  {"EW", "", 10, { 1,1,1,0,0,0,1,1 } }, // Evil Wolf
-  {"FL", "", 10, {  } }, // 
-  {"", "", 10, {  } }, // 
-  {"", "", 10, {  } }, // 
+  {"AB", "",   10, { 1,0,1,0,1,0,1,0 } }, // Angry Boar A'
+  {"EW", "",   10, { 1,1,1,0,0,0,1,1 } }, // Evil Wolf
+  {"SD", "",   10, { 5,2,5,2,5,2,5,2 } }, // She-Devil
+  {"GD", "",   10, { 2,3,X,3,2,3,X,3 } }, // Great Dragon
+  {"GO", "",   10, { X,3,2,3,X,3,2,3 } }, // Golden Bird
+  // Chu pieces (but with different promotion)
+  {"LN", "FF",LVAL, { L,L,L,L,L,L,L,L }, 4 }, // lion
+  {"FK", "",   600, { X,X,X,X,X,X,X,X }, 4 }, // free king
+  {"DK", "",   400, { X,1,X,1,X,1,X,1 }, 4 }, // dragon king
+  {"DH", "",   350, { 1,X,1,X,1,X,1,X }, 4 }, // dragon horse
+  {"R",  "",   300, { X,0,X,0,X,0,X,0 }, 4 }, // rook
+  {"K",  "",   280, { 1,1,1,1,1,1,1,1 }, 2, 4 }, // king
+  {"B",  "",   250, { 0,X,0,X,0,X,0,X }, 2 }, // bishop
+  {"VM", "",   200, { X,0,1,0,X,0,1,0 }, 2 }, // vertical mover
+  {"SM", "",   200, { 1,0,X,0,1,0,X,0 }, 6 }, // side mover
+  {"G",  "",   151, { 1,1,1,0,1,0,1,1 }, 2 }, // gold
+  {"FL", "",   150, { 1,1,0,1,1,1,0,1 }, 2 }, // ferocious leopard
+  {"KN", "GD", 154, { J,1,J,1,J,1,J,1 }, 2 }, // kirin
+  {"PH", "GO", 153, { 1,J,1,J,1,J,1,J }, 2 }, // phoenix
+  {"RV", "",   150, { X,0,0,0,X,0,0,0 }, 1 }, // reverse chariot
+  {"L",  "",   150, { X,0,0,0,0,0,0,0 }, 1 }, // lance
+  {"S",  "",   100, { 1,1,0,1,0,1,0,1 }, 2 }, // silver
+  {"C",  "",   100, { 1,1,0,0,1,0,0,1 }, 2 }, // copper
+  {"P",  "",    40, { 1,0,0,0,0,0,0,0 }, 2 }, // pawn
   {"", "", 10, {  } }, // 
   {"", "", 10, {  } }, // 
   { NULL }  // sentinel
 };
 
 PieceDesc makaPieces[] = {
-  {"DV", "TK", 10, { 0,1,0,1,0,0,1,1 } }, // Deva
-  {"DS", "BS", 10, { 0,1,1,0,0,1,0,1 } }, // Dark Spirit
-  {"T",  "fT", 10, { 0,1,0,0,1,0,0,1 } }, // Tile General
-  {"CS", "fS", 10, { 1,0,0,1,1,1,0,0 } }, // Coiled Serpent
-  {"RD", "fD", 10, { 1,0,1,1,1,1,1,0 } }, // Reclining Dragon
-  {"CC", "WS", 10, { 0,1,1,0,1,0,1,1 } }, // Chinese Cock
-  {"OM", "MW", 10, { 0,1,0,1,1,1,0,1 } }, // Old Monkey
-  {"BB", "fB", 10, { 0,1,0,1,X,1,0,1 } }, // Blind Bear
-  {"OR", "BA", 10, { 0,2,0,0,2,0,0,2 } }, // Old Rat
+  {"DV", "TK", 10, { 0,1,0,1,0,0,1,1 } }, // Deva I'
+  {"DS", "BS", 10, { 0,1,1,0,0,1,0,1 } }, // Dark Spirit J'
+  {"T",  "fT", 10, { 0,1,0,0,1,0,0,1 } }, // Tile General Y
+  {"CS", "fS", 10, { 1,0,0,1,1,1,0,0 } }, // Coiled Serpent S!
+  {"RD", "fD", 10, { 1,0,1,1,1,1,1,0 } }, // Reclining Dragon D!
+  {"CC", "WS", 10, { 0,1,1,0,1,0,1,1 } }, // Chinese Cock N'
+  {"OM", "MW", 10, { 0,1,0,1,1,1,0,1 } }, // Old Monkey M'
+  {"BB", "fB", 10, { 0,1,0,1,X,1,0,1 } }, // Blind Bear B'
+  {"OR", "BA", 10, { 0,2,0,0,2,0,0,2 } }, // Old Rat O'
   {"LD", "WS", 10, { T,T,T,T,T,T,T,T } }, // Lion Dog W!
-  {"WR", "G", 10, { 0,3,1,3,0,3,1,3 } }, // Wrestler
-  {"GG", "G", 10, { 3,1,3,0,3,0,3,1 } }, // Guardian of the Gods
-  {"BD", "G", 10, { 0,3,1,0,1,0,1,3 } }, // Budhist Devil
-  {"SD", "G", 10, { 5,2,5,2,5,2,5,2 } }, // She-Devil
-  {"DY", "G", 10, { J,0,1,0,J,0,1,0 } }, // Donkey
+  {"WR", "G", 10, { 0,3,1,3,0,3,1,3 } }, // Wrestler W'
+  {"GG", "G", 10, { 3,1,3,0,3,0,3,1 } }, // Guardian of the Gods G'
+  {"BD", "G", 10, { 0,3,1,0,1,0,1,3 } }, // Budhist Devil D'
+  {"SD", "G", 10, { 5,2,5,2,5,2,5,2 } }, // She-Devil S'
+  {"DY", "G", 10, { J,0,1,0,J,0,1,0 } }, // Donkey Y'
   {"CA", "G", 10, { 0,H,0,2,0,2,0,H } }, // Capricorn C!
   {"HM", "G", 10, { H,0,H,0,H,0,H,0 } }, // Hook Mover H!
-  {"SF", "G", 10, { 0,1,X,1,0,1,0,1 } }, // Side Flier
-  {"LC", "G", 10, { X,0,0,X,1,0,0,X } }, // Left Chariot L!
-  {"RC", "G", 10, { X,X,0,0,1,X,0,0 } }, // Right Chariot R!
-  {"fG", "", 10, { X,X,X,0,X,0,X,X } }, // Free Gold
-  {"fS", "", 10, { X,X,0,X,0,X,0,X } }, // Free Silver
-  {"WH", "", 10, { X,X,0,0,X,0,0,X } }, // Free Copper
-  {"fI", "", 10, { X,X,0,0,0,0,0,X } }, // Free Iron
-  {"fY", "", 10, { 0,X,0,0,X,0,0,X } }, // Free Tile
-  {"fU", "", 10, { 0,X,0,0,0,0,0,X } }, // Free Stone
-  {"fT", "", 10, { 0,X,X,X,X,X,X,X } }, // Free Tiger
-  {"fL", "", 10, { X,X,0,X,X,X,0,X } }, // Free Leopard (Free Boar?)
-  {"WL", "", 10, { X,0,0,X,X,X,0,0 } }, // Free Serpent (Whale?)
-  {"fD", "", 10, { X,0,X,X,X,X,X,0 } }, // Free Dragon
-  {"B",  "", 10, { 0,X,0,X,0,X,0,X } }, // Free Cat (Bishop?)
-  {"EM", "", 10, {  } }, // Emperor
-  {"TK", "", 10, {  } }, // Teaching King
-  {"BS", "", 10, {  } }, // Budhist Spirit
-  {"WS", "", 10, { X,X,0,X,1,X,0,X } }, // Wizard Stork
-  {"MW", "", 10, { 1,X,0,X,X,X,0,X } }, // Mountain Witch
-  {"FF", "", 10, {  } }, // Furious Fiend
-  {"GD", "", 10, { 2,3,X,3,2,3,X,3 } }, // Great Dragon
-  {"GB", "", 10, { X,3,2,3,X,3,2,3 } }, // Golden Bird
-  {"fW", "", 10, {  } }, // Free Wolf
-  {"fB", "", 10, {  } }, // Free Bear
-  {"BA", "", 10, { X,0,0,X,0,X,0,0 } }, // Bat
+  {"SF", "G", 10, { 0,1,X,1,0,1,0,1 } }, // Side Flier F!
+  {"LC", "G", 10, { X,0,0,X,1,0,0,X } }, // Left Chariot L'
+  {"RC", "G", 10, { X,X,0,0,1,X,0,0 } }, // Right Chariot R'
+  {"fT", "", 10, { 0,X,X,X,X,X,X,X } }, // Free Tiger +T
+  {"fD", "", 10, { X,0,X,X,X,X,X,0 } }, // Free Dragon +D!
+  {"fG", "", 10, { X,X,X,0,X,0,X,X } }, // Free Gold +G
+  {"fS", "", 10, { X,X,0,X,0,X,0,X } }, // Free Silver +S
+  {"fI", "", 10, { X,X,0,0,0,0,0,X } }, // Free Iron +I
+  {"fY", "", 10, { 0,X,0,0,X,0,0,X } }, // Free Tile +Y
+  {"fU", "", 10, { 0,X,0,0,0,0,0,X } }, // Free Stone +U
+  {"EM", "", 10, { 0,0,0,0,0,0,0,0 } }, // Emperor +K
+  {"TK", "", 10, { K,K,K,K,K,K,K,K } }, // Teaching King +I'
+  {"BS", "", 10, { S,S,S,S,S,S,S,S } }, // Budhist Spirit +J'
+  {"WS", "", 10, { X,X,0,X,1,X,0,X } }, // Wizard Stork +N'
+  {"MW", "", 10, { 1,X,0,X,X,X,0,X } }, // Mountain Witch +M'
+  {"FF", "", 10, { F,F,F,F,F,F,F,F } }, // Furious Fiend +L!
+  {"GD", "", 10, { 2,3,X,3,2,3,X,3 } }, // Great Dragon +W!
+  {"GO", "", 10, { X,3,2,3,X,3,2,3 } }, // Golden Bird +X
+  {"fW", "", 10, { X,X,X,0,0,0,X,X } }, // Free Wolf +W
+  {"BA", "", 10, { X,0,0,X,0,X,0,0 } }, // Bat +O'
+  // Chu pieces (but with different promotion)
+  {"LN", "FF",LVAL, { L,L,L,L,L,L,L,L }, 4 }, // lion
+  {"FK", "",   600, { X,X,X,X,X,X,X,X }, 4 }, // free king
+  {"FO", "",   400, { X,X,0,X,X,X,0,X }, 4 }, // flying ox (free leopard)
+  {"FB", "",   400, { 0,X,X,X,0,X,X,X }, 4 }, // free boar
+  {"DK", "",   400, { X,1,X,1,X,1,X,1 }, 4 }, // dragon king
+  {"DH", "",   350, { 1,X,1,X,1,X,1,X }, 4 }, // dragon horse
+  {"WH", "",   350, { X,X,0,0,X,0,0,X }, 3 }, // white horse (free copper)
+  {"R",  "G",  300, { X,0,X,0,X,0,X,0 }, 4 }, // rook
+  {"WL", "",   250, { X,0,0,X,X,X,0,0 }, 4 }, // whale (free serpent)
+  {"K",  "EM", 280, { 1,1,1,1,1,1,1,1 }, 2, 4 }, // king
+  {"CP", "",   270, { 1,1,1,1,1,1,1,1 }, 2, 4 }, // king
+  {"B",  "G",  250, { 0,X,0,X,0,X,0,X }, 2 }, // bishop
+  {"VM", "G",  200, { X,0,1,0,X,0,1,0 }, 2 }, // vertical mover
+  {"SM", "G",  200, { 1,0,X,0,1,0,X,0 }, 6 }, // side mover
+  {"DE", "CP", 201, { 1,1,1,1,0,1,1,1 }, 2 }, // drunk elephant
+  {"BT", "fT", 152, { 0,1,1,1,1,1,1,1 }, 2 }, // blind tiger
+  {"G",  "fG", 151, { 1,1,1,0,1,0,1,1 }, 2 }, // gold
+  {"FL", "FO", 150, { 1,1,0,1,1,1,0,1 }, 2 }, // ferocious leopard
+  {"KN", "GD", 154, { J,1,J,1,J,1,J,1 }, 2 }, // kirin
+  {"PH", "GB", 153, { 1,J,1,J,1,J,1,J }, 2 }, // phoenix
+  {"RV", "G",  150, { X,0,0,0,X,0,0,0 }, 1 }, // reverse chariot
+  {"L",  "G",  150, { X,0,0,0,0,0,0,0 }, 1 }, // lance
+  {"S",  "fS", 100, { 1,1,0,1,0,1,0,1 }, 2 }, // silver
+  {"C",  "WH", 100, { 1,1,0,0,1,0,0,1 }, 2 }, // copper
+  {"GB", "RV",  50, { 1,0,0,0,1,0,0,0 }, 1 }, // go between
+  {"P",  "G",   40, { 1,0,0,0,0,0,0,0 }, 2 }, // pawn
   {"", "", 10, {  } }, // 
   { NULL }  // sentinel
 };
@@ -504,8 +537,8 @@ char makaIDs[]  = "RVB C DKDEFLG DHI ..K L SMN KNP FKR S BTSG..EWPHT .."  // L (
                   "ABBBCSBDE FDGG  DVDS  LCBMCCORGB  RCSD      WRVODY  "  // L'
                   "    CARD      HM      LN            CO    VMLD      "; // L!
 char dadaIDs[]  = "RVB C DKEFFLG DHI ..K L SMNKKNP FKR S ..SGVBEWPH...."  // L (also for Cashew)
-                  "ABEBCSHDEBFDPRFHLGRGOKLCOMNBORPS  RCSBST  W WBVO    "  // L'
-                  "RAWB  BD    GOHM      LN        SQ    WTRUVMLD      "; // L!
+                  "ABEBCSHDEAFDPRFHLGRGOKLCOMNOORPS  RCSOST  W WSVO    "  // L'
+                  "RAWB  BD    LGHM      LN        SQ    WTRUVMLD      "; // L!
 
 typedef struct {
   int boardWidth, boardFiles, boardRanks, zoneDepth, varNr; // board sizes
@@ -1239,7 +1272,7 @@ GenNonCapts (int promoSuppress)
     for(j=0; j<8; j++) {
       int y, v = kStep[j], r = p[i].range[j];
       if(r < 0) { // jumping piece, special treatment
-	if(r == N) { // pure Knightm do off-ray jump
+	if(r == N) { // pure Knight, do off-ray jump
 	  NewNonCapture(x, x + nStep[j], pFlag);
 	} else
 	if(r >= S) { // in any case, do a jump of 2
@@ -1251,6 +1284,10 @@ GenNonCapts (int promoSuppress)
 	      v = nStep[j];
 	      if(r != W) NewNonCapture(x, x + v, pFlag);
 	    } else if(r == T) NewNonCapture(x, x+3*v, pFlag); // Lion Dog, also triple step
+	    else if(r == K) {
+	      occup |= NewNonCapture(x, x+3*v, pFlag); // Lion Dog, also triple step
+	      if(!occup) for(y=x+3*v; !NewNonCapture(x, y+=v, pFlag); ); // TK moves
+	    }
 	  } else if(r == I) NewNonCapture(x, x + v, pFlag); // also do step
 	} else
 	if(r == M) { // FIDE Pawn; check double-move
@@ -1294,9 +1331,20 @@ MapOneColor (int start, int last, int *map)
 	    if(board[x + v] != EMPTY && board[x + v] != EDGE)
 	      map[2*(x + v) + start] += one[j];
 	    if(r < I) {
-	    if(r == T) { // Lion Dog, also jump of 3
+	    if(r == T || r == K) { // Lion Dog, also jump of 3
 	      if(board[x + 3*v] != EMPTY && board[x + 3*v] != EDGE)
 		map[2*(x + 3*v) + start] += one[j];
+	      if(r == K) { // also range (Teaching King)
+		int y = x, n = 0;
+		while(1) {
+		  if(board[y+=v] == EDGE) break;
+		  if(board[y] != EMPTY) {
+		    if(n > 2) map[2*y + start] += one[j]; // outside Lion range
+		    break;
+		  }
+		  n++;
+		}
+	      }
 	    } else
 	    if(r <= L) {  // true Lion, also Knight jump
 	      if(r < L) { // Lion plus (limited) range
@@ -1634,6 +1682,7 @@ GenCapts (int sqr, int victimValue)
 	      }
 	      break;
 	    case T: // Lion-Dog move (awful!)
+	    case K:
 	      if(d > 3) break;
 	      NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
 	      att -= one[i];
@@ -1697,7 +1746,7 @@ GenCapts (int sqr, int victimValue)
 //printf("mask[%d] = %o\n", i, att);
 	if((att & attackMask[i]) == 0) break;
       }
-      // more attacks to come; san for next stop
+      // more attacks to come; scan for next stop
       if(jcapt < p[board[x]].qval) jcapt = p[board[x]].qval; // raise barrier for range jumpers further upstream
       while(board[x+=v] == EMPTY); // this should never run off-board, if the attack map is not corrupted
       } while(1);
