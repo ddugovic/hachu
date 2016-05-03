@@ -160,7 +160,7 @@ typedef struct {
   char fireMask;
 } UndoInfo;
 
-char *array, fenArray[4000], startPos[4000], *reason, checkStack[300];
+char *array, *IDs, fenArray[4000], startPos[4000], *reason, checkStack[300];
 int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, stalemate;
 int tsume, pvCuts, allowRep, entryProm, okazaki, pVal;
 int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
@@ -266,7 +266,7 @@ PieceDesc waPieces[] = {
   {"HH", "",   220, { N,0,0,N,N,0,0,N }, 1 }, // Heavenly Horse
   {"VW", "PO", 220, { 1,1,1,0,1,0,1,1 }, 2 }, // Violent Wolf (G)
   {"VS", "RB", 200, { 1,1,0,1,0,1,0,1 }, 2 }, // Violent Stag (S)
-  {"FG", "SW"  190, { 1,1,0,0,1,0,0,1 }, 2 }, // Flying Goose (C)
+  {"FG", "SW", 190, { 1,1,0,0,1,0,0,1 }, 2 }, // Flying Goose (C)
   {"CM", "VS", 175, { 1,1,0,0,1,0,0,1 }, 2 }, // Climbing Monkey (C)
   {"LH", "HH", 170, { X,0,0,0,2,0,0,0 }, 1 }, // Liberated Horse
   {"BD", "VW", 150, { 0,1,1,0,1,0,1,1 }, 2 }, // Blind Dog
@@ -274,7 +274,7 @@ PieceDesc waPieces[] = {
   {"FC", "RF", 130, { 0,1,1,0,0,0,1,1 }, 2 }, // Flying Cock
   {"SO", "CE", 115, { 1,0,0,1,0,1,0,0 }, 2 }, // Swooping Owl
   {"SC", "FF", 105, { 1,0,0,1,0,1,0,0 }, 2 }, // Strutting Crow
-  {"P",  "GB",  80, { 1,0,0,0,0,0,0,0 }, 2 }, // Sparrow Pawn (P)
+  {"P",  "VW",  80, { 1,0,0,0,0,0,0,0 }, 2 }, // Sparrow Pawn (P)
   { NULL }  // sentinel
 };
 
@@ -331,9 +331,6 @@ PieceDesc ddPieces[] = {
   { NULL }  // sentinel
 };
 
-char makaIDs[] =  "RVB C DKDEFLG DHI ..K L SMN KYP FKR S BT..VMEWPH...."  // L
-                  "ABBBCS    FDGB  DVDS    OM  OR      STT   VOWR      "  // L'
-                  "    CP        HM      LN                    LD      "; // L!
 PieceDesc makaPieces[] = {
   {"DV", "TK", 10, { 0,1,0,1,0,0,1,1 } }, // Deva
   {"DS", "BS", 10, { 0,1,1,0,0,1,0,1 } }, // Dark Spirit
@@ -444,12 +441,12 @@ PieceDesc lionPieces[] = {
 };
 
 PieceDesc shatranjPieces[] = {
-  {"F", "",  150, { 0,1,0,1,0,1,0,1 } },
+  {"Q", "",  150, { 0,1,0,1,0,1,0,1 } },
   {"R", "",  500, { X,0,X,0,X,0,X,0 } },
-  {"E", "",   90, { 0,J,0,J,0,J,0,J } },
+  {"B", "",   90, { 0,J,0,J,0,J,0,J } },
   {"N", "",  300, { N,N,N,N,N,N,N,N } },
   {"K", "",  280, { 1,1,1,1,1,1,1,1 } },
-  {"P", "F",  80, { M,C,0,0,0,0,0,C } },
+  {"P", "Q",  80, { M,C,0,0,0,0,0,C } },
   { NULL }  // sentinel
 };
 
@@ -473,42 +470,40 @@ PieceDesc wolfPieces[] = {
   { NULL }  // sentinel
 };
 
-char chuArray[] = "l:flcsg:dekgsc:fll/:rv1b1:bt:ph:kn:bt1b1:rv/:sm:vmr:dh:dk:fk:ln:dk:dhr:vm:sm/pppppppppppp/3:gb4:gb3"
+char chuArray[] = "lfcsgekgscfl/a1b1txot1b1a/mvrhdqndhrvm/pppppppppppp/3i4i3"
 		  "/12/12/"
-		  "3:GB4:GB3/PPPPPPPPPPPP/:SM:VMR:DH:DK:LN:FK:DK:DHR:VM:SM/:RV1B1:BT:KN:PH:BT1B1:RV/L:FLCSGK:DEGSC:FLL";
-char daiArray[] = "ln:sticsgkgsci:stnl/:rv1:cs1:fl1:bt:de:bt1:fl1:cs1:rv/1:vo1:ab1:ew:ph:ln:kn:ew1:ab1:vo1/r:fd:sm:vmb:dh:dk:fk:dk:dhb:vm:sm:fdr/"
-		  "ppppppppppppppp/4:gb5:gb4/15/15/15/4:GB5:GB4/PPPPPPPPPPPPPPP/"
-		  "R:FD:SM:VMB:DH:DK:FK:DK:DHB:VM:SM:FDR/1:VO1:AB1:EW:KN:LN:PH:EW1:AB1:VO1/:RV1:CS1:FL1:BT:DE:BT1:FL1:CS1:RV/LN:STICSGKGSCI:STNL";
-char tenArray[] = "ln:flicsg:dekgsci:flnl/:rv1:cs:cs1:bt:ph:fk:ln:kn:bt1:cs:cs1:rv/:ss:vsb:dh:dk:wb:fi:fe:lh:fi:wb:dk:dhb:vs:ss/"
-		  ":sm:vmr:hf:se:bg:rg:vg:gg:rg:bg:se:hfr:vm:sm/pppppppppppppppp/4d6d4/"
+		  "3I4I3/PPPPPPPPPPPP/MVRHDNQDHRVM/A1B1TOXT1B1A/LFCSGKEGSCFL";
+char daiArray[] = "lnuicsgkgsciunl/a1c'1f1tet1f1c'1a/1x'1a'1wxl!ow1a'1x'1/rf'mvbhdqdhbvmf'r/"
+		  "ppppppppppppppp/4p'5p'4/15/15/15/4P'5P'4/PPPPPPPPPPPPPPP/"
+		  "RF'MVBHDQDHBVMF'R/1X'1A'1WOL!XW1A'1X'1/A1C'1F1TET1F1C'1A/LNUICSGKGSCIUNL";
+char tenArray[] = "lnficsgekgscifnl/a1c!c!1txql!ot1c!c!1a/s'v'bhdw!d!q!h!d!w!dhbv's'/"
+		  "mvrf!e!b!r!v!q!r!b!e!f!rvm/pppppppppppppppp/4d6d4/"
 		  "16/16/16/16/"
-		  "4D6D4/PPPPPPPPPPPPPPPP/:SM:VMR:HF:SE:BG:RG:GG:VG:RG:BG:SE:HFR:VM:SM/"
-		  ":SS:VSB:DH:DK:WB:FI:LH:FE:FI:WB:DK:DHB:VS:SS/:RV1:CS:CS1:BT:KN:LN:FK:PH:BT1:CS:CS1:RV/LN:FLICSGK:DEGSCI:FLNL";
-char shoArray[] = "lnsgkgsnl/1r2:de2b1/ppppppppp/9/9/9/PPPPPPPPP/1B2:DE2R1/LNSGKGSNL";
-char waArray[] = ":lh:cm:so:fc:vsk:vw:fg:sc:bd:oc/1:ce3:sw3:ff1/ppp:rrppp:tfppp/3p3p3"
-		 "/11/11/11/"
-		 "3P3P3/PPP:TFPPP:RRPPP/1:FF3:SW3:CE1/:OC:BD:SC:FG:VWK:VS:FC:SO:CM:LH";
+		  "4D6D4/PPPPPPPPPPPPPPPP/MVRF!E!B!R!Q!V!R!B!E!F!RVM/"
+		  "S'V'BHDW!D!H!Q'D!W!DHBV'S'/A1C!C!TOL!QXT1C!C!1A/LNFICSGKEGSCIFNL";
+char shoArray[]   = "lnsgkgsnl/1r2e2b1/ppppppppp/9/9/9/PPPPPPPPP/1B2E2R1/LNSGKGSNL";
+char waArray[]    = "hmlcvkwgudo/1e3s3f1/ppprpppxppp/3p3p3/11/11/11/3P3P3/PPPXPPPRPPP/1F3S3E1/ODUGWKVCLMH";
 char chessArray[] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 char lionArray[]  = "rlbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RLBQKBNR";
-char shatArray[]= "rnekfenr/pppppppp/8/8/8/8/PPPPPPPP/RNEKFENR";
-char thaiArray[]= "rnsmksnr/8/pppppppp/8/8/PPPPPPPP/8/RNSKMSNR";
-char wolfArray[]= "rnbwkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBWKBNR";
+char shatArray[]  = "rnbkqbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBKQBNR";
+char thaiArray[]  = "rnsmksnr/8/pppppppp/8/8/PPPPPPPP/8/RNSKMSNR";
+char wolfArray[]  = "rnbwkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBWKBNR";
 
 // translation tables for single-(dressed-)letter IDs to multi-letter names, per variant
 //                 A.B.C.D.E.F.G.H.I.J.K.L.M.N.O.P.Q.R.S.T.U.V.W.X.Y.Z.
-char chuIDs[] =   "RVB C DKDEFLG DHGB..K L SMLNKYP FKR S BT..VM..PH....";
-char daiIDs[] =   "RVB C DKDEFLG DHI ..K L SMN KYP FKR S BTSGVMEWPH...."  // L
+char chuIDs[] =   "RVB C DKDEFLG DHGB..K L SMLNKNP FKR S BT..VM..PH....";
+char daiIDs[] =   "RVB C DKDEFLG DHI ..K L SMN KNP FKR S BTSGVMEWPH...."  // L
                   "AB  CS    FD                  GB              VO    "  // L'
                   "                      LN                            "; // L!
-char tenIDs[] =   "RVB C DKDEFLG DHI ..K L SMN KYP FKR S BT..VM..PH...."  // L
-                  "..  ..D   ..                        SS    VS        "  // L'
-                  "  BGCSFISEHFGGLH      LN        FERG      VGWB      "; // L!
-char waIDs[] =    "....FCBDCEFFFGLH....K SOBM..OCP ..RRSW..SCVSVWTF....";
+char tenIDs[] =   "RVB C DKDEFLG DHI ..K L SMN KNP FKR S BT..VM..PH...."  // L
+                  "..  ..D   ..                    FE  SS    VS        "  // L'
+                  "  BGCSFISEHF  LH      LN        GGRG      VGWB      "; // L!
+char waIDs[] =    "....FCBDCEFFFGLH....K SOCM..OCP ..RRSW..SCVSVWTF....";
 char chessIDs[] = "A B ....E F ........K L M N ..P Q R S ......W ......"; // covers all chess-like variants
-char makaIDs[]  = "RVB C DKDEFLG DHI ..K L SMN KYP FKR S BTSG..EWPHT .."  // L (also for Macadamia)
+char makaIDs[]  = "RVB C DKDEFLG DHI ..K L SMN KNP FKR S BTSG..EWPHT .."  // L (also for Macadamia)
                   "ABBBCSBDE FDGG  DVDS  LCBMCCORGB  RCSD      WRVODY  "  // L'
                   "    CARD      HM      LN            CO    VMLD      "; // L!
-char dadaIDs[]  = "RVB C DKEFFLG DHI ..K L SMNKKYP FKR S ..SGVBEWPH...."  // L (also for Cashew)
+char dadaIDs[]  = "RVB C DKEFFLG DHI ..K L SMNKKNP FKR S ..SGVBEWPH...."  // L (also for Cashew)
                   "ABEBCSHDEBFDPRFHLGRGOKLCOMNBORPS  RCSBST  W WBVO    "  // L'
                   "RAWB  BD    GOHM      LN        SQ    WTRUVMLD      "; // L!
 
@@ -516,6 +511,7 @@ typedef struct {
   int boardWidth, boardFiles, boardRanks, zoneDepth, varNr; // board sizes
   char *name;  // WinBoard name
   char *array; // initial position
+  char *IDs;
 } VariantDesc;
 
 typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_TENJIKU, V_SHATRANJ, V_MAKRUK, V_LION, V_WA, V_WOLF } Variant;
@@ -523,17 +519,17 @@ typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_T
 #define SAME (-1)
 
 VariantDesc variants[] = {
-  { 24, 12, 12, 4, V_CHU,     "chu",     chuArray }, // Chu
-  { 16,  8,  8, 1, V_CHESS,  "nocastle", chessArray }, // FIDE
-  { 18,  9,  9, 3, V_SHO, "9x9+0_shogi", shoArray }, // Sho
-  { 18,  9,  9, 3, V_SHO,     "sho",     shoArray }, // Sho duplicat
-  { 30, 15, 15, 5, V_DAI,     "dai",     daiArray }, // Dai
-  { 32, 16, 16, 5, V_TENJIKU, "tenjiku", tenArray }, // Tenjiku
-  { 16,  8,  8, 1, V_SHATRANJ,"shatranj",shatArray}, // Shatranj
-  { 16,  8,  8, 3, V_MAKRUK,  "makruk",  thaiArray}, // Makruk
-  { 16,  8,  8, 1, V_LION,    "lion",    lionArray}, // Mighty Lion
-  { 22, 11, 11, 3, V_WA,      "wa-shogi",waArray},   // Wa
-  { 16,  8,  8, 1, V_WOLF,    "werewolf",wolfArray},   // Wa
+  { 24, 12, 12, 4, V_CHU,     "chu",     chuArray,  chuIDs },   // Chu
+  { 16,  8,  8, 1, V_CHESS,  "nocastle", chessArray,chessIDs }, // FIDE
+  { 18,  9,  9, 3, V_SHO, "9x9+0_shogi", shoArray,  chuIDs },   // Sho
+  { 18,  9,  9, 3, V_SHO,     "sho",     shoArray,  chuIDs },   // Sho duplicat
+  { 30, 15, 15, 5, V_DAI,     "dai",     daiArray,  daiIDs },   // Dai
+  { 32, 16, 16, 5, V_TENJIKU, "tenjiku", tenArray,  tenIDs },   // Tenjiku
+  { 16,  8,  8, 1, V_SHATRANJ,"shatranj",shatArray, chessIDs},  // Shatranj
+  { 16,  8,  8, 3, V_MAKRUK,  "makruk",  thaiArray, chessIDs},  // Makruk
+  { 16,  8,  8, 1, V_LION,    "lion",    lionArray, chessIDs},  // Mighty Lion
+  { 22, 11, 11, 3, V_WA,      "wa-shogi", waArray,  waIDs},     // Wa
+  { 16,  8,  8, 1, V_WOLF,    "werewolf",wolfArray, chessIDs},  // Wa
 
   { 0, 0, 0, 0, 0 }, // sentinel
   { 34, 17, 17, 0, V_DADA,    "dada",    chuArray }, // Dai Dai
@@ -908,12 +904,14 @@ SetUp (char *array, int var)
       }
       if(c == '/') break;
       name[1] = name[2] = 0;
-      if(c == ':') name[0] = *array++, name[1] = *array++;
-      if(name[0] >= 'a') {
+      if(c >= 'a') {
 	color = BLACK;
-	name[0] += 'A' - 'a';
-	if(name[1]) name[1] += 'A' - 'a';
+	c += 'A' - 'a';
       } else color = WHITE;
+      if(*array == '\'') c += 26, array++; else
+      if(*array == '!')  c += 52, array++;
+      name[0] = IDs[2*(c - 'A')];
+      name[1] = IDs[2*(c - 'A') + 1]; if(name[1] == ' ') name[1] = 0;
       if(!strcmp(name, "CP") || pflag && !strcmp(name, "DE")) prince |= color+1; // remember if we added Crown Prince
       p1 = LookUp(name, var);
       if(!p1) printf("tellusererror Unknown piece '%s' in setup\n", name), exit(-1);
@@ -1006,6 +1004,7 @@ Init (int var)
   bHeight = variants[var].boardRanks;
   zone    = variants[var].zoneDepth;
   array   = variants[var].array;
+  IDs     = variants[var].IDs;
   }
   bsize = bWidth*bHeight;
   chuFlag = (currentVariant == V_CHU || currentVariant == V_LION);
