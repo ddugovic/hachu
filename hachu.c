@@ -2475,61 +2475,22 @@ UnMake2 (MOVE move)
   sup2 = sup1; sup1 = sup0;
 }
 
-char fenNames[] = "RV....DKDEFL..DHGB......SMLNKN..FK....BT..VMEWPH..LN"; // pairs of char
-char fenPromo[] = "WLDHSMSECPB R HFDE....WHFB..LNG ..DKVMFS..FO..FK...."; // pairs of char
-
-char *
-Convert (char *fen)
-{
-  char *p = fenArray, *q, *rows[36], tmp[4000];
-  int n=0;
-  printf("# convert FEN '%s'\n", fen);
-  q = strchr(fen, ' '); if(q) *q = 0; q = fen;
-  do { rows[n++] = q; q = strchr(q, '/'); if(!q) break; *q++ = 0; } while(1);
-  *tmp = 0;
-  while(--n >= 0) { strcat(tmp, rows[n]); if(n) strcat(tmp, "/"); }
-  fen = tmp;
-  printf("# flipped FEN '%s'\n", fen);
-  while(*fen) {
-    if(*fen == ' ') { *p = 0; break; }
-    if(n=atoi(fen)) fen++; // digits read
-    if(n > 9) fen++; // double digit
-    while(n-- > 0) *p++ = '.'; // expand to empty squares
-    if(currentVariant == V_LION && (*fen == 'L' || *fen == 'l')) *fen += 'Z' - 'L'; // L in Mighty-Lion Chess changed in Z for Lion
-    if(isalpha(*fen)) {
-      char *table = fenNames;
-      n = *fen > 'Z' ? 'a' - 'A' : 0;
-      if((currentVariant == V_CHESS || currentVariant == V_SHATRANJ || currentVariant == V_LION || currentVariant == V_WOLF ||
-          currentVariant == V_MAKRUK || currentVariant == V_SHO) && *fen - n == 'N' // In Chess N is Knight, not Lion
-           || table[2* (*fen - 'A' - n)] == '.') *p++ = *fen; else {
-        *p++ = ':';
-        *p++ = table[2* (*fen - 'A' - n)] + n;
-        *p++ = table[2* (*fen - 'A' - n)+1] + n;
-      }
-    } else *p++ = *fen;
-    if(!*fen) break;
-    fen++;
-  }
-  *p = '\0';
-  printf("# converted FEN '%s'\n", fenArray);
-  return fenArray;
-}
-
 int
 Setup2 (char *fen)
 {
+  char *p;
   int stm = WHITE;
+  static char startFEN[4000];
   if(fen) {
     char *q = strchr(fen, '\n');
     if(q) *q = 0;
     if(q = strchr(fen, ' ')) stm = (q[1] == 'b' ? BLACK : WHITE); // fen contains color field
-    if(strchr(fen, '.') || strchr(fen, ':')) array = fen; else array = Convert(fen);
-  }
+  } else fen = array;
   rootEval = promoDelta = filling = cnt50 = moveNr = 0;
-  SetUp(array, currentVariant);
-  strcpy(startPos, array);
+  SetUp(fen, currentVariant);
   sup0 = sup1 = sup2 = ABSENT;
   hashKeyH = hashKeyL = 87620895*currentVariant + !!fen;
+  for(p=startPos; *p++ = *fen++; ) {} // remember last start position for undo
   return stm;
 }
 
