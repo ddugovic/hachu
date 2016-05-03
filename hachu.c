@@ -280,14 +280,16 @@ PieceDesc waPieces[] = {
 };
 
 PieceDesc ddPieces[] = {
-  {"LG", "",   10, { 1,H,1,H,1,H,1,H } }, // Long-Nosed Goblin G!
-  {"OK", "LG", 10, { 2,1,2,0,2,0,2,1 } }, // Old Kite K'
+  {"HM", "",   10, { H,0,H,0,H,0,H,0 } }, // Hook Mover H!
+  {"LO", "",   10, { 1,H,1,H,1,H,1,H } }, // Long-Nosed Goblin G!
+  {"OK", "LO", 10, { 2,1,2,0,2,0,2,1 } }, // Old Kite K'
   {"PS", "HM", 10, { J,0,1,J,0,J,1,0 } }, // Poisonous Snake S'
+  {"FF", "",   10, { F,F,F,F,F,F,F,F } }, // Furious Fiend +L!
   {"GE", "",   10, { 3,3,5,5,3,5,5,3 } }, // Great Elephant +W!
-  {"WS", "LD", 10, { 1,1,2,0,1,0,2,1 } }, // Western Barbarian W'
-  {"EA", "LN", 10, { 2,1,1,0,2,0,1,1 } }, // Eastern Barbarian E'
-  {"NO", "FE", 10, { 0,2,1,1,0,1,1,2 } }, // Northern Barbarian N'
-  {"SO", "WE", 10, { 0,1,1,2,0,2,1,1 } }, // Southern Barbarian S'
+  {"We", "LD", 10, { 1,1,2,0,1,0,2,1 } }, // Western Barbarian W'
+  {"Ea", "LN", 10, { 2,1,1,0,2,0,1,1 } }, // Eastern Barbarian E'
+  {"No", "FE", 10, { 0,2,1,1,0,1,1,2 } }, // Northern Barbarian N'
+  {"So", "WE", 10, { 0,1,1,2,0,2,1,1 } }, // Southern Barbarian S'
   {"FE", "",   10, { 2,X,2,2,2,2,2,X } }, // Fragrant Elephant +N'
   {"WE", "",   10, { 2,2,2,X,2,X,2,2 } }, // White Elephant +S'
   {"FT", "",   10, { X,X,5,0,X,0,5,X } }, // Free Dream-Eater +W
@@ -297,6 +299,8 @@ PieceDesc ddPieces[] = {
   {"SB", "",   10, { X,X,2,2,2,2,2,X } }, // Standard Bearer +N
   {"FH", "FK", 10, { 1,2,1,0,1,0,1,2 } }, // Flying Horse  H'
   {"NK", "SB", 10, { 1,1,1,1,1,1,1,1 } }, // Neighbor King N
+  {"RG", "",   10, { 1,1,0,1,1,1,1,1 } }, // Right General R'
+  {"LG", "",   10, { 1,1,1,1,1,1,0,1 } }, // Left General L'
   {"BM", "MW", 10, { 0,1,1,1,0,1,1,1 } }, // Blind Monkey
   {"DO", "",   10, { 2,5,2,5,2,5,2,5 } }, // Dove
   {"EB", "DO", 10, { 2,0,2,0,0,0,2,0 } }, // Enchanted Badger B'
@@ -318,6 +322,8 @@ PieceDesc ddPieces[] = {
   {"SD", "",   10, { 5,2,5,2,5,2,5,2 } }, // She-Devil
   {"GD", "",   10, { 2,3,X,3,2,3,X,3 } }, // Great Dragon
   {"GO", "",   10, { X,3,2,3,X,3,2,3 } }, // Golden Bird
+  {"LC", "",   10, { X,0,0,X,1,0,0,X } }, // Left Chariot L'
+  {"RC", "",   10, { X,X,0,0,1,X,0,0 } }, // Right Chariot R'
   // Chu pieces (but with different promotion)
   {"LN", "FF",LVAL, { L,L,L,L,L,L,L,L }, 4 }, // lion
   {"FK", "",   600, { X,X,X,X,X,X,X,X }, 4 }, // free king
@@ -346,13 +352,13 @@ PieceDesc makaPieces[] = {
   {"DV", "TK", 10, { 0,1,0,1,0,0,1,1 } }, // Deva I'
   {"DS", "BS", 10, { 0,1,1,0,0,1,0,1 } }, // Dark Spirit J'
   {"T",  "fT", 10, { 0,1,0,0,1,0,0,1 } }, // Tile General Y
-  {"CS", "fS", 10, { 1,0,0,1,1,1,0,0 } }, // Coiled Serpent S!
+  {"CO", "fS", 10, { 1,0,0,1,1,1,0,0 } }, // Coiled Serpent S!
   {"RD", "fD", 10, { 1,0,1,1,1,1,1,0 } }, // Reclining Dragon D!
   {"CC", "WS", 10, { 0,1,1,0,1,0,1,1 } }, // Chinese Cock N'
   {"OM", "MW", 10, { 0,1,0,1,1,1,0,1 } }, // Old Monkey M'
   {"BB", "fB", 10, { 0,1,0,1,X,1,0,1 } }, // Blind Bear B'
   {"OR", "BA", 10, { 0,2,0,0,2,0,0,2 } }, // Old Rat O'
-  {"LD", "WS", 10, { T,T,T,T,T,T,T,T } }, // Lion Dog W!
+  {"LD", "G", 10, { T,T,T,T,T,T,T,T } }, // Lion Dog W!
   {"WR", "G", 10, { 0,3,1,3,0,3,1,3 } }, // Wrestler W'
   {"GG", "G", 10, { 3,1,3,0,3,0,3,1 } }, // Guardian of the Gods G'
   {"BD", "G", 10, { 0,3,1,0,1,0,1,3 } }, // Budhist Devil D'
@@ -380,6 +386,17 @@ PieceDesc makaPieces[] = {
   {"GO", "", 10, { X,3,2,3,X,3,2,3 } }, // Golden Bird +X
   {"fW", "", 10, { X,X,X,0,0,0,X,X } }, // Free Wolf +W
   {"BA", "", 10, { X,0,0,X,0,X,0,0 } }, // Bat +O'
+  {"FD", "G", 150, { 0,2,0,2,0,2,0,2 }, 2 }, // Flying Dragon
+  // Dai pieces with different promotion
+  {"FD", "G", 150, { 0,2,0,2,0,2,0,2 }, 2 }, // Flying Dragon
+  {"VO", "G", 200, { 2,0,2,0,2,0,2,0 }, 2 }, // Violent Ox
+  {"EW", "fW", 80, { 1,1,1,0,0,0,1,1 }, 2 }, // Evil Wolf
+  {"CS", "B",  70, { 0,1,0,1,0,1,0,1 }, 1 }, // Cat Sword
+  {"AB", "FB", 60, { 1,0,1,0,1,0,1,0 }, 1 }, // Angry Boar
+  {"T",  "fY", 80, { 0,1,0,0,1,0,0,1 }, 2 }, // Tile
+  {"I",  "fI", 80, { 1,1,0,0,0,0,0,1 }, 2 }, // Iron
+  {"N",  "G",  60, { N,0,0,0,0,0,0,N }, 0 }, // Knight
+  {"SG", "fU", 50, { 0,1,0,0,0,0,0,1 }, 0 }, // Stone
   // Chu pieces (but with different promotion)
   {"LN", "FF",LVAL, { L,L,L,L,L,L,L,L }, 4 }, // lion
   {"FK", "",   600, { X,X,X,X,X,X,X,X }, 4 }, // free king
@@ -514,6 +531,10 @@ char tenArray[] = "lnficsgekgscifnl/a1c!c!1txql!ot1c!c!1a/s'v'bhdw!d!q!h!d!w!dhb
 		  "16/16/16/16/"
 		  "4D6D4/PPPPPPPPPPPPPPPP/MVRF!E!B!R!Q!V!R!B!E!F!RVM/"
 		  "S'V'BHDW!D!H!Q'D!W!DHBV'S'/A1C!C!TOL!QXT1C!C!1A/LNFICSGKEGSCIFNL";
+char cashewArray[]= "lh!f'dh'j'ki'qc'hg!l/t!p'w!+oogngx+xl!k'd!/r've'fst'+nt'sfw'vl'/ppppppppppppp/3d'5d'3/13/"
+		    "13/13/3D'5D'3/PPPPPPPPPPPPP/L'VW'FST'+NT'SFE'VR'/D!K'L!+XXGNGO+OW!P'T!/LG!HC'QI'KJ'H'DF'H!L";
+char macadArray[] = "lxcsgi'kj'gscol/1f'1w!1tet1l!1f'1/rr'g'bdh!qc!dbw'l'r/ppppppppppppp/3p'5p'3/13/"
+		    "13/13/3P'5P'3/PPPPPPPPPPPPP/RL'W'BDC!QH!DBG'R'R/1F'1L!1TET1W!1F'1/LOCSGI'KJ'GSCXL";
 char shoArray[]   = "lnsgkgsnl/1r2e2b1/ppppppppp/9/9/9/PPPPPPPPP/1B2E2R1/LNSGKGSNL";
 char waArray[]    = "hmlcvkwgudo/1e3s3f1/ppprpppxppp/3p3p3/11/11/11/3P3P3/PPPXPPPRPPP/1F3S3E1/ODUGWKVCLMH";
 char chessArray[] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
@@ -537,7 +558,7 @@ char makaIDs[]  = "RVB C DKDEFLG DHI ..K L SMN KNP FKR S BTSG..EWPHT .."  // L (
                   "ABBBCSBDE FDGG  DVDS  LCBMCCORGB  RCSD      WRVODY  "  // L'
                   "    CARD      HM      LN            CO    VMLD      "; // L!
 char dadaIDs[]  = "RVB C DKEFFLG DHI ..K L SMNKKNP FKR S ..SGVBEWPH...."  // L (also for Cashew)
-                  "ABEBCSHDEAFDPRFHLGRGOKLCOMNOORPS  RCSOST  W WSVO    "  // L'
+                  "ABEBCSHDEaFDPRFHLGRGOKLCOMNoORPS  RCSoST  W WeVO    "  // L'
                   "RAWB  BD    LGHM      LN        SQ    WTRUVMLD      "; // L!
 
 typedef struct {
@@ -547,7 +568,8 @@ typedef struct {
   char *IDs;
 } VariantDesc;
 
-typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_TENJIKU, V_SHATRANJ, V_MAKRUK, V_LION, V_WA, V_WOLF } Variant;
+typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_TENJIKU,
+	       V_CASHEW, V_MACAD, V_SHATRANJ, V_MAKRUK, V_LION, V_WA, V_WOLF } Variant;
 
 #define SAME (-1)
 
@@ -562,7 +584,9 @@ VariantDesc variants[] = {
   { 16,  8,  8, 3, V_MAKRUK,  "makruk",  thaiArray, chessIDs},  // Makruk
   { 16,  8,  8, 1, V_LION,    "lion",    lionArray, chessIDs},  // Mighty Lion
   { 22, 11, 11, 3, V_WA,      "wa-shogi", waArray,  waIDs},     // Wa
-  { 16,  8,  8, 1, V_WOLF,    "werewolf",wolfArray, chessIDs},  // Wa
+  { 16,  8,  8, 1, V_WOLF,    "werewolf",wolfArray, chessIDs},  // Werewolf Chess
+  { 26, 13, 13,13, V_CASHEW, "cashew-shogi",    cashewArray, dadaIDs },  // Cashew
+  { 26, 13, 13,13, V_MACAD,  "macadamia-shogi", macadArray,  makaIDs },  // Macadamia
 
   { 0, 0, 0, 0, 0 }, // sentinel
   { 34, 17, 17, 0, V_DADA,    "dada",    chuArray }, // Dai Dai
@@ -760,6 +784,10 @@ LookUp (char *name, int var)
       return ListLookUp(name, waPieces);
     case V_WOLF: // Werewolf
       return ListLookUp(name, wolfPieces);
+    case V_CASHEW: // Cashew
+      return ListLookUp(name, ddPieces);
+    case V_MACAD: // Cashew
+      return ListLookUp(name, makaPieces);
   }
   return NULL;
 }
@@ -918,8 +946,8 @@ AddPiece (int stm, PieceDesc *list)
 void
 SetUp (char *array, int var)
 {
-  int i, j, n, m, color;
-  char c, name[3], prince = 0;
+  int i, j, n, m, color, c;
+  char name[3], prince = 0;
   PieceDesc *p1, *p2;
   last[WHITE] = 1; last[BLACK] = 0;
   royal[WHITE] = royal[BLACK] = 0;
@@ -947,7 +975,7 @@ SetUp (char *array, int var)
       name[1] = IDs[2*(c - 'A') + 1]; if(name[1] == ' ') name[1] = 0;
       if(!strcmp(name, "CP") || pflag && !strcmp(name, "DE")) prince |= color+1; // remember if we added Crown Prince
       p1 = LookUp(name, var);
-      if(!p1) printf("tellusererror Unknown piece '%s' in setup\n", name), exit(-1);
+      if(!p1) printf("tellusererror Unknown piece '%s' in setup (%d)\n", name, c), exit(-1);
       if(pflag && p1->promoted) p1 = LookUp(p1->promoted, var); // use promoted piece instead
       n = AddPiece(color, p1);
       p[n].pos = j;
@@ -3055,6 +3083,23 @@ pboard(board);
                    "piece +P& WfF\npiece +O& K\npiece +H& vN\npiece +U& BfW\npiece +L& vRfF3bFsW\npiece +M& FfW\npiece +G& sRvW\npiece +C& vRsWfF\n"
                    "piece D& sbWfF\npiece V& FfW\npiece W& WfF\npiece S& sRvW\npiece R& FfRbW\npiece F& BfW\npiece X& FvWAvD\n"
                    "piece +D& WfF\npiece +V& FfsW\npiece +W& K\npiece +S& R\npiece +R& FvWAvD\npiece +F& BvRsW\npiece E& vRfF3bFsW\n");
+          if(currentVariant == V_MACAD)
+            printf("setup (P.*B*RQSEXOG....D^J'..*LP'.L!J'...*W!...*F'...^C.C.^L!.^P'^K.T*L'.*C!*H!^I'.^E...*R'^P^T*W'*G'^G^SI'^X^OK"
+                          "p.*b*rqsexog....d^j'..*lp'.l!j'...*w!...*f'...^c.c.^l!.^p'^k.t*l'.*c!*h!^i'.^e...*r'^p^t*w'*g'^g^si'^x^ok) 13x13+0_chu %s w 0 1\n"
+		   "piece P& fW\npiece S& FfW\npiece E& FfsW\npiece X& WA\npiece O& FD\npiece G& WfF\npiece D& RF\npiece +J'& QNADcaKmabK\n"
+		   "piece L& fR\npiece P'& vW\npiece L!& KNADcaKmabK\npiece J'& blfFrW\npiece H!& RmasR\npiece W!& KADcavKmcpafmcpavK\n"
+		   "piece C!& BmasB\npiece F'& F2\npiece +C& vRfB\npiece C& vWfF\npiece +L!& K3NADcaKmabK\npiece +P'& vR\npiece T& FbsW\n"
+		   "piece L'& lfrbBfRbW\npiece +I'& QADcavKmcpafmcpavK\npiece +E& K\npiece R'& rflbBfRbW\npiece +P& WfF\npiece +T& BbsR\n"
+		   "piece W'& F3sW\npiece G'& W3fF\npiece +G& RfB\npiece +S& BfR\npiece I'& rbfFlW\npiece +X& F3vRsW\npiece +O& F3sRvW\n", macadArray);
+          if(currentVariant == V_CASHEW)
+            printf("setup (P.^K'^P'QS^W!XOGND'.HDT!...P'.L!E'.^W'K'W!..LF'V^E'J'H'...^L!^N..FT'L'C'G!H!D!I'.^H'..R'..^C'^F'..W'^X^OK"
+                          "p.^k'^p'qs^w!xognd'.hdt!...p'.l!e'.^w'k'w!..lf'v^e'j'h'...^l!^n..ft'l'c'g!h!d!i'.^h'..r'..^c'^f'..w'^x^ok) 13x13+0_chu %s w 0 1\n"
+                   "piece P& fW\npiece S& FfW\npiece W'& fFvWsW2\npiece E'& fFsWvW2\npiece X& WA\npiece O& FD\npiece G& WfF\npiece H& BW\n"
+                   "piece +C'& BW\npiece D& RF\npiece +F'& RF\npiece L& fR\npiece D'& fRbW\npiece L!& KNADcaKmabK\npiece +E'& KNADcaKmabK\n"
+                   "piece J'& FvlW\npiece H!& RmasR\npiece +W'& KADcavKmcpafmcpavK\npiece G!& WBmasB\npiece F'& F2\npiece +L!& K3NADcaKmabK\n"
+                   "piece T!& vRsW2flBfrF\npiece T'& fFvW2\npiece L'& lfrbBfRbW\npiece N& K\npiece R'& rflbBfRbW\npiece I'& FvrW\n"
+                   "piece +X& F3vRsW2\npiece +O& F3sRvW2\npiece H'& WfF2\npiece +H'& Q\npiece C'& F\npiece D!& sRvW2frBflF\npiece P'& sWfDbA\n"
+                   "piece K'& W2fF\npiece +K'& WBmasB\npiece +P'& RmasR\npiece +N& fRfBbF2bsW2\npiece F& FvW\npiece V& fF2sW\n", cashewArray);
 	  repStack[199] = hashKeyH, checkStack[199] = 0;
           continue;
         }
