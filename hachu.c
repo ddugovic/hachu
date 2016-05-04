@@ -162,7 +162,7 @@ typedef struct {
 
 char *array, *IDs, fenArray[4000], startPos[4000], *reason, checkStack[300];
 int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, stalemate;
-int tsume, pvCuts, allowRep, entryProm, okazaki, pVal;
+int tsume, pvCuts, allowRep, entryProm=1, okazaki, pVal;
 int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
 int retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
 int ll, lr, ul, ur; // corner squares
@@ -2989,12 +2989,12 @@ pboard(board);
           printf("%s%s", (i ? "," : "feature variants=\""), variants[i].name); printf("\"\n");
           printf("feature ping=1 setboard=1 colors=0 usermove=1 memory=1 debug=1 sigint=0 sigterm=0\n");
           printf("feature myname=\"HaChu " VERSION "\" highlight=1\n");
-          printf("feature option=\"Full analysis PV -check 1\"\n"); // example of an engine-defined option
-          printf("feature option=\"Allow repeats -check 0\"\n");
-          printf("feature option=\"Promote on entry -check 0\"\n");
-          printf("feature option=\"Okazaki rule -check 0\"\n");
-          printf("feature option=\"Resign -check 0\"\n");           // 
-          printf("feature option=\"Contempt -spin 0 -200 200\"\n"); // and another one
+          printf("feature option=\"Full analysis PV -check %d\"\n", noCut); // example of an engine-defined option
+          printf("feature option=\"Allow repeats -check %d\"\n", allowRep);
+          printf("feature option=\"Promote on entry -check %d\"\n", entryProm);
+          printf("feature option=\"Okazaki rule -check %d\"\n", okazaki);
+          printf("feature option=\"Resign -check %d\"\n", resign);           // 
+          printf("feature option=\"Contempt -spin %d -200 200\"\n", contemptFactor); // and another one
           printf("feature option=\"Tsume -combo no /// Sente mates /// Gote mates\"\n");
           printf("feature done=1\n");
           continue;
