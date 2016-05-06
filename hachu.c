@@ -2680,6 +2680,7 @@ ParseMove (char *moveText)
     } else if(f + 3*kStep[i] == t) { // Lion Dog 1+2 move
       t2 = SPECIAL + 64 + i;
     } else if(*moveText == ',') { // 3rd leg follows!
+      moveText++;
       if(f + 2*kStep[i] != t) return INVALID; // 3-leg moves must be linear!
       moveText += ReadSquare(moveText, &e);
       if(e != t) return INVALID; // must again continue with same piece
