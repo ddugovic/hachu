@@ -12,7 +12,7 @@
 
 #define VERSION "0.21"
 
-//define PATH level==0 || path[0] == 0x590cb &&  (level==1 || path[1] == 0x4c0c9 && (level == 2 || path[2] == 0x8598ca && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5))*/)))
+//define PATH level==0 || path[0] == 0x82906b &&  (level==1 || path[1] == 0x8790d9 && (level == 2 || path[2] == 0x8598ca && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5))*/)))
 #define PATH 0
 
 #define HASH
@@ -177,9 +177,9 @@ Move retMove, moveStack[20000], path[100], repStack[300], pv[1000], repeatMove[3
 #define N -1 /* Knight              */
 #define J -2 /* jump                */
 #define I -3 /* jump + step         */
-#define D -4 /* linear double move  */
+#define K -4 /* triple + range      */
 #define T -5 /* linear triple move  */
-#define K -6 /* triple + range      */
+#define D -6 /* linear double move  */
 #define L -7 /* true Lion move      */
 #define W -8 /* Werewolf move       */
 #define F -9 /* Lion + 3-step       */
@@ -358,7 +358,7 @@ PieceDesc makaPieces[] = {
   {"OM", "MW", 10, { 0,1,0,1,1,1,0,1 } }, // Old Monkey M'
   {"BB", "fB", 10, { 0,1,0,1,X,1,0,1 } }, // Blind Bear B'
   {"OR", "BA", 10, { 0,2,0,0,2,0,0,2 } }, // Old Rat O'
-  {"LD", "G", 10, { T,T,T,T,T,T,T,T } }, // Lion Dog W!
+  {"LD", "G", 800, { T,T,T,T,T,T,T,T } }, // Lion Dog W!
   {"WR", "G", 10, { 0,3,1,3,0,3,1,3 } }, // Wrestler W'
   {"GG", "G", 10, { 3,1,3,0,3,0,3,1 } }, // Guardian of the Gods G'
   {"BD", "G", 10, { 0,3,1,0,1,0,1,3 } }, // Budhist Devil D'
@@ -377,11 +377,11 @@ PieceDesc makaPieces[] = {
   {"fY", "", 10, { 0,X,0,0,X,0,0,X } }, // Free Tile +Y
   {"fU", "", 10, { 0,X,0,0,0,0,0,X } }, // Free Stone +U
   {"EM", "", 10, { 0,0,0,0,0,0,0,0 } }, // Emperor +K
-  {"TK", "", 10, { K,K,K,K,K,K,K,K } }, // Teaching King +I'
-  {"BS", "", 10, { S,S,S,S,S,S,S,S } }, // Budhist Spirit +J'
+  {"TK", "", 1300, { K,K,K,K,K,K,K,K }, 0, 6}, // Teaching King +I'
+  {"BS", "", 1500, { S,S,S,S,S,S,S,S }, 0, 7}, // Budhist Spirit +J'
   {"WS", "", 10, { X,X,0,X,1,X,0,X } }, // Wizard Stork +N'
   {"MW", "", 10, { 1,X,0,X,X,X,0,X } }, // Mountain Witch +M'
-  {"FF", "", 10, { F,F,F,F,F,F,F,F } }, // Furious Fiend +L!
+  {"FF", "", 1150, { F,F,F,F,F,F,F,F } }, // Furious Fiend +L!
   {"GD", "", 10, { 2,3,X,3,2,3,X,3 } }, // Great Dragon +W!
   {"GO", "", 10, { X,3,2,3,X,3,2,3 } }, // Golden Bird +X
   {"fW", "", 10, { X,X,X,0,0,0,X,X } }, // Free Wolf +W
@@ -984,6 +984,10 @@ SetUp (char *array, int var)
 	p2 = LookUp(p1->promoted, var);
         m = AddPiece(color, p2);
 	if(m <= n) n += 2;
+	if(p2->ranking > 5) { // contageous
+	  AddPiece(color, p2);
+	  if(m <= n) n += 2;
+	}
 	p[n].promo = m;
 	p[n].promoFlag = IsUpwardCompatible(p2->range, p1->range) * DONT_DEFER + CAN_PROMOTE;
 	if(Forward(p1->range)) p[n].promoFlag |= LAST_RANK; // Pieces that only move forward can't defer on last rank
@@ -1311,10 +1315,9 @@ GenNonCapts (int promoSuppress)
 	      if(!occup & r < L) for(y=x+2*v; !NewNonCapture(x, y+=v, pFlag) && r == S; ); // BS and FF moves
 	      v = nStep[j];
 	      if(r != W) NewNonCapture(x, x + v, pFlag);
-	    } else if(r == T) NewNonCapture(x, x+3*v, pFlag); // Lion Dog, also triple step
-	    else if(r == K) {
+	    } else if(r >= T) { // T or K
 	      occup |= NewNonCapture(x, x+3*v, pFlag); // Lion Dog, also triple step
-	      if(!occup) for(y=x+3*v; !NewNonCapture(x, y+=v, pFlag); ); // TK moves
+	      if(!occup && r == K) for(y=x+3*v; !NewNonCapture(x, y+=v, pFlag); ); // Teaching King distant moves
 	    }
 	  } else if(r == I) NewNonCapture(x, x + v, pFlag); // also do step
 	} else
@@ -1355,18 +1358,18 @@ MapOneColor (int start, int last, int *map)
 	if(r >= S) { // in any case, do a jump of 2
 	  if(board[x + 2*v] != EMPTY && board[x + 2*v] != EDGE)
 	    map[2*(x + 2*v) + start] += one[j], mob += (board[x + 2*v] ^ start) & 1;
-	  if(r < J) { // Lion power, also single step
+	  if(r < J) { // more than plain jump
 	    if(board[x + v] != EMPTY && board[x + v] != EDGE)
-	      map[2*(x + v) + start] += one[j];
-	    if(r < I) {
-	    if(r == T || r == K) { // Lion Dog, also jump of 3
+	      map[2*(x + v) + start] += one[j]; // single step (completes D and I)
+	    if(r < I) {  // Lion power
+	    if(r >= T) { // Lion Dog, also do a jump of 3
 	      if(board[x + 3*v] != EMPTY && board[x + 3*v] != EDGE)
 		map[2*(x + 3*v) + start] += one[j];
-	      if(r == K) { // also range (Teaching King)
+	      if(r == K) { // Teaching King also range move
 		int y = x, n = 0;
 		while(1) {
 		  if(board[y+=v] == EDGE) break;
-		  if(board[y] != EMPTY) {
+ 		  if(board[y] != EMPTY) {
 		    if(n > 2) map[2*y + start] += one[j]; // outside Lion range
 		    break;
 		  }
@@ -1554,9 +1557,9 @@ MakeMove(Move m, UndoInfo *u)
 
   u->victim = board[u->to];
   p[u->victim].pos = ABSENT;
-  if(p[u->victim].ranking == 5 && p[u->piece].ranking < 4) { // contageous piece captured by non-royal
+  if(p[u->victim].ranking >= 5 && p[u->piece].ranking < 4) { // contageous piece captured by non-royal
     u->booty -= p[u->new].value;
-    u->new = u->piece & 1 | 2;    // promote to it
+    u->new = u->piece & 1 | (u->victim - 2 & ~3) + 2; // promote to it (assumes they head the list in pairs)
     if(p[u->new].pos != ABSENT) u->new += 2;
     p[u->piece].pos = ABSENT;
     u->booty += p[u->new].value;
@@ -1639,9 +1642,11 @@ GenCapts (int sqr, int victimValue)
       while( board[x+=v] == EMPTY ); // scan towards source until we encounter a 'stop'
 //printf("stop @ %c%d (dir %d)\n",x%BW+'a',x/BW,i);
       if((board[x] & TYPE) == stm) {               // stop is ours
+	static int minRange[20] = {  3, 0, 0, 0, 2, 2,  2 }; // K, T, D, L, W, F, S
+	static int maxRange[20] = { 36, 0, 0, 0, 3, 3, 36 }; // K, T, D, L, W, F, S
 	int attacker = board[x], d = dist[x-sqr], r = p[attacker].range[i];
 //printf("attacker %d, range %d, dist %d\n", attacker, r, d);
-	if(r >= d || r < L && (d > 3 && r == S || d == 3 && r >= S)) { // it has a plain move in our direction that hits us
+	if(r >= d || r <= K && d <= maxRange[K-r] && d > minRange[K-r]) { // it has a plain move in our direction that hits us
 	  NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
 	  att -= one[i];
 	  if(!(att & attackMask[i])) continue; // no more; next direction
@@ -1649,7 +1654,7 @@ GenCapts (int sqr, int victimValue)
 	  while(board[x+=v] == EMPTY);// one attack accounted for, but more to come, so skip to next stop
 	}
       }
-      // we get here when we are on a piece that dous not attack us through a (limited) ranging move,
+      // we get here when we are on a piece that does not attack us through a (limited) ranging move,
       // it can be our own or an enemy with not (enough) range, or which is blocked
       do {
 //printf("scan %x-%x (%d) dir=%d d=%d r=%d att=%o jcapt=%d qval=%d\n", sqr, x, board[x], i, dist[x-sqr], p[board[x]].range[i], att, jcapt, p[board[x]].qval);
@@ -2123,7 +2128,7 @@ if(PATH)printf("new iter %d\n", iterDep);
       bestScore = curEval; resDep = QSdepth;
       if(bestScore > alpha) {
 	alpha = bestScore;
-if(PATH)printf("stand pat %d\n", bestScore);
+if(PATH)printf("stand pat %d (beta=%d)\n", bestScore, beta);
 	if(bestScore >= beta) goto cutoff;
       }
     }
@@ -2131,14 +2136,18 @@ if(PATH)printf("stand pat %d\n", bestScore);
 if(flag && depth>= 0) printf("phase=%d: first/curr/last = %d / %d / %d\n", phase, firstMove, curMove, msp);fflush(stdout);
       // MOVE SOURCE
       if(curMove >= msp) { // we ran out of moves; generate some new
-if(PATH)printf("new moves, phase=%d\n", phase);
+if(PATH)printf("new moves, phase=%d\n", phase),fflush(stdout);
 	switch(phase) {
 	  case 0: // null move
 #ifdef NULLMOVE
 	    if(depth > QSdepth && curEval >= beta && !inCheck && filling > 10) {
               int nullDep = depth - 3;
 	      stm ^= WHITE;
+path[level++] = 0;
+if(PATH) printf("%d:%d null move\n", level, depth),fflush(stdout);
 	      score = -Search(-beta, 1-beta, -difEval, nullDep<QSdepth ? QSdepth : nullDep, 0, promoSuppress & SQUARE, ABSENT, INF);
+if(PATH) printf("%d:%d null move score = %d\n", level, depth, score),fflush(stdout);
+level--;
 	      xstm = stm; stm ^= WHITE;
 	      if(score >= beta) { msp = oldMSP; retDep += 3; pvPtr = myPV; return score + (score < curEval); }
 //	      else depth += lmr, lmr = 0;
@@ -2160,7 +2169,7 @@ if(PATH)printf("new moves, phase=%d\n", phase);
 	    nextVictim = xstm; autoFail = (depth == 0);
 	    phase = 3;
 	  case 3: // generate captures
-if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp);
+if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp),fflush(stdout);
 	    while(nextVictim < last[xstm]) {          // more victims exist
 	      int group, to = p[nextVictim += 2].pos; // take next
 	      if(to == ABSENT) continue;              // ignore if absent
@@ -2171,18 +2180,18 @@ if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp
 		if(bestScore < 2*group + curEval + 30) bestScore = 2*group + curEval + 30;
 		goto cutoff;
 	      }
-if(PATH) printf("%d:%2d:%2d group=%d, to=%c%d\n",level,depth,iterDep,group,to%BW+'a',to/BW+ONE);
+if(PATH) printf("%d:%2d:%2d group=%d, to=%c%d\n",level,depth,iterDep,group,to%BW+'a',to/BW+ONE),fflush(stdout);
 	      GenCapts(to, 0);
-if(PATH) printf("%d:%2d:%2d first=%d msp=%d\n",level,depth,iterDep,firstMove,msp);
+if(PATH) printf("%d:%2d:%2d first=%d msp=%d\n",level,depth,iterDep,firstMove,msp),fflush(stdout);
 	      while(nextVictim < last[xstm] && p[nextVictim+2].value == group) { // more victims of same value exist
 		to = p[nextVictim += 2].pos;          // take next
 		if(to == ABSENT) continue;            // ignore if absent
 		if(!attacks[2*to + stm]) continue;    // skip if not attacked
-if(PATH) printf("%d:%2d:%2d p=%d, to=%c%d\n",level,depth,iterDep,nextVictim,to%BW+'a',to/BW+ONE);
+if(PATH) printf("%d:%2d:%2d p=%d, to=%c%d\n",level,depth,iterDep,nextVictim,to%BW+'a',to/BW+ONE),fflush(stdout);
 		GenCapts(to, 0);
-if(PATH) printf("%d:%2d:%2d msp=%d\n",level,depth,iterDep,msp);
+if(PATH) printf("%d:%2d:%2d msp=%d\n",level,depth,iterDep,msp),fflush(stdout);
 	      }
-if(PATH) printf("captures on %d generated, msp=%d, group=%d, threshold=%d\n", nextVictim, msp, group, threshold);
+if(PATH) printf("captures on %d generated, msp=%d, group=%d, threshold=%d\n", nextVictim, msp, group, threshold),fflush(stdout);
 	      goto extractMove; // in auto-fail phase, only search if they might auto-fail-hi
 	    }
 if(PATH) printf("# autofail=%d\n", autoFail);
@@ -2420,8 +2429,8 @@ pplist()
 {
   int i, j;
   for(i=0; i<182; i++) {
-	printf("%3d. %3d %3d %4d   %02x %d %d %x %3d %4d ", i, p[i].value, p[i].promo, p[i].pos, p[i].promoFlag&255, p[i].mobWeight, p[i].qval, p[i].bulk, p[i].promoGain, p[i].pst);
-	for(j=0; j<8; j++) printf("  %2d", p[i].range[j]);
+	printf("%3d. %4d %3d %4d %02x %d %2d %x %3d %4d ", i, p[i].value, p[i].promo, p[i].pos, p[i].promoFlag&255, p[i].mobWeight, p[i].qval, p[i].bulk, p[i].promoGain, p[i].pst);
+	for(j=0; j<8; j++) printf(" %3d", p[i].range[j]);
 	if(i<2 || i>11) printf("\n"); else printf("  %02x %d\n", fireFlags[i-2]&255, p[i].ranking);
   }
   printf("last: %d / %d\nroyal %d / %d\n", last[WHITE], last[BLACK], royal[WHITE], royal[BLACK]);
@@ -2644,7 +2653,7 @@ MapFromScratch(attacks);
   for(i=listStart; i<msp && currentVariant == V_WOLF; i++) { // mark Werewolf captures as promotions
     int to = moveStack[i] & SQUARE, from = moveStack[i] >> SQLEN & SQUARE;
     if(to >= SPECIAL) continue;
-    if(p[board[to]].ranking == 5 && p[board[from]].ranking < 4) moveStack[i] |= PROMOTE;
+    if(p[board[to]].ranking >= 5 && p[board[from]].ranking < 4) moveStack[i] |= PROMOTE;
   }
 }
 
@@ -2950,12 +2959,14 @@ pboard(board);
             PrintResult(stm, score);
           } else {
             MOVE f, pMove = move;
+            static char *pName[] = { "w", "z", "j" };
             if((move & SQUARE) >= SPECIAL && p[board[f = move>>SQLEN & SQUARE]].value == pVal) { // e.p. capture
               pMove = move & ~SQUARE | f + toList[(move & SQUARE) - SPECIAL]; // print as a single move
             }
             stm = MakeMove2(stm, move);  // assumes MakeMove returns new side to move
             gameMove[moveNr++] = move;   // remember game
-            printf("move %s%s\n", MoveToText(pMove, 1), p[undoInfo.victim].ranking == 5 && p[undoInfo.piece].ranking < 4 ? "w" : "");
+            i = p[undoInfo.victim].ranking;
+            printf("move %s%s\n", MoveToText(pMove, 1), i == 5 && p[undoInfo.piece].ranking < 4 ? pName[i-5] : "");
             listEnd = 0;
             continue;                    // go check if we should ponder
           }
@@ -3084,8 +3095,8 @@ pboard(board);
                    "piece D& sbWfF\npiece V& FfW\npiece W& WfF\npiece S& sRvW\npiece R& FfRbW\npiece F& BfW\npiece X& FvWAvD\n"
                    "piece +D& WfF\npiece +V& FfsW\npiece +W& K\npiece +S& R\npiece +R& FvWAvD\npiece +F& BvRsW\npiece E& vRfF3bFsW\n");
           if(currentVariant == V_MACAD)
-            printf("setup (P.*B*RQSEXOG....D^J'..*LP'.L!J'...*W!...*F'...^C.C.^L!.^P'^K.T*L'.*C!*H!^I'.^E...*R'^P^T*W'*G'^G^SI'^X^OK"
-                          "p.*b*rqsexog....d^j'..*lp'.l!j'...*w!...*f'...^c.c.^l!.^p'^k.t*l'.*c!*h!^i'.^e...*r'^p^t*w'*g'^g^si'^x^ok) 13x13+0_chu %s w 0 1\n"
+            printf("setup (P.*B*RQSEXOG....D^J'..*LP'.L!J'=J...*W!...*F'...^C.C.^L!.^P'^K.T*L'.*C!*H!^I'=Z.^E...*R'^P^T*W'*G'^G^SI'^X^OK"
+                          "p.*b*rqsexog....d^j'..*lp'.l!j'=j...*w!...*f'...^c.c.^l!.^p'^k.t*l'.*c!*h!^i'=z.^e...*r'^p^t*w'*g'^g^si'^x^ok) 13x13+0_chu %s w 0 1\n"
 		   "piece P& fW\npiece S& FfW\npiece E& FfsW\npiece X& WA\npiece O& FD\npiece G& WfF\npiece D& RF\npiece +J'& QNADcaKmabK\n"
 		   "piece L& fR\npiece P'& vW\npiece L!& KNADcaKmabK\npiece J'& blfFrW\npiece H!& RmasR\npiece W!& KADcavKmcpafmcpavK\n"
 		   "piece C!& BmasB\npiece F'& F2\npiece +C& vRfB\npiece C& vWfF\npiece +L!& K3NADcaKmabK\npiece +P'& vR\npiece T& FbsW\n"
