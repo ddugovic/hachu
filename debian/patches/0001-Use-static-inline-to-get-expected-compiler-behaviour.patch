@@ -1,0 +1,48 @@
+From bafa958a33464f1eb64c0c83e31bb18a64763a77 Mon Sep 17 00:00:00 2001
+From: Yann Dirson <ydirson@free.fr>
+Date: Sun, 6 Aug 2017 17:37:30 +0200
+Subject: [PATCH 1/2] Use 'static inline' to get expected compiler behaviour.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Fixes undefined references with gcc-7, -Winline says "inlining failed in call
+to ‘NewCapture’: call is unlikely and code size would grow".
+---
+ hachu.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/hachu.c b/hachu.c
+index 81919a0..bd90c7c 100644
+--- a/hachu.c
++++ b/hachu.c
+@@ -1112,7 +1112,7 @@ Dtest ()
+ 
+ int flag;
+ 
+-inline int
++static inline int
+ NewNonCapture (int x, int y, int promoFlags)
+ {
+   if(board[y] != EMPTY) return 1; // edge, capture or own piece
+@@ -1133,7 +1133,7 @@ NewNonCapture (int x, int y, int promoFlags)
+   return 0;
+ }
+ 
+-inline int
++static inline int
+ NewCapture (int x, int y, int promoFlags)
+ {
+   if( (promoBoard[x] | promoBoard[y]) & promoFlags) { // piece can promote with this move
+@@ -1908,7 +1908,7 @@ Evaluate (int difEval)
+   return difEval - (filling*promoDelta >> 8) + (stm ? score : -score);
+ }
+ 
+-inline void
++static inline void
+ FireSet (UndoInfo *tb)
+ { // set fireFlags acording to remaining presene of Fire Demons
+   int i;
+-- 
+2.13.2
+

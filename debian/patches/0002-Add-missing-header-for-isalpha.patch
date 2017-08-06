@@ -1,0 +1,25 @@
+From 8fdcb32144706538ce91006fd1cb4a999f1b4ed1 Mon Sep 17 00:00:00 2001
+From: Yann Dirson <ydirson@free.fr>
+Date: Sun, 6 Aug 2017 17:51:57 +0200
+Subject: [PATCH 2/2] Add missing header for isalpha.
+
+Reported for gcc-6 and gcc-7 as standard warning.
+---
+ hachu.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/hachu.c b/hachu.c
+index bd90c7c..c56f11f 100644
+--- a/hachu.c
++++ b/hachu.c
+@@ -36,6 +36,7 @@
+ #include <signal.h>
+ #include <time.h>
+ #include <stdint.h>
++#include <ctype.h>
+ 
+ #ifdef WIN32 
+ #    include <windows.h>
+-- 
+2.13.2
+

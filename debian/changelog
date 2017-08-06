@@ -1,3 +1,10 @@
+hachu (0.21-7-g1c1f14a-2) unstable; urgency=medium
+
+  * Fix build failure with gcc-7 (Closes: #853439)
+  * Silence warning with missing include
+
+ -- Yann Dirson <dirson@debian.org>  Sun, 06 Aug 2017 18:05:51 +0200
+
 hachu (0.21-7-g1c1f14a-1) unstable; urgency=medium
 
   * New upstream snapshot.
