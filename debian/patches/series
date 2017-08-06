@@ -1,2 +1,3 @@
 0001-Use-static-inline-to-get-expected-compiler-behaviour.patch
 0002-Add-missing-header-for-isalpha.patch
+0003-Honor-standard-CPPFLAGS.patch
