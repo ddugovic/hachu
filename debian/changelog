@@ -1,3 +1,9 @@
+hachu (0.21-7-g1c1f14a-3) UNRELEASED; urgency=medium
+
+  * Update Vcs-* for salsa migration.
+
+ -- Yann Dirson <dirson@debian.org>  Sun, 10 Mar 2019 18:43:03 +0100
+
 hachu (0.21-7-g1c1f14a-2) unstable; urgency=medium
 
   * Fix build failure with gcc-7 (Closes: #853439)
