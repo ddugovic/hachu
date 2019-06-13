@@ -1,7 +1,7 @@
 srcdir = .
 
 CC?=gcc
-CFLAGS?= -O2 -s
+CFLAGS?= -O2 -s -Wall -Wno-parentheses
 
 prefix=/usr/local
 DATADIR=`xboard --show-config Datadir`

@@ -741,7 +741,7 @@ int squareKey[BSIZE];
 int rawBoard[BSIZE + 11*BHMAX + 6];
 //int attacks[2*BSIZE];   // attack map
 int attackMaps[200*BSIZE], *attacks = attackMaps;
-char distance[2*BSIZE]; // distance table
+unsigned char distance[2*BSIZE];      // distance table
 char promoBoard[BSIZE]; // flags to indicate promotion zones
 unsigned char rawFire[BSIZE+2*BWMAX]; // flags to indicate squares controlled by Fire Demons
 signed char PST[7*BSIZE];
@@ -2029,8 +2029,8 @@ void TerminationCheck();
 int
 Search (int alpha, int beta, int difEval, int depth, int lmr, int oldPromo, int promoSuppress, int threshold)
 {
-  int i, j, k, phase, king, nextVictim, to, defer, autoFail=0, inCheck = 0, late=100000, ep;
-  int firstMove, oldMSP = msp, curMove, sorted, bad, dubious, bestMoveNr;
+  int i, j, k, phase, king, nextVictim, defer, autoFail=0, inCheck = 0, late=100000, ep;
+  int firstMove, oldMSP = msp, curMove, sorted, bestMoveNr;
   int resDep, iterDep, ext;
   int myPV = pvPtr;
   int score, bestScore, oldBest, curEval, iterAlpha;
@@ -2567,7 +2567,6 @@ Setup2 (char *fen)
 {
   char *p;
   int stm = WHITE;
-  static char startFEN[4000];
   if(fen) {
     char *q = strchr(fen, '\n');
     if(q) *q = 0;
@@ -2910,7 +2909,7 @@ printf("# ponder hit\n");
     {
       int engineSide=NONE;                // side played by engine
       MOVE move;
-      int i, score, curVarNr;
+      int i, score, curVarNr = 0;
 
       setvbuf(stdin, NULL, _IOLBF, 1024); // buffering more than one line flaws test for pending input!
 
@@ -2992,8 +2991,8 @@ pboard(board);
         if(!strcmp(command, "exit"))    { engineSide = NONE;    continue; }
         if(!strcmp(command, "level"))   {
           int min, sec=0;
-          sscanf(inBuf, "level %d %d %d", &mps, &min, &inc) == 3 ||  // if this does not work, it must be min:sec format
-          sscanf(inBuf, "level %d %d:%d %d", &mps, &min, &sec, &inc);
+          if(sscanf(inBuf, "level %d %d %d", &mps, &min, &inc) != 3)  // if this does not work, it must be min:sec format
+             sscanf(inBuf, "level %d %d:%d %d", &mps, &min, &sec, &inc);
           timeControl = 60*min + sec; timePerMove = -1;
           continue;
         }
