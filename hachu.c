@@ -377,6 +377,7 @@ PieceDesc makaPieces[] = {
   {"fY", "", 10, { 0,X,0,0,X,0,0,X } }, // Free Tile +Y
   {"fU", "", 10, { 0,X,0,0,0,0,0,X } }, // Free Stone +U
   {"EM", "", 10, { 0,0,0,0,0,0,0,0 } }, // Emperor +K
+
   {"TK", "", 1300, { K,K,K,K,K,K,K,K }, 0, 6}, // Teaching King +I'
   {"BS", "", 1500, { S,S,S,S,S,S,S,S }, 0, 7}, // Budhist Spirit +J'
   {"WS", "", 10, { X,X,0,X,1,X,0,X } }, // Wizard Stork +N'
@@ -1199,7 +1200,7 @@ Dtest ()
 
 int flag;
 
-inline int
+static inline int
 NewNonCapture (int x, int y, int promoFlags)
 {
   if(board[y] != EMPTY) return 1; // edge, capture or own piece
@@ -1220,7 +1221,7 @@ NewNonCapture (int x, int y, int promoFlags)
   return 0;
 }
 
-inline int
+static inline int
 NewCapture (int x, int y, int promoFlags)
 {
   if( (promoBoard[x] | promoBoard[y]) & promoFlags) { // piece can promote with this move
@@ -2013,7 +2014,7 @@ Evaluate (int difEval)
   return difEval - (filling*promoDelta >> 8) + (stm ? score : -score);
 }
 
-inline void
+static inline void
 FireSet (UndoInfo *tb)
 { // set fireFlags acording to remaining presene of Fire Demons
   int i;
