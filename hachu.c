@@ -2475,7 +2475,7 @@ Convert (char *fen)
     if(isalpha(*fen)) {
       char *table = fenNames;
       n = *fen > 'Z' ? 'a' - 'A' : 0;
-      if((currentVariant == V_CHESS || currentVariant == V_SHATRANJ || currentVariant == V_LION ||
+      if((currentVariant == V_CHESS || currentVariant == V_SHATRANJ || currentVariant == V_LION || currentVariant == V_WOLF ||
           currentVariant == V_MAKRUK || currentVariant == V_SHO) && *fen - n == 'N' // In Chess N is Knight, not Lion
            || table[2* (*fen - 'A' - n)] == '.') *p++ = *fen; else {
         *p++ = ':';
