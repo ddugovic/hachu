@@ -12,7 +12,7 @@
 
 #define VERSION "0.21"
 
-//define PATH level==0 || path[0] == 0x590cb &&  (level==1 || path[1] == 0x4c0c9 && (level == 2 || path[2] == 0x8598ca && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5))*/)))
+//define PATH level==0 || path[0] == 0x82906b &&  (level==1 || path[1] == 0x8790d9 && (level == 2 || path[2] == 0x8598ca && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5))*/)))
 #define PATH 0
 
 #define HASH
@@ -160,9 +160,9 @@ typedef struct {
   char fireMask;
 } UndoInfo;
 
-char *array, fenArray[4000], startPos[4000], *reason, checkStack[300];
+char *array, *IDs, fenArray[4000], startPos[4000], *reason, checkStack[300];
 int bWidth, bHeight, bsize, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, stalemate;
-int tsume, pvCuts, allowRep, entryProm, okazaki, pVal;
+int tsume, pvCuts, allowRep, entryProm=1, okazaki, pVal;
 int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
 int retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
 int ll, lr, ul, ur; // corner squares
@@ -177,23 +177,22 @@ Move retMove, moveStack[20000], path[100], repStack[300], pv[1000], repeatMove[3
 #define N -1 /* Knight              */
 #define J -2 /* jump                */
 #define I -3 /* jump + step         */
-#define D -4 /* linear double move  */
+#define K -4 /* triple + range      */
 #define T -5 /* linear triple move  */
-#define L -6 /* true Lion move      */
-#define W -7 /* Werewolf move       */
-#define F -8 /* Lion + 3-step       */
-#define S -9 /* Lion + range        */
-#define H -10 /* hook move           */
-#define C -11 /* capture only       */
-#define M -12 /* non-capture only   */
+#define D -6 /* linear double move  */
+#define L -7 /* true Lion move      */
+#define W -8 /* Werewolf move       */
+#define F -9 /* Lion + 3-step       */
+#define S -10 /* Lion + range        */
+#define H -11 /* hook move           */
+#define C -12 /* capture only       */
+#define M -13 /* non-capture only   */
 
 #define LVAL 1000 /* piece value of Lion. Used in chu for recognizing it to implement Lion-trade rules  */
 #define FVAL 5000 /* piece value of Fire Demon. Used in code for recognizing moves with it and do burns */
 
 PieceDesc chuPieces[] = {
-  {"LN", "",  LVAL, { W,W,W,W,W,W,W,W }, 4 }, // lion
-//  {"LN", "",  LVAL, { T,T,T,T,T,T,T,T }, 4 }, // lion
-//  {"LN", "",  LVAL, { L,L,L,L,L,L,L,L }, 4 }, // lion
+  {"LN", "",  LVAL, { L,L,L,L,L,L,L,L }, 4 }, // lion
   {"FK", "",   600, { X,X,X,X,X,X,X,X }, 4 }, // free king
   {"SE", "",   550, { X,D,X,X,X,X,X,D }, 4 }, // soaring eagle
   {"HF", "",   500, { D,X,X,X,X,X,X,X }, 4 }, // horned falcon
@@ -249,133 +248,183 @@ PieceDesc daiPieces[] = {
   {"AB", "G",  60, { 1,0,1,0,1,0,1,0 }, 1 }, // Angry Boar
   {"I",  "G",  80, { 1,1,0,0,0,0,0,1 }, 2 }, // Iron
   {"N",  "G",  60, { N,0,0,0,0,0,0,N }, 0 }, // Knight
-  {"ST", "G",  50, { 0,1,0,0,0,0,0,1 }, 0 }, // Stone
+  {"SG", "G",  50, { 0,1,0,0,0,0,0,1 }, 0 }, // Stone
   { NULL }  // sentinel
 };
 
 PieceDesc waPieces[] = {
   {"TE", "",   720, { X,X,1,X,X,X,1,X }, 4 }, // Tenacious Falcon
   {"GS", "",   500, { X,0,X,0,X,0,X,0 }, 4 }, // Gliding Swallow (R)
-  {"DE", "",   430, { X,3,1,1,X,1,1,3 }, 3 }, // Cloud Eagle
+  {"CE", "",   430, { X,3,1,1,X,1,1,3 }, 3 }, // Cloud Eagle
   {"K",  "",   410, { 1,1,1,1,1,1,1,1 }, 2 }, // Crane King (K)
-  {"BT", "",   390, { I,I,0,I,I,I,0,I }, 4 }, // Treacherous Fox
-  {"FL", "TE", 380, { 1,X,0,X,0,X,0,X }, 4 }, // Flying Falcon
-  {"FS", "",   290, { X,1,1,0,X,0,1,1 }, 3 }, // Raiding Falcon
-  {"S",  "GS", 260, { 1,0,X,0,1,0,X,0 }, 6 }, // Swallow's Wing (SM)
+  {"TF", "",   390, { I,I,0,I,I,I,0,I }, 4 }, // Treacherous Fox
+  {"FF", "TE", 380, { 1,X,0,X,0,X,0,X }, 4 }, // Flying Falcon
+  {"RF", "",   290, { X,1,1,0,X,0,1,1 }, 3 }, // Raiding Falcon
+  {"SW", "GS", 260, { 1,0,X,0,1,0,X,0 }, 6 }, // Swallow's Wing (SM)
   {"PO", "",   260, { 1,1,1,1,1,1,1,1 }, 2 }, // Plodding Ox (K)
-  {"R",  "BT", 260, { X,1,0,1,1,1,0,1 }, 2 }, // Running Rabit
-  {"B",  "",   240, { 1,1,1,1,0,1,1,1 }, 2 }, // Roaming Boar
+  {"RR", "TF", 260, { X,1,0,1,1,1,0,1 }, 2 }, // Running Rabit
+  {"RB", "",   240, { 1,1,1,1,0,1,1,1 }, 2 }, // Roaming Boar
   {"HH", "",   220, { N,0,0,N,N,0,0,N }, 1 }, // Heavenly Horse
-  {"EW", "PO", 220, { 1,1,1,0,1,0,1,1 }, 2 }, // Violent Wolf (G)
-  {"VM", "B",  200, { 1,1,0,1,0,1,0,1 }, 2 }, // Violent Stag (S)
-  {"G",  "S",  190, { 1,1,0,0,1,0,0,1 }, 2 }, // Flying Goose (C)
-  {"SM", "VM", 175, { 1,1,0,0,1,0,0,1 }, 2 }, // Climbing Monkey (C)
-  {"DH", "HH", 170, { X,0,0,0,2,0,0,0 }, 1 }, // Liberated Horse
-  {"DK", "EW", 150, { 0,1,1,0,1,0,1,1 }, 2 }, // Blind Dog
-  {"PH", "PO", 150, { X,0,0,0,0,0,0,0 }, 1 }, // Oxcart (L)
-  {"L",  "FS", 130, { 0,1,1,0,0,0,1,1 }, 2 }, // Flying Cock
-  {"KN", "DE", 115, { 1,0,0,1,0,1,0,0 }, 2 }, // Swooping Owl
-  {"C",  "FL", 105, { 1,0,0,1,0,1,0,0 }, 2 }, // Strutting Crow
-  {"P",  "EW",  80, { 1,0,0,0,0,0,0,0 }, 2 }, // Sparrow Pawn (P)
+  {"VW", "PO", 220, { 1,1,1,0,1,0,1,1 }, 2 }, // Violent Wolf (G)
+  {"VS", "RB", 200, { 1,1,0,1,0,1,0,1 }, 2 }, // Violent Stag (S)
+  {"FG", "SW", 190, { 1,1,0,0,1,0,0,1 }, 2 }, // Flying Goose (C)
+  {"CM", "VS", 175, { 1,1,0,0,1,0,0,1 }, 2 }, // Climbing Monkey (C)
+  {"LH", "HH", 170, { X,0,0,0,2,0,0,0 }, 1 }, // Liberated Horse
+  {"BD", "VW", 150, { 0,1,1,0,1,0,1,1 }, 2 }, // Blind Dog
+  {"OC", "PO", 150, { X,0,0,0,0,0,0,0 }, 1 }, // Oxcart (L)
+  {"FC", "RF", 130, { 0,1,1,0,0,0,1,1 }, 2 }, // Flying Cock
+  {"SO", "CE", 115, { 1,0,0,1,0,1,0,0 }, 2 }, // Swooping Owl
+  {"SC", "FF", 105, { 1,0,0,1,0,1,0,0 }, 2 }, // Strutting Crow
+  {"P",  "VW",  80, { 1,0,0,0,0,0,0,0 }, 2 }, // Sparrow Pawn (P)
   { NULL }  // sentinel
 };
 
 PieceDesc ddPieces[] = {
-  {"LO", "",   10, { 1,H,1,H,1,H,1,H } }, // Long-Nosed Goblin
-  {"OK", "LO", 10, { 2,1,2,0,2,0,2,1 } }, // Old Kite
-  {"PS", "HM", 10, { J,0,1,J,0,J,1,0 } }, // Poisonous Snake
-  {"GE", "",   10, { 3,3,5,5,3,5,5,3 } }, // Great Elephant
-  {"WS", "LD", 10, { 1,1,2,0,1,0,2,1 } }, // Western Barbarian
-  {"EA", "LN", 10, { 2,1,1,0,2,0,1,1 } }, // Eastern Barbarian
-  {"NO", "FE", 10, { 0,2,1,1,0,1,1,2 } }, // Northern Barbarian
-  {"SO", "WE", 10, { 0,1,1,2,0,2,1,1 } }, // Southern Barbarian
-  {"FE", "",   10, { 2,X,2,2,2,2,2,X } }, // Fragrant Elephant
-  {"WE", "",   10, { 2,2,2,X,2,X,2,2 } }, // White Elephant
-  {"FT", "",   10, { X,X,5,0,X,0,5,X } }, // Free Dream-Eater
-  {"FR", "",   10, { 5,X,X,0,5,0,X,X } }, // Free Demon
-  {"WB", "FT", 10, { 2,X,X,X,2,X,X,X } }, // Water Buffalo
-  {"RB", "FR", 10, { X,X,X,X,0,X,X,X } }, // Rushing Bird
-  {"SB", "",   10, { X,X,2,2,2,2,2,X } }, // Standard Bearer
-
-  {"FH", "FK", 10, { 1,2,1,0,1,0,1,2 } }, // Flying Horse
-  {"NK", "SB", 10, { 1,1,1,1,1,1,1,1 } }, // Neighbor King
+  {"HM", "",   10, { H,0,H,0,H,0,H,0 } }, // Hook Mover H!
+  {"LO", "",   10, { 1,H,1,H,1,H,1,H } }, // Long-Nosed Goblin G!
+  {"OK", "LO", 10, { 2,1,2,0,2,0,2,1 } }, // Old Kite K'
+  {"PS", "HM", 10, { J,0,1,J,0,J,1,0 } }, // Poisonous Snake S'
+  {"FF", "",   10, { F,F,F,F,F,F,F,F } }, // Furious Fiend +L!
+  {"GE", "",   10, { 3,3,5,5,3,5,5,3 } }, // Great Elephant +W!
+  {"We", "LD", 10, { 1,1,2,0,1,0,2,1 } }, // Western Barbarian W'
+  {"Ea", "LN", 10, { 2,1,1,0,2,0,1,1 } }, // Eastern Barbarian E'
+  {"No", "FE", 10, { 0,2,1,1,0,1,1,2 } }, // Northern Barbarian N'
+  {"So", "WE", 10, { 0,1,1,2,0,2,1,1 } }, // Southern Barbarian S'
+  {"FE", "",   10, { 2,X,2,2,2,2,2,X } }, // Fragrant Elephant +N'
+  {"WE", "",   10, { 2,2,2,X,2,X,2,2 } }, // White Elephant +S'
+  {"FT", "",   10, { X,X,5,0,X,0,5,X } }, // Free Dream-Eater +W
+  {"FR", "",   10, { 5,X,X,0,5,0,X,X } }, // Free Demon +U
+  {"WB", "FT", 10, { 2,X,X,X,2,X,X,X } }, // Water Buffalo W
+  {"RU", "FR", 10, { X,X,X,X,0,X,X,X } }, // Rushing Bird U
+  {"SB", "",   10, { X,X,2,2,2,2,2,X } }, // Standard Bearer +N
+  {"FH", "FK", 10, { 1,2,1,0,1,0,1,2 } }, // Flying Horse  H'
+  {"NK", "SB", 10, { 1,1,1,1,1,1,1,1 } }, // Neighbor King N
+  {"RG", "",   10, { 1,1,0,1,1,1,1,1 } }, // Right General R'
+  {"LG", "",   10, { 1,1,1,1,1,1,0,1 } }, // Left General L'
   {"BM", "MW", 10, { 0,1,1,1,0,1,1,1 } }, // Blind Monkey
-  {"DO", "",   10, { 2,X,2,X,2,X,2,X } }, // Dove
-  {"EB", "DO", 10, { 2,0,2,0,0,0,2,0 } }, // Enchanted Badger
-  {"EF", "SD", 10, { 0,2,0,0,2,0,0,2 } }, // Enchanted Fox
-  {"RA", "",   10, { X,0,X,1,X,1,X,0 } }, // Racing Chariot
-  {"SQ", "",   10, { X,1,X,0,X,0,X,1 } }, // Square Mover
+  {"DO", "",   10, { 2,5,2,5,2,5,2,5 } }, // Dove
+  {"EB", "DO", 10, { 2,0,2,0,0,0,2,0 } }, // Enchanted Badger B'
+  {"EF", "SD", 10, { 0,2,0,0,2,0,0,2 } }, // Enchanted Fox X'
+  {"RA", "",   10, { X,0,X,1,X,1,X,0 } }, // Racing Chariot A
+  {"SQ", "",   10, { X,1,X,0,X,0,X,1 } }, // Square Mover Q'
   {"PR", "SQ", 10, { 1,1,2,1,0,1,2,1 } }, // Prancing Stag
-  {"WT", "",   10, { X,1,2,0,X,0,2,X } }, // White Tiger
-  {"BD", "",   10, { 2,X,X,0,2,0,X,1 } }, // Blue Dragon
-  {"HD", "",   10, { X,0,0,0,1,0,0,0 } }, // Howling Dog
-  {"VB", "",   10, { 0,2,1,0,0,0,1,2 } }, // Violent Bear
-  {"SA", "",   10, { 2,1,0,0,2,0,0,1 } }, // Savage Tiger
-  {"W",  "",   10, { 0,2,0,0,0,0,0,2 } }, // Wood
-  {"CS", "DH",  70, { 0,1,0,1,0,1,0,1 } }, // cat sword
-  {"FD", "DK", 150, { 0,2,0,2,0,2,0,2 } }, // flying dragon
-  {"KN", "GD", 150, { J,1,J,1,J,1,J,1 } }, // kirin
-  {"PH", "GB", 150, { 1,J,1,J,1,J,1,J } }, // phoenix
-  {"LN", "FF",  1000, { L,L,L,L,L,L,L,L } }, // lion
-  {"LD", "GE", 10, { T,T,T,T,T,T,T,T } }, // Lion Dog
-  {"AB", "", 10, { 1,0,1,0,1,0,1,0 } }, // Angry Boar
-  {"B",  "", 10, { 0,X,0,X,0,X,0,X } }, // Bishop
-  {"C",  "", 10, { 1,1,0,0,1,0,0,1 } }, // Copper
-  {"DH", "", 10, { 1,X,1,X,1,X,1,X } }, // Dragon Horse
-  {"DK", "", 10, { X,1,X,1,X,1,X,1 } }, // Dragon King
-  {"FK", "", 10, {  } }, // 
-  {"EW", "", 10, { 1,1,1,0,0,0,1,1 } }, // Evil Wolf
-  {"FL", "", 10, {  } }, // 
-  {"", "", 10, {  } }, // 
-  {"", "", 10, {  } }, // 
+  {"WT", "",   10, { X,1,2,0,X,0,2,X } }, // White Tiger T!
+  {"BD", "",   10, { 2,X,X,0,2,0,X,1 } }, // Blue Dragon D!
+  {"HD", "",   10, { X,0,0,0,1,0,0,0 } }, // Howling Dog D'
+  {"VB", "",   10, { 0,2,1,0,0,0,1,2 } }, // Violent Bear V
+  {"ST", "",   10, { 2,1,0,0,2,0,0,1 } }, // Savage Tiger T'
+  {"W",  "",   10, { 0,2,0,0,0,0,0,2 } }, // Wood General V'
+  {"CS", "DH",  70, { 0,1,0,1,0,1,0,1 } }, // Cat Sword C'
+  {"FD", "DK", 150, { 0,2,0,2,0,2,0,2 } }, // Flying Dragon F'
+  {"LD", "GE", 10, { T,T,T,T,T,T,T,T } }, // Lion Dog W!
+  {"AB", "",   10, { 1,0,1,0,1,0,1,0 } }, // Angry Boar A'
+  {"EW", "",   10, { 1,1,1,0,0,0,1,1 } }, // Evil Wolf
+  {"SD", "",   10, { 5,2,5,2,5,2,5,2 } }, // She-Devil
+  {"GD", "",   10, { 2,3,X,3,2,3,X,3 } }, // Great Dragon
+  {"GO", "",   10, { X,3,2,3,X,3,2,3 } }, // Golden Bird
+  {"LC", "",   10, { X,0,0,X,1,0,0,X } }, // Left Chariot L'
+  {"RC", "",   10, { X,X,0,0,1,X,0,0 } }, // Right Chariot R'
+  // Chu pieces (but with different promotion)
+  {"LN", "FF",LVAL, { L,L,L,L,L,L,L,L }, 4 }, // lion
+  {"FK", "",   600, { X,X,X,X,X,X,X,X }, 4 }, // free king
+  {"DK", "",   400, { X,1,X,1,X,1,X,1 }, 4 }, // dragon king
+  {"DH", "",   350, { 1,X,1,X,1,X,1,X }, 4 }, // dragon horse
+  {"R",  "",   300, { X,0,X,0,X,0,X,0 }, 4 }, // rook
+  {"K",  "",   280, { 1,1,1,1,1,1,1,1 }, 2, 4 }, // king
+  {"B",  "",   250, { 0,X,0,X,0,X,0,X }, 2 }, // bishop
+  {"VM", "",   200, { X,0,1,0,X,0,1,0 }, 2 }, // vertical mover
+  {"SM", "",   200, { 1,0,X,0,1,0,X,0 }, 6 }, // side mover
+  {"G",  "",   151, { 1,1,1,0,1,0,1,1 }, 2 }, // gold
+  {"FL", "",   150, { 1,1,0,1,1,1,0,1 }, 2 }, // ferocious leopard
+  {"KN", "GD", 154, { J,1,J,1,J,1,J,1 }, 2 }, // kirin
+  {"PH", "GO", 153, { 1,J,1,J,1,J,1,J }, 2 }, // phoenix
+  {"RV", "",   150, { X,0,0,0,X,0,0,0 }, 1 }, // reverse chariot
+  {"L",  "",   150, { X,0,0,0,0,0,0,0 }, 1 }, // lance
+  {"S",  "",   100, { 1,1,0,1,0,1,0,1 }, 2 }, // silver
+  {"C",  "",   100, { 1,1,0,0,1,0,0,1 }, 2 }, // copper
+  {"P",  "",    40, { 1,0,0,0,0,0,0,0 }, 2 }, // pawn
   {"", "", 10, {  } }, // 
   {"", "", 10, {  } }, // 
   { NULL }  // sentinel
 };
 
 PieceDesc makaPieces[] = {
-  {"DV", "", 10, { 0,1,0,1,0,0,1,1 } }, // Deva
-  {"DS", "", 10, { 0,1,1,0,0,1,0,1 } }, // Dark Spirit
-  {"T",  "", 10, { 0,1,0,0,1,0,0,1 } }, // Tile
-  {"CS", "", 10, { 1,0,0,1,1,1,0,0 } }, // Coiled Serpent
-  {"RD", "", 10, { 1,0,1,1,1,1,1,0 } }, // Reclining Dragon
-  {"CC", "", 10, { 0,1,1,0,1,0,1,1 } }, // Chinese Cock
-  {"OM", "", 10, { 0,1,0,1,1,1,0,1 } }, // Old Monkey
-  {"BB", "", 10, { 0,1,0,1,X,1,0,1 } }, // Blind Bear
-  {"OR", "", 10, { 0,2,0,0,2,0,0,2 } }, // Old Rat
-  {"LD", "WS", 10, { T,T,T,T,T,T,T,T } }, // Lion Dog
-  {"WR", "", 10, { 0,3,1,3,0,3,1,3 } }, // Wrestler
-  {"GG", "", 10, { 3,1,3,0,3,0,3,1 } }, // Guardian of the Gods
-  {"BD", "", 10, { 0,3,1,0,1,0,1,3 } }, // Budhist Devil
-  {"SD", "", 10, { 5,2,5,2,5,2,5,2 } }, // She-Devil
-  {"DY", "", 10, { J,0,1,0,J,0,1,0 } }, // Donkey
-  {"CP", "", 10, { 0,H,0,2,0,2,0,H } }, // Capricorn
-  {"HM", "", 10, { H,0,H,0,H,0,H,0 } }, // Hook Mover
-  {"SF", "", 10, { 0,1,X,1,0,1,0,1 } }, // Side Flier
-  {"LC", "", 10, { X,0,0,X,1,0,0,X } }, // Left Chariot
-  {"RC", "", 10, { X,X,0,0,1,X,0,0 } }, // Right Chariot
-  {"FG", "", 10, { X,X,X,0,X,0,X,X } }, // Free Gold
-  {"FS", "", 10, { X,X,0,X,0,X,0,X } }, // Free Silver
-  {"FC", "", 10, { X,X,0,0,X,0,0,X } }, // Free Copper
-  {"FI", "", 10, { X,X,0,0,0,0,0,X } }, // Free Iron
-  {"FT", "", 10, { 0,X,0,0,X,0,0,X } }, // Free Tile
-  {"FN", "", 10, { 0,X,0,0,0,0,0,X } }, // Free Stone
-  {"FTg", "", 10, { 0,X,X,X,X,X,X,X } }, // Free Tiger
-  {"FLp", "", 10, { X,X,0,X,X,X,0,X } }, // Free Leopard (Free Boar?)
-  {"FSp", "", 10, { X,0,0,X,X,X,0,0 } }, // Free Serpent (Whale?)
-  {"FrD", "", 10, { X,0,X,X,X,X,X,0 } }, // Free Dragon
-  {"FC", "", 10, { 0,X,0,X,0,X,0,X } }, // Free Cat (Bishop?)
-  {"EM", "", 10, {  } }, // Emperor
-  {"TK", "", 10, {  } }, // Teaching King
-  {"BS", "", 10, {  } }, // Budhist Spirit
-  {"WS", "", 10, { X,X,0,X,1,X,0,X } }, // Wizard Stork
-  {"MW", "", 10, { 1,X,0,X,X,X,0,X } }, // Mountain Witch
-  {"FF", "", 10, {  } }, // Furious Fiend
-  {"GD", "", 10, { 2,3,X,3,2,3,X,3 } }, // Great Dragon
-  {"GB", "", 10, { X,3,2,3,X,3,2,3 } }, // Golden Bird
-  {"FrW", "", 10, {  } }, // Free Wolf
-  {"FrB", "", 10, {  } }, // Free Bear
-  {"BT", "", 10, { X,0,0,X,0,X,0,0 } }, // Bat
+  {"DV", "TK", 10, { 0,1,0,1,0,0,1,1 } }, // Deva I'
+  {"DS", "BS", 10, { 0,1,1,0,0,1,0,1 } }, // Dark Spirit J'
+  {"T",  "fT", 10, { 0,1,0,0,1,0,0,1 } }, // Tile General Y
+  {"CO", "fS", 10, { 1,0,0,1,1,1,0,0 } }, // Coiled Serpent S!
+  {"RD", "fD", 10, { 1,0,1,1,1,1,1,0 } }, // Reclining Dragon D!
+  {"CC", "WS", 10, { 0,1,1,0,1,0,1,1 } }, // Chinese Cock N'
+  {"OM", "MW", 10, { 0,1,0,1,1,1,0,1 } }, // Old Monkey M'
+  {"BB", "fB", 10, { 0,1,0,1,X,1,0,1 } }, // Blind Bear B'
+  {"OR", "BA", 10, { 0,2,0,0,2,0,0,2 } }, // Old Rat O'
+  {"LD", "G", 800, { T,T,T,T,T,T,T,T } }, // Lion Dog W!
+  {"WR", "G", 10, { 0,3,1,3,0,3,1,3 } }, // Wrestler W'
+  {"GG", "G", 10, { 3,1,3,0,3,0,3,1 } }, // Guardian of the Gods G'
+  {"BD", "G", 10, { 0,3,1,0,1,0,1,3 } }, // Budhist Devil D'
+  {"SD", "G", 10, { 5,2,5,2,5,2,5,2 } }, // She-Devil S'
+  {"DY", "G", 10, { J,0,1,0,J,0,1,0 } }, // Donkey Y'
+  {"CA", "G", 10, { 0,H,0,2,0,2,0,H } }, // Capricorn C!
+  {"HM", "G", 10, { H,0,H,0,H,0,H,0 } }, // Hook Mover H!
+  {"SF", "G", 10, { 0,1,X,1,0,1,0,1 } }, // Side Flier F!
+  {"LC", "G", 10, { X,0,0,X,1,0,0,X } }, // Left Chariot L'
+  {"RC", "G", 10, { X,X,0,0,1,X,0,0 } }, // Right Chariot R'
+  {"fT", "", 10, { 0,X,X,X,X,X,X,X } }, // Free Tiger +T
+  {"fD", "", 10, { X,0,X,X,X,X,X,0 } }, // Free Dragon +D!
+  {"fG", "", 10, { X,X,X,0,X,0,X,X } }, // Free Gold +G
+  {"fS", "", 10, { X,X,0,X,0,X,0,X } }, // Free Silver +S
+  {"fI", "", 10, { X,X,0,0,0,0,0,X } }, // Free Iron +I
+  {"fY", "", 10, { 0,X,0,0,X,0,0,X } }, // Free Tile +Y
+  {"fU", "", 10, { 0,X,0,0,0,0,0,X } }, // Free Stone +U
+  {"EM", "", 10, { 0,0,0,0,0,0,0,0 } }, // Emperor +K
+
+  {"TK", "", 1300, { K,K,K,K,K,K,K,K }, 0, 6}, // Teaching King +I'
+  {"BS", "", 1500, { S,S,S,S,S,S,S,S }, 0, 7}, // Budhist Spirit +J'
+  {"WS", "", 10, { X,X,0,X,1,X,0,X } }, // Wizard Stork +N'
+  {"MW", "", 10, { 1,X,0,X,X,X,0,X } }, // Mountain Witch +M'
+  {"FF", "", 1150, { F,F,F,F,F,F,F,F } }, // Furious Fiend +L!
+  {"GD", "", 10, { 2,3,X,3,2,3,X,3 } }, // Great Dragon +W!
+  {"GO", "", 10, { X,3,2,3,X,3,2,3 } }, // Golden Bird +X
+  {"fW", "", 10, { X,X,X,0,0,0,X,X } }, // Free Wolf +W
+  {"BA", "", 10, { X,0,0,X,0,X,0,0 } }, // Bat +O'
+  {"FD", "G", 150, { 0,2,0,2,0,2,0,2 }, 2 }, // Flying Dragon
+  // Dai pieces with different promotion
+  {"FD", "G", 150, { 0,2,0,2,0,2,0,2 }, 2 }, // Flying Dragon
+  {"VO", "G", 200, { 2,0,2,0,2,0,2,0 }, 2 }, // Violent Ox
+  {"EW", "fW", 80, { 1,1,1,0,0,0,1,1 }, 2 }, // Evil Wolf
+  {"CS", "B",  70, { 0,1,0,1,0,1,0,1 }, 1 }, // Cat Sword
+  {"AB", "FB", 60, { 1,0,1,0,1,0,1,0 }, 1 }, // Angry Boar
+  {"T",  "fY", 80, { 0,1,0,0,1,0,0,1 }, 2 }, // Tile
+  {"I",  "fI", 80, { 1,1,0,0,0,0,0,1 }, 2 }, // Iron
+  {"N",  "G",  60, { N,0,0,0,0,0,0,N }, 0 }, // Knight
+  {"SG", "fU", 50, { 0,1,0,0,0,0,0,1 }, 0 }, // Stone
+  // Chu pieces (but with different promotion)
+  {"LN", "FF",LVAL, { L,L,L,L,L,L,L,L }, 4 }, // lion
+  {"FK", "",   600, { X,X,X,X,X,X,X,X }, 4 }, // free king
+  {"FO", "",   400, { X,X,0,X,X,X,0,X }, 4 }, // flying ox (free leopard)
+  {"FB", "",   400, { 0,X,X,X,0,X,X,X }, 4 }, // free boar
+  {"DK", "",   400, { X,1,X,1,X,1,X,1 }, 4 }, // dragon king
+  {"DH", "",   350, { 1,X,1,X,1,X,1,X }, 4 }, // dragon horse
+  {"WH", "",   350, { X,X,0,0,X,0,0,X }, 3 }, // white horse (free copper)
+  {"R",  "G",  300, { X,0,X,0,X,0,X,0 }, 4 }, // rook
+  {"WL", "",   250, { X,0,0,X,X,X,0,0 }, 4 }, // whale (free serpent)
+  {"K",  "EM", 280, { 1,1,1,1,1,1,1,1 }, 2, 4 }, // king
+  {"CP", "",   270, { 1,1,1,1,1,1,1,1 }, 2, 4 }, // king
+  {"B",  "G",  250, { 0,X,0,X,0,X,0,X }, 2 }, // bishop
+  {"VM", "G",  200, { X,0,1,0,X,0,1,0 }, 2 }, // vertical mover
+  {"SM", "G",  200, { 1,0,X,0,1,0,X,0 }, 6 }, // side mover
+  {"DE", "CP", 201, { 1,1,1,1,0,1,1,1 }, 2 }, // drunk elephant
+  {"BT", "fT", 152, { 0,1,1,1,1,1,1,1 }, 2 }, // blind tiger
+  {"G",  "fG", 151, { 1,1,1,0,1,0,1,1 }, 2 }, // gold
+  {"FL", "FO", 150, { 1,1,0,1,1,1,0,1 }, 2 }, // ferocious leopard
+  {"KN", "GD", 154, { J,1,J,1,J,1,J,1 }, 2 }, // kirin
+  {"PH", "GB", 153, { 1,J,1,J,1,J,1,J }, 2 }, // phoenix
+  {"RV", "G",  150, { X,0,0,0,X,0,0,0 }, 1 }, // reverse chariot
+  {"L",  "G",  150, { X,0,0,0,0,0,0,0 }, 1 }, // lance
+  {"S",  "fS", 100, { 1,1,0,1,0,1,0,1 }, 2 }, // silver
+  {"C",  "WH", 100, { 1,1,0,0,1,0,0,1 }, 2 }, // copper
+  {"GB", "RV",  50, { 1,0,0,0,1,0,0,0 }, 1 }, // go between
+  {"P",  "G",   40, { 1,0,0,0,0,0,0,0 }, 2 }, // pawn
   {"", "", 10, {  } }, // 
   { NULL }  // sentinel
 };
@@ -422,99 +471,123 @@ PieceDesc taikyokuPieces[] = {
 };
 
 PieceDesc chessPieces[] = {
-  {"FK", "", 950, { X,X,X,X,X,X,X,X } },
+  {"Q", "",  950, { X,X,X,X,X,X,X,X } },
   {"R", "",  500, { X,0,X,0,X,0,X,0 } },
   {"B", "",  320, { 0,X,0,X,0,X,0,X } },
   {"N", "",  300, { N,N,N,N,N,N,N,N } },
   {"K", "",  280, { 1,1,1,1,1,1,1,1 } },
-  {"P", "FK", 80, { M,C,0,0,0,0,0,C } },
+  {"P", "Q",  80, { M,C,0,0,0,0,0,C } },
   { NULL }  // sentinel
 };
 
 PieceDesc lionPieces[] = {
-  {"LN","", LVAL, { L,L,L,L,L,L,L,L } },
-  {"FK", "", 600, { X,X,X,X,X,X,X,X } },
+  {"L", "", LVAL, { L,L,L,L,L,L,L,L } },
+  {"Q", "",  600, { X,X,X,X,X,X,X,X } },
   {"R", "",  300, { X,0,X,0,X,0,X,0 } },
   {"K", "",  280, { 1,1,1,1,1,1,1,1 } },
   {"B", "",  190, { 0,X,0,X,0,X,0,X } },
   {"N", "",  180, { N,N,N,N,N,N,N,N } },
-  {"P", "FK", 50, { M,C,0,0,0,0,0,C } },
+  {"P", "Q",  50, { M,C,0,0,0,0,0,C } },
   { NULL }  // sentinel
 };
 
 PieceDesc shatranjPieces[] = {
-  {"FK", "", 150, { 0,1,0,1,0,1,0,1 } },
+  {"Q", "",  150, { 0,1,0,1,0,1,0,1 } },
   {"R", "",  500, { X,0,X,0,X,0,X,0 } },
   {"B", "",   90, { 0,J,0,J,0,J,0,J } },
   {"N", "",  300, { N,N,N,N,N,N,N,N } },
   {"K", "",  280, { 1,1,1,1,1,1,1,1 } },
-  {"P", "FK", 80, { M,C,0,0,0,0,0,C } },
+  {"P", "Q",  80, { M,C,0,0,0,0,0,C } },
   { NULL }  // sentinel
 };
 
 PieceDesc makrukPieces[] = {
-  {"SM","",  150, { 0,1,0,1,0,1,0,1 } },
+  {"M", "",  150, { 0,1,0,1,0,1,0,1 } },
   {"R", "",  500, { X,0,X,0,X,0,X,0 } },
   {"S", "",  200, { 1,1,0,1,0,1,0,1 } }, // silver
   {"N", "",  300, { N,N,N,N,N,N,N,N } },
   {"K", "",  280, { 1,1,1,1,1,1,1,1 } },
-  {"P", "SM", 80, { M,C,0,0,0,0,0,C } },
+  {"P", "M",  80, { M,C,0,0,0,0,0,C } },
   { NULL }  // sentinel
 };
 
 PieceDesc wolfPieces[] = {
-  {"EW","EW",1050,{ W,W,W,W,W,W,W,W }, 6, 5 }, // kludge to get extra Werewolves
+  {"W", "W",1050,{ W,W,W,W,W,W,W,W }, 6, 5 }, // kludge to get extra Werewolves
   {"R", "",  500, { X,0,X,0,X,0,X,0 }, 3 },
   {"B", "",  320, { 0,X,0,X,0,X,0,X }, 1 },
   {"N", "",  300, { N,N,N,N,N,N,N,N }, 1 },
-  {"K", "",  280, { 1,1,1,1,1,1,1,1 } },
+  {"K", "",  280, { 1,1,1,1,1,1,1,1 }, 0, 4 },
   {"P", "R",  80, { M,C,0,0,0,0,0,C } },
   { NULL }  // sentinel
 };
 
-char chuArray[] = "L:FLCSGK:DEGSC:FLL/:RV.B.:BT:KN:PH:BT.B.:RV/:SM:VMR:DH:DK:LN:FK:DK:DHR:VM:SM/PPPPPPPPPPPP/...:GB....:GB..."
-		  "/............/............/"
-		  "...:gb....:gb.../pppppppppppp/:sm:vmr:dh:dk:fk:ln:dk:dhr:vm:sm/:rv.b.:bt:ph:kn:bt.b.:rv/l:flcsg:dekgsc:fll";
-char daiArray[] = "LN:STICSGKGSCI:STNL/:RV.:CS.:FL.:BT:DE:BT.:FL.:CS.:RV/.:VO.:AB.:EW:KN:LN:PH:EW.:AB.:VO./R:FD:SM:VMB:DH:DK:FK:DK:DHB:VM:SM:FDR"
-		  "/PPPPPPPPPPPPPPP/....:GB.....:GB..../.............../.............../.............../....:gb.....:gb..../ppppppppppppppp/"
-		  "r:fd:sm:vmb:dh:dk:fk:dk:dhb:vm:sm:fdr/.:vo.:ab.:ew:ph:ln:kn:ew.:ab.:vo./:rv.:cs.:fl.:bt:de:bt.:fl.:cs.:rv/ln:sticsgkgsci:stnl";
-char tenArray[] = "LN:FLICSGK:DEGSCI:FLNL/:RV.:CS:CS.:BT:KN:LN:FK:PH:BT.:CS:CS.:RV/:SS:VSB:DH:DK:WB:FI:LH:FE:FI:WB:DK:DHB:VS:SS/"
-		  ":SM:VMR:HF:SE:BG:RG:GG:VG:RG:BG:SE:HFR:VM:SM/PPPPPPPPPPPPPPPP/....D......D..../"
-		  "................/................/................/................/"
-		  "....d......d..../pppppppppppppppp/:sm:vmr:hf:se:bg:rg:vg:gg:rg:bg:se:hfr:vm:sm/"
-		  ":ss:vsb:dh:dk:wb:fi:fe:lh:fi:wb:dk:dhb:vs:ss/:rv.:cs:cs.:bt:ph:fk:ln:kn:bt.:cs:cs.:rv/ln:flicsg:dekgsci:flnl";
-char shoArray[] = "LNSGKGSNL/.B..:DE..R./PPPPPPPPP/........./........./........./ppppppppp/.r..:de..b./lnsgkgsnl";
-char waArray[] = ":PH:DKCG:EWK:VML:KN:SM:DH/.:FL...S...:DE./PPP:BTPPPRPPP/...P...P..."
-		 "/.........../.........../..........."
-		 "/...p...p.../ppprppp:btppp/.:de...s...:fl./:dh:sm:knl:vmk:ewgc:dk:ph";
-char chessArray[] = "RNB:FKKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnb:fkkbnr";
-char lionArray[]  = "R:LNB:FKKBNR/PPPPPPPP/......../......../......../......../pppppppp/r:lnb:fkkbnr";
-char shatArray[]= "RNBK:FKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnbk:fkbnr";
-char thaiArray[]= "RNSK:SMSNR/......../PPPPPPPP/......../......../pppppppp/......../rns:smksnr";
-char wolfArray[]= "RNB:EWKBNR/PPPPPPPP/......../......../......../......../pppppppp/rnb:ewkbnr";
+char chuArray[] = "lfcsgekgscfl/a1b1txot1b1a/mvrhdqndhrvm/pppppppppppp/3i4i3"
+		  "/12/12/"
+		  "3I4I3/PPPPPPPPPPPP/MVRHDNQDHRVM/A1B1TOXT1B1A/LFCSGKEGSCFL";
+char daiArray[] = "lnuicsgkgsciunl/a1c'1f1tet1f1c'1a/1x'1a'1wxl!ow1a'1x'1/rf'mvbhdqdhbvmf'r/"
+		  "ppppppppppppppp/4p'5p'4/15/15/15/4P'5P'4/PPPPPPPPPPPPPPP/"
+		  "RF'MVBHDQDHBVMF'R/1X'1A'1WOL!XW1A'1X'1/A1C'1F1TET1F1C'1A/LNUICSGKGSCIUNL";
+char tenArray[] = "lnficsgekgscifnl/a1c!c!1txql!ot1c!c!1a/s'v'bhdw!d!q!h!d!w!dhbv's'/"
+		  "mvrf!e!b!r!v!q!r!b!e!f!rvm/pppppppppppppppp/4d6d4/"
+		  "16/16/16/16/"
+		  "4D6D4/PPPPPPPPPPPPPPPP/MVRF!E!B!R!Q!V!R!B!E!F!RVM/"
+		  "S'V'BHDW!D!H!Q'D!W!DHBV'S'/A1C!C!TOL!QXT1C!C!1A/LNFICSGKEGSCIFNL";
+char cashewArray[]= "lh!f'dh'j'ki'qc'hg!l/t!p'w!+oogngx+xl!k'd!/r've'fst'+nt'sfw'vl'/ppppppppppppp/3d'5d'3/13/"
+		    "13/13/3D'5D'3/PPPPPPPPPPPPP/L'VW'FST'+NT'SFE'VR'/D!K'L!+XXGNGO+OW!P'T!/LG!HC'QI'KJ'H'DF'H!L";
+char macadArray[] = "lxcsgi'kj'gscol/1f'1w!1tet1l!1f'1/rr'g'bdh!qc!dbw'l'r/ppppppppppppp/3p'5p'3/13/"
+		    "13/13/3P'5P'3/PPPPPPPPPPPPP/RL'W'BDC!QH!DBG'R'R/1F'1L!1TET1W!1F'1/LOCSGI'KJ'GSCXL";
+char shoArray[]   = "lnsgkgsnl/1r2e2b1/ppppppppp/9/9/9/PPPPPPPPP/1B2E2R1/LNSGKGSNL";
+char waArray[]    = "hmlcvkwgudo/1e3s3f1/ppprpppxppp/3p3p3/11/11/11/3P3P3/PPPXPPPRPPP/1F3S3E1/ODUGWKVCLMH";
+char chessArray[] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+char lionArray[]  = "rlbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RLBQKBNR";
+char shatArray[]  = "rnbkqbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBKQBNR";
+char thaiArray[]  = "rnsmksnr/8/pppppppp/8/8/PPPPPPPP/8/RNSKMSNR";
+char wolfArray[]  = "rnbwkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBWKBNR";
+
+// translation tables for single-(dressed-)letter IDs to multi-letter names, per variant
+//                 A.B.C.D.E.F.G.H.I.J.K.L.M.N.O.P.Q.R.S.T.U.V.W.X.Y.Z.
+char chuIDs[] =   "RVB C DKDEFLG DHGB..K L SMLNKNP FKR S BT..VM..PH....";
+char daiIDs[] =   "RVB C DKDEFLG DHI ..K L SMN KNP FKR S BTSGVMEWPH...."  // L
+                  "AB  CS    FD                  GB              VO    "  // L'
+                  "                      LN                            "; // L!
+char tenIDs[] =   "RVB C DKDEFLG DHI ..K L SMN KNP FKR S BT..VM..PH...."  // L
+                  "..  ..D   ..                    FE  SS    VS        "  // L'
+                  "  BGCSFISEHF  LH      LN        GGRG      VGWB      "; // L!
+char waIDs[] =    "....FCBDCEFFFGLH....K SOCM..OCP ..RRSW..SCVSVWTF....";
+char chessIDs[] = "A B ....E F ........K L M N ..P Q R S ......W ......"; // covers all chess-like variants
+char makaIDs[]  = "RVB C DKDEFLG DHI ..K L SMN KNP FKR S BTSG..EWPHT .."  // L (also for Macadamia)
+                  "ABBBCSBDE FDGG  DVDS  LCBMCCORGB  RCSD      WRVODY  "  // L'
+                  "    CARD      HM      LN            CO    VMLD      "; // L!
+char dadaIDs[]  = "RVB C DKEFFLG DHI ..K L SMNKKNP FKR S ..SGVBEWPH...."  // L (also for Cashew)
+                  "ABEBCSHDEaFDPRFHLGRGOKLCOMNoORPS  RCSoST  W WeVO    "  // L'
+                  "RAWB  BD    LGHM      LN        SQ    WTRUVMLD      "; // L!
 
 typedef struct {
   int boardWidth, boardFiles, boardRanks, zoneDepth, varNr; // board sizes
   char *name;  // WinBoard name
   char *array; // initial position
+  char *IDs;
 } VariantDesc;
 
-typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_TENJIKU, V_SHATRANJ, V_MAKRUK, V_LION, V_WA, V_WOLF } Variant;
+typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_TENJIKU,
+	       V_CASHEW, V_MACAD, V_SHATRANJ, V_MAKRUK, V_LION, V_WA, V_WOLF } Variant;
 
 #define SAME (-1)
 
 VariantDesc variants[] = {
-  { 24, 12, 12, 4, V_CHU,     "chu",     chuArray }, // Chu
-  { 16,  8,  8, 1, V_CHESS,  "nocastle", chessArray }, // FIDE
-  { 18,  9,  9, 3, V_SHO, "9x9+0_shogi", shoArray }, // Sho
-  { 18,  9,  9, 3, V_SHO,     "sho",     shoArray }, // Sho duplicat
-  { 30, 15, 15, 5, V_DAI,     "dai",     daiArray }, // Dai
-  { 32, 16, 16, 5, V_TENJIKU, "tenjiku", tenArray }, // Tenjiku
-  { 16,  8,  8, 1, V_SHATRANJ,"shatranj",shatArray}, // Shatranj
-  { 16,  8,  8, 3, V_MAKRUK,  "makruk",  thaiArray}, // Makruk
-  { 16,  8,  8, 1, V_LION,    "lion",    lionArray}, // Mighty Lion
-  { 22, 11, 11, 3, V_WA,      "washogi", waArray},   // Wa
-  { 16,  8,  8, 1, V_WOLF,    "werewolf",wolfArray},   // Wa
+  { 24, 12, 12, 4, V_CHU,     "chu",     chuArray,  chuIDs },   // Chu
+  { 16,  8,  8, 1, V_CHESS,  "nocastle", chessArray,chessIDs }, // FIDE
+  { 18,  9,  9, 3, V_SHO, "9x9+0_shogi", shoArray,  chuIDs },   // Sho
+  { 18,  9,  9, 3, V_SHO,     "sho",     shoArray,  chuIDs },   // Sho duplicat
+  { 30, 15, 15, 5, V_DAI,     "dai",     daiArray,  daiIDs },   // Dai
+  { 32, 16, 16, 5, V_TENJIKU, "tenjiku", tenArray,  tenIDs },   // Tenjiku
+  { 16,  8,  8, 1, V_SHATRANJ,"shatranj",shatArray, chessIDs},  // Shatranj
+  { 16,  8,  8, 3, V_MAKRUK,  "makruk",  thaiArray, chessIDs},  // Makruk
+  { 16,  8,  8, 1, V_LION,    "lion",    lionArray, chessIDs},  // Mighty Lion
+  { 22, 11, 11, 3, V_WA,      "wa-shogi", waArray,  waIDs},     // Wa
+  { 16,  8,  8, 1, V_WOLF,    "werewolf",wolfArray, chessIDs},  // Werewolf Chess
+  { 26, 13, 13,13, V_CASHEW, "cashew-shogi",    cashewArray, dadaIDs },  // Cashew
+  { 26, 13, 13,13, V_MACAD,  "macadamia-shogi", macadArray,  makaIDs },  // Macadamia
 
   { 0, 0, 0, 0, 0 }, // sentinel
   { 34, 17, 17, 0, V_DADA,    "dada",    chuArray }, // Dai Dai
@@ -668,7 +741,7 @@ int squareKey[BSIZE];
 int rawBoard[BSIZE + 11*BHMAX + 6];
 //int attacks[2*BSIZE];   // attack map
 int attackMaps[200*BSIZE], *attacks = attackMaps;
-char distance[2*BSIZE]; // distance table
+unsigned char distance[2*BSIZE];      // distance table
 char promoBoard[BSIZE]; // flags to indicate promotion zones
 unsigned char rawFire[BSIZE+2*BWMAX]; // flags to indicate squares controlled by Fire Demons
 signed char PST[7*BSIZE];
@@ -712,6 +785,10 @@ LookUp (char *name, int var)
       return ListLookUp(name, waPieces);
     case V_WOLF: // Werewolf
       return ListLookUp(name, wolfPieces);
+    case V_CASHEW: // Cashew
+      return ListLookUp(name, ddPieces);
+    case V_MACAD: // Cashew
+      return ListLookUp(name, makaPieces);
   }
   return NULL;
 }
@@ -870,12 +947,12 @@ AddPiece (int stm, PieceDesc *list)
 void
 SetUp (char *array, int var)
 {
-  int i, j, n, m, color;
-  char c, name[3], prince = 0;
+  int i, j, n, m, color, c;
+  char name[3], prince = 0;
   PieceDesc *p1, *p2;
   last[WHITE] = 1; last[BLACK] = 0;
   royal[WHITE] = royal[BLACK] = 0;
-  for(i=0; ; i++) {
+  for(i=BH-1; ; i--) {
 //printf("next rank: %s\n", array);
     for(j = BW*i; ; j++) {
       int pflag=0;
@@ -883,17 +960,23 @@ SetUp (char *array, int var)
       c = name[0] = *array++;
       if(!c) goto eos;
       if(c == '.') continue;
+      if(c > '0' && c <= '9') {
+        c -= '0'; if(*array >= '0' && *array <= '9') c = 10*c + *array++ - '0';
+        j += c - 1; continue;
+      }
       if(c == '/') break;
       name[1] = name[2] = 0;
-      if(c == ':') name[0] = *array++, name[1] = *array++;
-      if(name[0] >= 'a') {
+      if(c >= 'a') {
 	color = BLACK;
-	name[0] += 'A' - 'a';
-	if(name[1]) name[1] += 'A' - 'a';
+	c += 'A' - 'a';
       } else color = WHITE;
+      if(*array == '\'') c += 26, array++; else
+      if(*array == '!')  c += 52, array++;
+      name[0] = IDs[2*(c - 'A')];
+      name[1] = IDs[2*(c - 'A') + 1]; if(name[1] == ' ') name[1] = 0;
       if(!strcmp(name, "CP") || pflag && !strcmp(name, "DE")) prince |= color+1; // remember if we added Crown Prince
       p1 = LookUp(name, var);
-      if(!p1) printf("tellusererror Unknown piece '%s' in setup\n", name), exit(-1);
+      if(!p1) printf("tellusererror Unknown piece '%s' in setup (%d)\n", name, c), exit(-1);
       if(pflag && p1->promoted) p1 = LookUp(p1->promoted, var); // use promoted piece instead
       n = AddPiece(color, p1);
       p[n].pos = j;
@@ -902,6 +985,10 @@ SetUp (char *array, int var)
 	p2 = LookUp(p1->promoted, var);
         m = AddPiece(color, p2);
 	if(m <= n) n += 2;
+	if(p2->ranking > 5) { // contageous
+	  AddPiece(color, p2);
+	  if(m <= n) n += 2;
+	}
 	p[n].promo = m;
 	p[n].promoFlag = IsUpwardCompatible(p2->range, p1->range) * DONT_DEFER + CAN_PROMOTE;
 	if(Forward(p1->range)) p[n].promoFlag |= LAST_RANK; // Pieces that only move forward can't defer on last rank
@@ -983,6 +1070,7 @@ Init (int var)
   bHeight = variants[var].boardRanks;
   zone    = variants[var].zoneDepth;
   array   = variants[var].array;
+  IDs     = variants[var].IDs;
   }
   bsize = bWidth*bHeight;
   chuFlag = (currentVariant == V_CHU || currentVariant == V_LION);
@@ -1112,7 +1200,7 @@ Dtest ()
 
 int flag;
 
-inline int
+static inline int
 NewNonCapture (int x, int y, int promoFlags)
 {
   if(board[y] != EMPTY) return 1; // edge, capture or own piece
@@ -1133,7 +1221,7 @@ NewNonCapture (int x, int y, int promoFlags)
   return 0;
 }
 
-inline int
+static inline int
 NewCapture (int x, int y, int promoFlags)
 {
   if( (promoBoard[x] | promoBoard[y]) & promoFlags) { // piece can promote with this move
@@ -1217,7 +1305,7 @@ GenNonCapts (int promoSuppress)
     for(j=0; j<8; j++) {
       int y, v = kStep[j], r = p[i].range[j];
       if(r < 0) { // jumping piece, special treatment
-	if(r == N) { // pure Knightm do off-ray jump
+	if(r == N) { // pure Knight, do off-ray jump
 	  NewNonCapture(x, x + nStep[j], pFlag);
 	} else
 	if(r >= S) { // in any case, do a jump of 2
@@ -1228,7 +1316,10 @@ GenNonCapts (int promoSuppress)
 	      if(!occup & r < L) for(y=x+2*v; !NewNonCapture(x, y+=v, pFlag) && r == S; ); // BS and FF moves
 	      v = nStep[j];
 	      if(r != W) NewNonCapture(x, x + v, pFlag);
-	    } else if(r == T) NewNonCapture(x, x+3*v, pFlag); // Lion Dog, also triple step
+	    } else if(r >= T) { // T or K
+	      occup |= NewNonCapture(x, x+3*v, pFlag); // Lion Dog, also triple step
+	      if(!occup && r == K) for(y=x+3*v; !NewNonCapture(x, y+=v, pFlag); ); // Teaching King distant moves
+	    }
 	  } else if(r == I) NewNonCapture(x, x + v, pFlag); // also do step
 	} else
 	if(r == M) { // FIDE Pawn; check double-move
@@ -1268,13 +1359,24 @@ MapOneColor (int start, int last, int *map)
 	if(r >= S) { // in any case, do a jump of 2
 	  if(board[x + 2*v] != EMPTY && board[x + 2*v] != EDGE)
 	    map[2*(x + 2*v) + start] += one[j], mob += (board[x + 2*v] ^ start) & 1;
-	  if(r < J) { // Lion power, also single step
+	  if(r < J) { // more than plain jump
 	    if(board[x + v] != EMPTY && board[x + v] != EDGE)
-	      map[2*(x + v) + start] += one[j];
-	    if(r < I) {
-	    if(r == T) { // Lion Dog, also jump of 3
+	      map[2*(x + v) + start] += one[j]; // single step (completes D and I)
+	    if(r < I) {  // Lion power
+	    if(r >= T) { // Lion Dog, also do a jump of 3
 	      if(board[x + 3*v] != EMPTY && board[x + 3*v] != EDGE)
 		map[2*(x + 3*v) + start] += one[j];
+	      if(r == K) { // Teaching King also range move
+		int y = x, n = 0;
+		while(1) {
+		  if(board[y+=v] == EDGE) break;
+ 		  if(board[y] != EMPTY) {
+		    if(n > 2) map[2*y + start] += one[j]; // outside Lion range
+		    break;
+		  }
+		  n++;
+		}
+	      }
 	    } else
 	    if(r <= L) {  // true Lion, also Knight jump
 	      if(r < L) { // Lion plus (limited) range
@@ -1456,11 +1558,12 @@ MakeMove(Move m, UndoInfo *u)
 
   u->victim = board[u->to];
   p[u->victim].pos = ABSENT;
-  if(p[u->victim].ranking == 5 && p[u->piece].ranking != 4) { // contageous piece captured by non-royal
-    u->new = u->piece & 1 | 2;    // promote to it
-    p[u->piece].pos = ABSENT;
-    u->booty += p[u->new].value - p[u->piece].value;
+  if(p[u->victim].ranking >= 5 && p[u->piece].ranking < 4) { // contageous piece captured by non-royal
+    u->booty -= p[u->new].value;
+    u->new = u->piece & 1 | (u->victim - 2 & ~3) + 2; // promote to it (assumes they head the list in pairs)
     if(p[u->new].pos != ABSENT) u->new += 2;
+    p[u->piece].pos = ABSENT;
+    u->booty += p[u->new].value;
   }
 
   u->booty += PST[p[u->new].pst + u->to] - PST[p[u->piece].pst + u->from];
@@ -1540,9 +1643,11 @@ GenCapts (int sqr, int victimValue)
       while( board[x+=v] == EMPTY ); // scan towards source until we encounter a 'stop'
 //printf("stop @ %c%d (dir %d)\n",x%BW+'a',x/BW,i);
       if((board[x] & TYPE) == stm) {               // stop is ours
+	static int minRange[20] = {  3, 0, 0, 0, 2, 2,  2 }; // K, T, D, L, W, F, S
+	static int maxRange[20] = { 36, 0, 0, 0, 3, 3, 36 }; // K, T, D, L, W, F, S
 	int attacker = board[x], d = dist[x-sqr], r = p[attacker].range[i];
 //printf("attacker %d, range %d, dist %d\n", attacker, r, d);
-	if(r >= d || r < L && (d > 3 && r == S || d == 3 && r >= S)) { // it has a plain move in our direction that hits us
+	if(r >= d || r <= K && d <= maxRange[K-r] && d > minRange[K-r]) { // it has a plain move in our direction that hits us
 	  NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
 	  att -= one[i];
 	  if(!(att & attackMask[i])) continue; // no more; next direction
@@ -1550,7 +1655,7 @@ GenCapts (int sqr, int victimValue)
 	  while(board[x+=v] == EMPTY);// one attack accounted for, but more to come, so skip to next stop
 	}
       }
-      // we get here when we are on a piece that dous not attack us through a (limited) ranging move,
+      // we get here when we are on a piece that does not attack us through a (limited) ranging move,
       // it can be our own or an enemy with not (enough) range, or which is blocked
       do {
 //printf("scan %x-%x (%d) dir=%d d=%d r=%d att=%o jcapt=%d qval=%d\n", sqr, x, board[x], i, dist[x-sqr], p[board[x]].range[i], att, jcapt, p[board[x]].qval);
@@ -1611,6 +1716,7 @@ GenCapts (int sqr, int victimValue)
 	      }
 	      break;
 	    case T: // Lion-Dog move (awful!)
+	    case K:
 	      if(d > 3) break;
 	      NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
 	      att -= one[i];
@@ -1674,7 +1780,7 @@ GenCapts (int sqr, int victimValue)
 //printf("mask[%d] = %o\n", i, att);
 	if((att & attackMask[i]) == 0) break;
       }
-      // more attacks to come; san for next stop
+      // more attacks to come; scan for next stop
       if(jcapt < p[board[x]].qval) jcapt = p[board[x]].qval; // raise barrier for range jumpers further upstream
       while(board[x+=v] == EMPTY); // this should never run off-board, if the attack map is not corrupted
       } while(1);
@@ -1685,7 +1791,7 @@ GenCapts (int sqr, int victimValue)
     for(i=0; i<8; i++) {    // scan all knight jumps to locate source
       int x = sqr - nStep[i], attacker = board[x];
       if(attacker == EMPTY || (attacker & TYPE) != stm) continue;
-      if(p[attacker].range[i] <= L && p[attacker].range[i] >= S || p[attacker].range[i] == N) { // has Knight jump in our direction
+      if(p[attacker].range[i] == L || p[attacker].range[i] < W && p[attacker].range[i] >= S || p[attacker].range[i] == N) { // has Knight jump in our direction
 	NewCapture(x, sqr + victimValue, p[attacker].promoFlag);   // plain jump (as in N)
 	if(p[attacker].range[i] < N) { // Lion power; generate double captures over two possible intermediates
 	  int v = kStep[i]; // leftish path
@@ -1908,7 +2014,7 @@ Evaluate (int difEval)
   return difEval - (filling*promoDelta >> 8) + (stm ? score : -score);
 }
 
-inline void
+static inline void
 FireSet (UndoInfo *tb)
 { // set fireFlags acording to remaining presene of Fire Demons
   int i;
@@ -1923,8 +2029,8 @@ void TerminationCheck();
 int
 Search (int alpha, int beta, int difEval, int depth, int lmr, int oldPromo, int promoSuppress, int threshold)
 {
-  int i, j, k, phase, king, nextVictim, to, defer, autoFail=0, inCheck = 0, late=100000, ep;
-  int firstMove, oldMSP = msp, curMove, sorted, bad, dubious, bestMoveNr;
+  int i, j, k, phase, king, nextVictim, defer, autoFail=0, inCheck = 0, late=100000, ep;
+  int firstMove, oldMSP = msp, curMove, sorted, bestMoveNr;
   int resDep, iterDep, ext;
   int myPV = pvPtr;
   int score, bestScore, oldBest, curEval, iterAlpha;
@@ -1995,6 +2101,7 @@ if(PATH) printf("# probe hash index=%x hit=%d\n", index, hit),fflush(stdout);
   if(hit >= 0) {
     bestScore = hashTable[index].score[hit];
     hashMove = hashTable[index].move[hit];
+
     if((bestScore <= alpha || hashTable[index].flag[hit] & H_LOWER) &&
        (bestScore >= beta  || hashTable[index].flag[hit] & H_UPPER)   ) {
       iterDep = resDep = hashTable[index].depth[hit]; bestMoveNr = 0;
@@ -2022,7 +2129,7 @@ if(PATH)printf("new iter %d\n", iterDep);
       bestScore = curEval; resDep = QSdepth;
       if(bestScore > alpha) {
 	alpha = bestScore;
-if(PATH)printf("stand pat %d\n", bestScore);
+if(PATH)printf("stand pat %d (beta=%d)\n", bestScore, beta);
 	if(bestScore >= beta) goto cutoff;
       }
     }
@@ -2030,14 +2137,18 @@ if(PATH)printf("stand pat %d\n", bestScore);
 if(flag && depth>= 0) printf("phase=%d: first/curr/last = %d / %d / %d\n", phase, firstMove, curMove, msp);fflush(stdout);
       // MOVE SOURCE
       if(curMove >= msp) { // we ran out of moves; generate some new
-if(PATH)printf("new moves, phase=%d\n", phase);
+if(PATH)printf("new moves, phase=%d\n", phase),fflush(stdout);
 	switch(phase) {
 	  case 0: // null move
 #ifdef NULLMOVE
 	    if(depth > QSdepth && curEval >= beta && !inCheck && filling > 10) {
               int nullDep = depth - 3;
 	      stm ^= WHITE;
+path[level++] = 0;
+if(PATH) printf("%d:%d null move\n", level, depth),fflush(stdout);
 	      score = -Search(-beta, 1-beta, -difEval, nullDep<QSdepth ? QSdepth : nullDep, 0, promoSuppress & SQUARE, ABSENT, INF);
+if(PATH) printf("%d:%d null move score = %d\n", level, depth, score),fflush(stdout);
+level--;
 	      xstm = stm; stm ^= WHITE;
 	      if(score >= beta) { msp = oldMSP; retDep += 3; pvPtr = myPV; return score + (score < curEval); }
 //	      else depth += lmr, lmr = 0;
@@ -2059,7 +2170,7 @@ if(PATH)printf("new moves, phase=%d\n", phase);
 	    nextVictim = xstm; autoFail = (depth == 0);
 	    phase = 3;
 	  case 3: // generate captures
-if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp);
+if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp),fflush(stdout);
 	    while(nextVictim < last[xstm]) {          // more victims exist
 	      int group, to = p[nextVictim += 2].pos; // take next
 	      if(to == ABSENT) continue;              // ignore if absent
@@ -2070,18 +2181,18 @@ if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp
 		if(bestScore < 2*group + curEval + 30) bestScore = 2*group + curEval + 30;
 		goto cutoff;
 	      }
-if(PATH) printf("%d:%2d:%2d group=%d, to=%c%d\n",level,depth,iterDep,group,to%BW+'a',to/BW+ONE);
+if(PATH) printf("%d:%2d:%2d group=%d, to=%c%d\n",level,depth,iterDep,group,to%BW+'a',to/BW+ONE),fflush(stdout);
 	      GenCapts(to, 0);
-if(PATH) printf("%d:%2d:%2d first=%d msp=%d\n",level,depth,iterDep,firstMove,msp);
+if(PATH) printf("%d:%2d:%2d first=%d msp=%d\n",level,depth,iterDep,firstMove,msp),fflush(stdout);
 	      while(nextVictim < last[xstm] && p[nextVictim+2].value == group) { // more victims of same value exist
 		to = p[nextVictim += 2].pos;          // take next
 		if(to == ABSENT) continue;            // ignore if absent
 		if(!attacks[2*to + stm]) continue;    // skip if not attacked
-if(PATH) printf("%d:%2d:%2d p=%d, to=%c%d\n",level,depth,iterDep,nextVictim,to%BW+'a',to/BW+ONE);
+if(PATH) printf("%d:%2d:%2d p=%d, to=%c%d\n",level,depth,iterDep,nextVictim,to%BW+'a',to/BW+ONE),fflush(stdout);
 		GenCapts(to, 0);
-if(PATH) printf("%d:%2d:%2d msp=%d\n",level,depth,iterDep,msp);
+if(PATH) printf("%d:%2d:%2d msp=%d\n",level,depth,iterDep,msp),fflush(stdout);
 	      }
-if(PATH) printf("captures on %d generated, msp=%d, group=%d, threshold=%d\n", nextVictim, msp, group, threshold);
+if(PATH) printf("captures on %d generated, msp=%d, group=%d, threshold=%d\n", nextVictim, msp, group, threshold),fflush(stdout);
 	      goto extractMove; // in auto-fail phase, only search if they might auto-fail-hi
 	    }
 if(PATH) printf("# autofail=%d\n", autoFail);
@@ -2195,7 +2306,7 @@ attacks += 2*bsize;
 MapFromScratch(attacks); // for as long as incremental update does not work.
 //if(flag & depth >= 0) printf("%2d:%d mapped %d/%d %s\n", depth, iterDep, curMove, msp, MoveToText(moveStack[curMove], 0));
 //if(PATH) pmap(attacks, stm);
-      if(chuFlag && p[tb.victim].value == LVAL) {// verify legality of Lion capture in Chu Shogi
+      if(chuFlag && (p[tb.victim].value == LVAL || p[tb.epVictim[0]].value == LVAL)) {// verify legality of Lion capture in Chu Shogi
 	score = 0;
 	if(p[tb.piece].value == LVAL) {          // Ln x Ln: can make Ln 'vulnerable' (if distant and not through intemediate > GB)
 	  if(dist[tb.from-tb.to] != 1 && attacks[2*tb.to + stm] && p[tb.epVictim[0]].value <= 50)
@@ -2319,8 +2430,8 @@ pplist()
 {
   int i, j;
   for(i=0; i<182; i++) {
-	printf("%3d. %3d %3d %4d   %02x %d %d %x %3d %4d ", i, p[i].value, p[i].promo, p[i].pos, p[i].promoFlag&255, p[i].mobWeight, p[i].qval, p[i].bulk, p[i].promoGain, p[i].pst);
-	for(j=0; j<8; j++) printf("  %2d", p[i].range[j]);
+	printf("%3d. %4d %3d %4d %02x %d %2d %x %3d %4d ", i, p[i].value, p[i].promo, p[i].pos, p[i].promoFlag&255, p[i].mobWeight, p[i].qval, p[i].bulk, p[i].promoGain, p[i].pst);
+	for(j=0; j<8; j++) printf(" %3d", p[i].range[j]);
 	if(i<2 || i>11) printf("\n"); else printf("  %02x %d\n", fireFlags[i-2]&255, p[i].ranking);
   }
   printf("last: %d / %d\nroyal %d / %d\n", last[WHITE], last[BLACK], royal[WHITE], royal[BLACK]);
@@ -2451,61 +2562,21 @@ UnMake2 (MOVE move)
   sup2 = sup1; sup1 = sup0;
 }
 
-char fenNames[] = "RV....DKDEFL..DHGB......SMLNKN..FK....BT..VMEWPH..LN"; // pairs of char
-char fenPromo[] = "WLDHSMSECPB R HFDE....WHFB..LNG ..DKVMFS..FO..FK...."; // pairs of char
-
-char *
-Convert (char *fen)
-{
-  char *p = fenArray, *q, *rows[36], tmp[4000];
-  int n=0;
-  printf("# convert FEN '%s'\n", fen);
-  q = strchr(fen, ' '); if(q) *q = 0; q = fen;
-  do { rows[n++] = q; q = strchr(q, '/'); if(!q) break; *q++ = 0; } while(1);
-  *tmp = 0;
-  while(--n >= 0) { strcat(tmp, rows[n]); if(n) strcat(tmp, "/"); }
-  fen = tmp;
-  printf("# flipped FEN '%s'\n", fen);
-  while(*fen) {
-    if(*fen == ' ') { *p = 0; break; }
-    if(n=atoi(fen)) fen++; // digits read
-    if(n > 9) fen++; // double digit
-    while(n-- > 0) *p++ = '.'; // expand to empty squares
-    if(currentVariant == V_LION && (*fen == 'L' || *fen == 'l')) *fen += 'Z' - 'L'; // L in Mighty-Lion Chess changed in Z for Lion
-    if(isalpha(*fen)) {
-      char *table = fenNames;
-      n = *fen > 'Z' ? 'a' - 'A' : 0;
-      if((currentVariant == V_CHESS || currentVariant == V_SHATRANJ || currentVariant == V_LION || currentVariant == V_WOLF ||
-          currentVariant == V_MAKRUK || currentVariant == V_SHO) && *fen - n == 'N' // In Chess N is Knight, not Lion
-           || table[2* (*fen - 'A' - n)] == '.') *p++ = *fen; else {
-        *p++ = ':';
-        *p++ = table[2* (*fen - 'A' - n)] + n;
-        *p++ = table[2* (*fen - 'A' - n)+1] + n;
-      }
-    } else *p++ = *fen;
-    if(!*fen) break;
-    fen++;
-  }
-  *p = '\0';
-  printf("# converted FEN '%s'\n", fenArray);
-  return fenArray;
-}
-
 int
 Setup2 (char *fen)
 {
+  char *p;
   int stm = WHITE;
   if(fen) {
     char *q = strchr(fen, '\n');
     if(q) *q = 0;
     if(q = strchr(fen, ' ')) stm = (q[1] == 'b' ? BLACK : WHITE); // fen contains color field
-    if(strchr(fen, '.') || strchr(fen, ':')) array = fen; else array = Convert(fen);
-  }
+  } else fen = array;
   rootEval = promoDelta = filling = cnt50 = moveNr = 0;
-  SetUp(array, currentVariant);
-  strcpy(startPos, array);
+  SetUp(fen, currentVariant);
   sup0 = sup1 = sup2 = ABSENT;
   hashKeyH = hashKeyL = 87620895*currentVariant + !!fen;
+  for(p=startPos; *p++ = *fen++; ) {} // remember last start position for undo
   return stm;
 }
 
@@ -2549,7 +2620,7 @@ MoveToText (MOVE move, int multiLine)
    }
     t = g + toList[t - SPECIAL];
   }
-  if(move & PROMOTE) promoChar = currentVariant == V_MAKRUK ? "m" : repDraws ? "q" : "+";
+  if(move & PROMOTE) promoChar = currentVariant == V_MAKRUK ? "m" : currentVariant == V_WOLF ? "r" : repDraws ? "q" : "+";
   sprintf(buf+strlen(buf), "%c%d%c%d%s", f%BW+'a', f/BW+ONE, t%BW+'a', t/BW+ONE,  promoChar);
   return buf;
 }
@@ -2582,7 +2653,7 @@ MapFromScratch(attacks);
   for(i=listStart; i<msp && currentVariant == V_WOLF; i++) { // mark Werewolf captures as promotions
     int to = moveStack[i] & SQUARE, from = moveStack[i] >> SQLEN & SQUARE;
     if(to >= SPECIAL) continue;
-    if(p[board[to]].ranking == 5 && p[board[from]].ranking != 4) moveStack[i] |= PROMOTE;
+    if(p[board[to]].ranking >= 5 && p[board[from]].ranking < 4) moveStack[i] |= PROMOTE;
   }
 }
 
@@ -2609,6 +2680,7 @@ ParseMove (char *moveText)
     } else if(f + 3*kStep[i] == t) { // Lion Dog 1+2 move
       t2 = SPECIAL + 64 + i;
     } else if(*moveText == ',') { // 3rd leg follows!
+      moveText++;
       if(f + 2*kStep[i] != t) return INVALID; // 3-leg moves must be linear!
       moveText += ReadSquare(moveText, &e);
       if(e != t) return INVALID; // must again continue with same piece
@@ -2633,6 +2705,7 @@ ParseMove (char *moveText)
       if(t == f-2 && f > BW) t2 = CASTLE + 3;
   }
   ret = f<<SQLEN | t2;
+  if(currentVariant == V_WOLF && *moveText == 'w') *moveText = '\n';
   if(*moveText != '\n' && *moveText != '=') ret |= PROMOTE;
 printf("# suppress = %c%d\n", sup1%BW+'a', sup1/BW);
 //  ListMoves();
@@ -2651,7 +2724,7 @@ printf("# deferral of %d\n", deferred);
       if(!(flags & promoBoard[t] & (CANT_DEFER | LAST_RANK))) { // but change it into a deferral if that is allowed
 	moveStack[i] &= ~PROMOTE;
 	if(p[board[f]].value == 40) p[board[f]].promoFlag &= LAST_RANK; else
-	if(!(flags & promoBoard[f])) moveStack[i] |= DEFER; // came from outside zone, so essential deferral
+	if(!(flags & promoBoard[f]) && currentVariant != V_WOLF) moveStack[i] |= DEFER; // came from outside zone, so essential deferral
       }
     }
     if(i >= listEnd) {
@@ -2791,8 +2864,10 @@ printf("# setup done");fflush(stdout);
       int i, c;
       while(1) {
         // wait for input, and read it until we have collected a complete line
-        for(i = 0; (inBuf[i] = c = getchar()) != '\n'; i++) if(c == EOF || i>7997) exit(0);
-        inBuf[i+1] = 0;
+        do {
+          for(i = 0; (inBuf[i] = c = getchar()) != '\n'; i++) if(c == EOF || i>7997) exit(0);
+          inBuf[i+1] = 0;
+        } while(!i); // ignore empty lines
 
         // extract the first word
         sscanf(inBuf, "%s", command);
@@ -2834,7 +2909,7 @@ printf("# ponder hit\n");
     {
       int engineSide=NONE;                // side played by engine
       MOVE move;
-      int i, score, curVarNr;
+      int i, score, curVarNr = 0;
 
       setvbuf(stdin, NULL, _IOLBF, 1024); // buffering more than one line flaws test for pending input!
 
@@ -2885,12 +2960,14 @@ pboard(board);
             PrintResult(stm, score);
           } else {
             MOVE f, pMove = move;
+            static char *pName[] = { "w", "z", "j" };
             if((move & SQUARE) >= SPECIAL && p[board[f = move>>SQLEN & SQUARE]].value == pVal) { // e.p. capture
               pMove = move & ~SQUARE | f + toList[(move & SQUARE) - SPECIAL]; // print as a single move
             }
             stm = MakeMove2(stm, move);  // assumes MakeMove returns new side to move
             gameMove[moveNr++] = move;   // remember game
-            printf("move %s%s\n", MoveToText(pMove, 1), p[undoInfo.victim].ranking == 5 && p[undoInfo.piece].ranking != 4 ? "w" : "");
+            i = p[undoInfo.victim].ranking;
+            printf("move %s%s\n", MoveToText(pMove, 1), i == 5 && p[undoInfo.piece].ranking < 4 ? pName[i-5] : "");
             listEnd = 0;
             continue;                    // go check if we should ponder
           }
@@ -2914,8 +2991,8 @@ pboard(board);
         if(!strcmp(command, "exit"))    { engineSide = NONE;    continue; }
         if(!strcmp(command, "level"))   {
           int min, sec=0;
-          sscanf(inBuf, "level %d %d %d", &mps, &min, &inc) == 3 ||  // if this does not work, it must be min:sec format
-          sscanf(inBuf, "level %d %d:%d %d", &mps, &min, &sec, &inc);
+          if(sscanf(inBuf, "level %d %d %d", &mps, &min, &inc) != 3)  // if this does not work, it must be min:sec format
+             sscanf(inBuf, "level %d %d:%d %d", &mps, &min, &sec, &inc);
           timeControl = 60*min + sec; timePerMove = -1;
           continue;
         }
@@ -2924,12 +3001,12 @@ pboard(board);
           printf("%s%s", (i ? "," : "feature variants=\""), variants[i].name); printf("\"\n");
           printf("feature ping=1 setboard=1 colors=0 usermove=1 memory=1 debug=1 sigint=0 sigterm=0\n");
           printf("feature myname=\"HaChu " VERSION "\" highlight=1\n");
-          printf("feature option=\"Full analysis PV -check 1\"\n"); // example of an engine-defined option
-          printf("feature option=\"Allow repeats -check 0\"\n");
-          printf("feature option=\"Promote on entry -check 0\"\n");
-          printf("feature option=\"Okazaki rule -check 0\"\n");
-          printf("feature option=\"Resign -check 0\"\n");           // 
-          printf("feature option=\"Contempt -spin 0 -200 200\"\n"); // and another one
+          printf("feature option=\"Full analysis PV -check %d\"\n", noCut); // example of an engine-defined option
+          printf("feature option=\"Allow repeats -check %d\"\n", allowRep);
+          printf("feature option=\"Promote on entry -check %d\"\n", entryProm);
+          printf("feature option=\"Okazaki rule -check %d\"\n", okazaki);
+          printf("feature option=\"Resign -check %d\"\n", resign);           // 
+          printf("feature option=\"Contempt -spin %d -200 200\"\n", contemptFactor); // and another one
           printf("feature option=\"Tsume -combo no /// Sente mates /// Gote mates\"\n");
           printf("feature done=1\n");
           continue;
@@ -3006,12 +3083,35 @@ pboard(board);
             }
 	  }
           if(currentVariant == V_WOLF)
-            printf("setup (PNBR...........WKpnbr...........wk) 8x8+0_fairy rnbwkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBWKBNR w 0 1\n");
+            printf("setup (PNBR......................WKpnbr......................wk) 8x8+0_fairy rnbwkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBWKBNR w 0 1\n"
+                   "piece W& K3cpafK\n");
           if(currentVariant == V_SHO)
             printf("setup (PNBRLSE..G.+++++++Kpnbrlse..g.+++++++k) 9x9+0_shogi lnsgkgsnl/1r2e2b1/ppppppppp/9/9/9/PPPPPPPPP/1B2E2R1/LNSGKGSNL w 0 1\n");
           if(currentVariant == V_WA)
-            printf("setup (P.C.EVLO.WGHDF.TRSXOM.+.+..+++.+++++..+++++Kp.c.evlo.wghdf.trsxom.+.+..+++.+++++..+++++k) 11x11+0_chu "
-							"hmolvkwgcdx/1e3s3f1/ppprppptppp/3p3p3/11/11/11/3P3P3/PPPTPPPRPPP/1F3S3E1/XDCGWKVLOMH w 0 1\n");
+            printf("setup (P..^S^FV..^LW^OH.F.^R.E....R...D.GOL^M..^H.M.C.^CU.^W/.......^V.^P.^U..^DS.^GXK"
+                          "p..^s^fv..^lw^oh.f.^r.e....r...d.gol^m..^h.m.c.^cu.^w/.......^v.^p.^u..^ds.^gxk) 11x11+0_chu "
+							"hmlcvkwgudo/1e3s3f1/ppprpppxppp/3p3p3/11/11/11/3P3P3/PPPXPPPRPPP/1F3S3E1/ODUGWKVCLMH w 0 1\n"
+                   "piece P& fW\npiece O& fR\npiece H& fRbW2\npiece U& fWbF\npiece L& fWbF\npiece M& vWfF\npiece G& vWfF\npiece C& sWfF\n"
+                   "piece +P& WfF\npiece +O& K\npiece +H& vN\npiece +U& BfW\npiece +L& vRfF3bFsW\npiece +M& FfW\npiece +G& sRvW\npiece +C& vRsWfF\n"
+                   "piece D& sbWfF\npiece V& FfW\npiece W& WfF\npiece S& sRvW\npiece R& FfRbW\npiece F& BfW\npiece X& FvWAvD\n"
+                   "piece +D& WfF\npiece +V& FfsW\npiece +W& K\npiece +S& R\npiece +R& FvWAvD\npiece +F& BvRsW\npiece E& vRfF3bFsW\n");
+          if(currentVariant == V_MACAD)
+            printf("setup (P.*B*RQSEXOG....D^J'..*LP'.L!J'=J...*W!...*F'...^C.C.^L!.^P'^K.T*L'.*C!*H!^I'=Z.^E...*R'^P^T*W'*G'^G^SI'^X^OK"
+                          "p.*b*rqsexog....d^j'..*lp'.l!j'=j...*w!...*f'...^c.c.^l!.^p'^k.t*l'.*c!*h!^i'=z.^e...*r'^p^t*w'*g'^g^si'^x^ok) 13x13+0_chu %s w 0 1\n"
+		   "piece P& fW\npiece S& FfW\npiece E& FfsW\npiece X& WA\npiece O& FD\npiece G& WfF\npiece D& RF\npiece +J'& QNADcaKmabK\n"
+		   "piece L& fR\npiece P'& vW\npiece L!& KNADcaKmabK\npiece J'& blfFrW\npiece H!& RmasR\npiece W!& KADcavKmcpafmcpavK\n"
+		   "piece C!& BmasB\npiece F'& F2\npiece +C& vRfB\npiece C& vWfF\npiece +L!& K3NADcaKmabK\npiece +P'& vR\npiece T& FbsW\n"
+		   "piece L'& lfrbBfRbW\npiece +I'& QADcavKmcpafmcpavK\npiece +E& K\npiece R'& rflbBfRbW\npiece +P& WfF\npiece +T& BbsR\n"
+		   "piece W'& F3sW\npiece G'& W3fF\npiece +G& RfB\npiece +S& BfR\npiece I'& rbfFlW\npiece +X& F3vRsW\npiece +O& F3sRvW\n", macadArray);
+          if(currentVariant == V_CASHEW)
+            printf("setup (P.^K'^P'QS^W!XOGND'.HDT!...P'.L!E'.^W'K'W!..LF'V^E'J'H'...^L!^N..FT'L'C'G!H!D!I'.^H'..R'..^C'^F'..W'^X^OK"
+                          "p.^k'^p'qs^w!xognd'.hdt!...p'.l!e'.^w'k'w!..lf'v^e'j'h'...^l!^n..ft'l'c'g!h!d!i'.^h'..r'..^c'^f'..w'^x^ok) 13x13+0_chu %s w 0 1\n"
+                   "piece P& fW\npiece S& FfW\npiece W'& fFvWsW2\npiece E'& fFsWvW2\npiece X& WA\npiece O& FD\npiece G& WfF\npiece H& BW\n"
+                   "piece +C'& BW\npiece D& RF\npiece +F'& RF\npiece L& fR\npiece D'& fRbW\npiece L!& KNADcaKmabK\npiece +E'& KNADcaKmabK\n"
+                   "piece J'& FvlW\npiece H!& RmasR\npiece +W'& KADcavKmcpafmcpavK\npiece G!& WBmasB\npiece F'& F2\npiece +L!& K3NADcaKmabK\n"
+                   "piece T!& vRsW2flBfrF\npiece T'& fFvW2\npiece L'& lfrbBfRbW\npiece N& K\npiece R'& rflbBfRbW\npiece I'& FvrW\n"
+                   "piece +X& F3vRsW2\npiece +O& F3sRvW2\npiece H'& WfF2\npiece +H'& Q\npiece C'& F\npiece D!& sRvW2frBflF\npiece P'& sWfDbA\n"
+                   "piece K'& W2fF\npiece +K'& WBmasB\npiece +P'& RmasR\npiece +N& fRfBbF2bsW2\npiece F& FvW\npiece V& fF2sW\n", cashewArray);
 	  repStack[199] = hashKeyH, checkStack[199] = 0;
           continue;
         }

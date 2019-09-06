@@ -1,7 +1,7 @@
 srcdir = .
 
 CC?=gcc
-CFLAGS?= -O2 -s
+CFLAGS?= -O2 -s -Wall -Wno-parentheses
 
 prefix=/usr/local
 DATADIR=`xboard --show-config Datadir`
@@ -11,7 +11,7 @@ ALL= hachu hachu.6.gz
 all: ${ALL}
 
 hachu: hachu.c
-	$(CC) $(CFLAGS) $(LDFLAGS) hachu.c -o hachu
+	$(CC) $(CPPFLAGS) $(CFLAGS) hachu.c $(LDFLAGS) -o hachu
 
 install: ${ALL} ${srcdir}/svg/*
 	install -d -m0755 $(DESTDIR)$(prefix)/games
