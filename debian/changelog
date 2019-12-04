@@ -2,6 +2,7 @@ hachu (0.21-29-gdf26f4a-3) UNRELEASED; urgency=medium
 
   * Trim trailing whitespace.
   * Use secure copyright file specification URI.
+  * Update standards version to 4.4.1, no changes needed.
 
  -- Debian Janitor <janitor@jelmer.uk>  Wed, 04 Dec 2019 05:56:19 +0000
 
