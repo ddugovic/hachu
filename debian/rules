@@ -2,7 +2,7 @@
 # -*- makefile -*-
 
 %:
-	dh $@ 
+	dh $@
 
 override_dh_auto_make:
 	dh_auto_make -- prefix=/usr
