@@ -1,12 +1,17 @@
-hachu (0.21-29-gdf26f4a-3) UNRELEASED; urgency=medium
+hachu (0.21-29-gdf26f4a-3) unstable; urgency=medium
 
+  [ Debian Janitor ]
   * Trim trailing whitespace.
   * Use secure copyright file specification URI.
   * Update standards version to 4.4.1, no changes needed.
   * Bump debhelper from old 9 to 12.
   * Set debhelper-compat version in Build-Depends.
 
- -- Debian Janitor <janitor@jelmer.uk>  Wed, 04 Dec 2019 05:56:19 +0000
+  [ Yann Dirson ]
+  * Update standards version to 4.5.0, no changes needed.
+  * Release to unstable.
+
+ -- Yann Dirson <dirson@debian.org>  Fri, 03 Apr 2020 10:50:40 +0200
 
 hachu (0.21-29-gdf26f4a-2) unstable; urgency=medium
 
