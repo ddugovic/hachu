@@ -41,7 +41,7 @@ dist:
 	install -d -m0755 HaChu/svg
 	rm -f hachu.tar hachu.tar.gz
 	cp hachu.c hachu.pod Makefile hachu.eng logo.png HaChu
-	cp chu/* HaChu/svg
+	cp svg/* HaChu/svg
 	(md5sum HaChu/* HaChu/svg/* > HaChu/md5sums) || true
 	tar -cvvf hachu.tar HaChu
 	gzip hachu.tar
