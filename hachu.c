@@ -2642,31 +2642,33 @@ SetMemorySize (int n)
 #endif
 }
 
+#define FILECH(s) ((s-POS(0,0))%BW+'a')
+#define RANK(s) ((s-POS(0,0))/BW+1)
 char *
 MoveToText (MOVE move, int multiLine)
 {
   static char buf[50];
-  int f = move>>SQLEN & SQUARE, g = f, t = move & SQUARE;
+  int from = move>>SQLEN & SQUARE, to = move & SQUARE;
   char *promoChar = "";
-  if(f == t) { sprintf(buf, "@@@@"); return buf; } // null-move notation in WB protocol
+  if(from == to) { sprintf(buf, "@@@@"); return buf; } // null-move notation in WB protocol
   buf[0] = '\0';
-  if(t >= SPECIAL) {
-   if(t < CASTLE) { // castling is printed as a single move, implying its side effects
-    int e = f + epList[t - SPECIAL];
-    if(ep2List[t - SPECIAL]) {
-      int e2 = f + ep2List[t - SPECIAL];
+  if(to >= SPECIAL) {
+   if(to < CASTLE) { // castling is printed as a single move, implying its side effects
+    int e = from + epList[to - SPECIAL];
+    if(ep2List[to - SPECIAL]) {
+      int e2 = from + ep2List[to - SPECIAL];
 //      printf("take %c%d\n", e%BW+'a', e/BW+ONE);
-      sprintf(buf+strlen(buf), "%c%d%c%d,", f%BW+'a', f/BW+ONE, e2%BW+'a', e2/BW+ONE); f = e2;
+      sprintf(buf+strlen(buf), "%c%d%c%d,", FILECH(from), RANK(from), FILECH(e2), RANK(e2)); from = e2;
       if(multiLine) printf("move %s\n", buf), buf[0] = '\0';
     }
 //    printf("take %c%d\n", e%BW+'a', e/BW+ONE);
-    sprintf(buf, "%c%d%c%d,", f%BW+'a', f/BW+ONE, e%BW+'a', e/BW+ONE); f = e;
+    sprintf(buf, "%c%d%c%d,", FILECH(from), RANK(from), FILECH(e), RANK(e)); from = e;
     if(multiLine) printf("move %s\n", buf), buf[0] = '\0';
    }
-    t = g + toList[t - SPECIAL];
+   to = (move>>SQLEN & SQUARE) + toList[to - SPECIAL];
   }
   if(move & PROMOTE) promoChar = currentVariant == V_MAKRUK ? "m" : currentVariant == V_WOLF ? "r" : repDraws ? "q" : "+";
-  sprintf(buf+strlen(buf), "%c%d%c%d%s", f%BW+'a', f/BW+ONE, t%BW+'a', t/BW+ONE,  promoChar);
+  sprintf(buf+strlen(buf), "%c%d%c%d%s", FILECH(from), RANK(from), FILECH(to), RANK(to), promoChar);
   return buf;
 }
 
