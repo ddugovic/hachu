@@ -1122,9 +1122,9 @@ Init (int var)
   }
 
   // piece-square tables
-  for(j=0; j<BW; j++) {
-   for(i=0; i<BH; i++) {
-    int s = STEP(i, j), d = BH*(BH-2) - abs(2*i - BH + 1)*(BH-1) - (2*j - BH + 1)*(2*j - BH + 1);
+  for(i=0; i<bRanks; i++) {
+   for(j=0; j<bFiles; j++) {
+    int s = POS(i, j), d = BH*(BH-2) - abs(2*i - BH + 1)*(BH-1) - (2*j - BH + 1)*(2*j - BH + 1);
     PST[s] = 2*(i==0 | i==BH-1) + (i==1 | i==BH-2);         // last-rank markers in null table
     PST[PST_STEPPER+s] = d/4 - (i < 2 || i > BH-3 ? 3 : 0) - (j == 0 || j == BH-1 ? 5 : 0)
                     + 3*(i==zone || i==BH-zone-1);          // stepper centralization
