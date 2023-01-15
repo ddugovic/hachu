@@ -78,8 +78,6 @@
 #define FILECH(s) ((s-A1)%BW+'a')
 #define RANK(s) ((s-A1)/BW+1)
 
-#define ONE 1 /* currently no variants with 10-deep board */
-
 #define BLACK      0
 #define WHITE      1
 #define EMPTY      0
@@ -1937,17 +1935,16 @@ Evaluate (int difEval)
     max = 16*filling;
   }
 
-# ifdef FORTRESS
+#ifdef FORTRESS
   f = 0;
   if(bLion != ABSENT) f += Fortress( BW, wKing, bLion);
   if(wLion != ABSENT) f -= Fortress(-BW, bKing, wLion);
   score += (filling < 192 ? f : f*(224 - filling) >> 5); // build up slowly
-# endif
+#endif
 
-# ifdef KSHIELD
-  if (wKing != bKing) score += Surround(WHITE, wKing, 1, max) - Surround(BLACK, bKing, 1, max) >> 3;
-# endif
-
+#ifdef KSHIELD
+  if(wKing && bKing) score += Surround(WHITE, wKing, 1, max) - Surround(BLACK, bKing, 1, max) >> 3;
+#endif
 #endif
 
 #if KYLIN
@@ -2621,11 +2618,11 @@ MoveToText (MOVE move, int multiLine)
     int e = from + epList[to - SPECIAL];
     if(ep2List[to - SPECIAL]) {
       int e2 = from + ep2List[to - SPECIAL];
-//      printf("take %c%d\n", e%BW+'a', e/BW+ONE);
+//      printf("take %c%d\n", FILECH(e), RANK(e));
       sprintf(buf+strlen(buf), "%c%d%c%d,", FILECH(from), RANK(from), FILECH(e2), RANK(e2)); from = e2;
       if(multiLine) printf("move %s\n", buf), buf[0] = '\0';
     }
-//    printf("take %c%d\n", e%BW+'a', e/BW+ONE);
+//    printf("take %c%d\n", FILECH(e), RANK(e));
     sprintf(buf, "%c%d%c%d,", FILECH(from), RANK(from), FILECH(e), RANK(e)); from = e;
     if(multiLine) printf("move %s\n", buf), buf[0] = '\0';
    }
@@ -2641,9 +2638,9 @@ ReadSquare (char *p, int *sqr)
 {
   int f, r;
   f = p[0] - 'a';
-  r = atoi(p + 1) - ONE;
+  r = atoi(p+1) - 1;
   *sqr = POS(r, f);
-  return 2 + (r + ONE > 9);
+  return 2 + (r + 1 > 9);
 }
 
 int listStart, listEnd;
