@@ -74,9 +74,12 @@
 #define ZONE  zone
 #define STEP(X,Y) (BW*(X)+ (Y))
 #define POS(X,Y) STEP((BHMAX-bRanks)/2 + X, (BW-bFiles)/2 + Y)
-#define A1 POS(0, 0)
-#define FILECH(s) ((s-A1)%BW+'a')
-#define RANK(s) ((s-A1)/BW+1)
+#define LL POS(0, 0)
+#define LR POS(0, bFiles-1)
+#define UL POS(bRanks-1, 0)
+#define UR POS(bRanks-1, bFiles-1)
+#define FILECH(s) ((s-LL)%BW+'a')
+#define RANK(s) ((s-LL)/BW+1)
 
 #define BLACK      0
 #define WHITE      1
@@ -168,7 +171,6 @@ int bFiles, bRanks, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws,
 int tsume, pvCuts, allowRep, entryProm=1, okazaki, pVal;
 int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
 int retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
-int ll, lr, ul, ur; // corner squares
 int nodes, startTime, lastRootMove, lastRootIter, tlim1, tlim2, tlim3, repCnt, comp, abortFlag;
 Move ponderMove;
 Move retMove, moveStack[20000], path[100], repStack[300], pv[1000], repeatMove[300], killer[100][2];
@@ -1078,7 +1080,6 @@ Init (int var)
   chessFlag = (currentVariant == V_CHESS || currentVariant == V_LION || currentVariant == V_WOLF);
   stalemate = (currentVariant == V_CHESS || currentVariant == V_MAKRUK || currentVariant == V_LION || currentVariant == V_WOLF);
   repDraws  = (stalemate || currentVariant == V_SHATRANJ);
-  ll = 0; lr = bRanks - 1; ul = (bRanks - 1)*bFiles; ur = ul + bRanks - 1;
   pawn = LookUp("P", currentVariant); pVal = pawn ? pawn->value : 0; // get Pawn value
 
   for(i=-1; i<9; i++) { // board steps in linear coordinates
@@ -1909,16 +1910,16 @@ Evaluate (int difEval)
 # ifdef WINGS
   // bonus if corner lances are protected by Lion-proof setup (FL + C/S)
   if(bLion != ABSENT) {
-    if((p[board[BW+lr]].value == 320 || p[board[BW+lr]].value == 220) && 
-        p[board[ll+1]].value == 150 && p[board[ll + STEP(1, 2)]].value == 100) score += 20 + 20*!p[board[ll]].range[2];
-    if((p[board[BW+lr]].value == 320 || p[board[BW+lr]].value == 220) &&
-        p[board[lr-1]].value == 150 && p[board[lr + STEP(1, -2)]].value == 100) score += 20 + 20*!p[board[lr]].range[2];
+    if((p[board[BW+LR]].value == 320 || p[board[BW+LR]].value == 220) &&
+        p[board[LL+1]].value == 150 && p[board[LL + STEP(1, 2)]].value == 100) score += 20 + 20*!p[board[LL]].range[2];
+    if((p[board[BW+LR]].value == 320 || p[board[BW+LR]].value == 220) &&
+        p[board[LR-1]].value == 150 && p[board[LR + STEP(1, -2)]].value == 100) score += 20 + 20*!p[board[LR]].range[2];
   }
   if(wLion != ABSENT) {
-    if((p[board[ul-BW]].value == 320 || p[board[ul-BW]].value == 220) &&
-        p[board[ul+1]].value == 150 && p[board[ul-BW+2]].value == 100) score -= 20 + 20*!p[board[ul]].range[2];
-    if((p[board[ur-BW]].value == 320 || p[board[ur-BW]].value == 220) &&
-        p[board[ur-1]].value == 150 && p[board[ur-BW-2]].value == 100) score -= 20 + 20*!p[board[ur]].range[2];
+    if((p[board[UL-BW]].value == 320 || p[board[UL-BW]].value == 220) &&
+        p[board[UL+1]].value == 150 && p[board[UL-BW+2]].value == 100) score -= 20 + 20*!p[board[UL]].range[2];
+    if((p[board[UR-BW]].value == 320 || p[board[UR-BW]].value == 220) &&
+        p[board[UR-1]].value == 150 && p[board[UR-BW-2]].value == 100) score -= 20 + 20*!p[board[UR]].range[2];
   }
 # endif
 #endif
