@@ -580,19 +580,19 @@ typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_T
 #define SAME (-1)
 
 VariantDesc variants[] = {
-  { 12, 12, 4, V_CHU,     "chu",     chuArray,  chuIDs },   // Chu
-  {  8,  8, 1, V_CHESS,  "nocastle", chessArray,chessIDs }, // FIDE
-  {  9,  9, 3, V_SHO, "9x9+0_shogi", shoArray,  chuIDs },   // Sho
-  {  9,  9, 3, V_SHO,     "sho",     shoArray,  chuIDs },   // Sho duplicat
-  { 15, 15, 5, V_DAI,     "dai",     daiArray,  daiIDs },   // Dai
-  { 16, 16, 5, V_TENJIKU, "tenjiku", tenArray,  tenIDs },   // Tenjiku
-  {  8,  8, 1, V_SHATRANJ,"shatranj",shatArray, chessIDs},  // Shatranj
-  {  8,  8, 3, V_MAKRUK,  "makruk",  thaiArray, chessIDs},  // Makruk
-  {  8,  8, 1, V_LION,    "lion",    lionArray, chessIDs},  // Mighty Lion
-  { 11, 11, 3, V_WA,      "wa-shogi", waArray,  waIDs},     // Wa
-  {  8,  8, 1, V_WOLF,    "werewolf",wolfArray, chessIDs},  // Werewolf Chess
-  { 13, 13,13, V_CASHEW, "cashew-shogi",    cashewArray, dadaIDs },  // Cashew
-  { 13, 13,13, V_MACAD,  "macadamia-shogi", macadArray,  makaIDs },  // Macadamia
+  { 12, 12, 4, V_CHU,     "chu",     chuArray,  chuIDs },    // Chu
+  {  8,  8, 1, V_CHESS,   "nocastle", chessArray,chessIDs }, // FIDE
+  {  9,  9, 3, V_SHO,     "9x9+0_shogi", shoArray,  chuIDs },// Sho
+  {  9,  9, 3, V_SHO,     "sho",     shoArray,  chuIDs },    // Sho duplicat
+  { 15, 15, 5, V_DAI,     "dai",     daiArray,  daiIDs },    // Dai
+  { 16, 16, 5, V_TENJIKU, "tenjiku", tenArray,  tenIDs },    // Tenjiku
+  {  8,  8, 1, V_SHATRANJ,"shatranj",shatArray, chessIDs},   // Shatranj
+  {  8,  8, 3, V_MAKRUK,  "makruk",  thaiArray, chessIDs},   // Makruk
+  {  8,  8, 1, V_LION,    "lion",    lionArray, chessIDs},   // Mighty Lion
+  { 11, 11, 3, V_WA,      "wa-shogi", waArray,  waIDs},      // Wa
+  {  8,  8, 1, V_WOLF,    "werewolf",wolfArray, chessIDs},   // Werewolf Chess
+  { 13, 13,13, V_CASHEW,  "cashew-shogi",    cashewArray, dadaIDs },  // Cashew
+  { 13, 13,13, V_MACAD,   "macadamia-shogi", macadArray,  makaIDs },  // Macadamia
 
   { 0, 0, 0, 0 }, // sentinel
   { 17, 17, 0, V_DADA,    "dada",    chuArray }, // Dai Dai
@@ -1063,7 +1063,7 @@ int myRandom()
 void
 Init (int var)
 {
-  int bsize, i, j, k;
+  int i, j, k;
   PieceDesc *pawn;
 
   if(var != SAME) { // the following should be already set if we stay in same variant (for TakeBack)
@@ -1074,7 +1074,6 @@ Init (int var)
   array  = variants[var].array;
   IDs    = variants[var].IDs;
   }
-  bsize = bRanks*bFiles;
   chuFlag = (currentVariant == V_CHU || currentVariant == V_LION);
   tenFlag = (currentVariant == V_TENJIKU);
   chessFlag = (currentVariant == V_CHESS || currentVariant == V_LION || currentVariant == V_WOLF);
@@ -1102,11 +1101,11 @@ Init (int var)
     toList[80+i] = 3*kStep[i]; epList[80+i] = 2*kStep[i]; ep2List[80+i] = kStep[i];
     toList[88+i] =   kStep[i]; epList[88+i] = 2*kStep[i];
   }
-
-  toList[100]   = BH - 2; epList[100]   = BH - 1; ep2List[100]   = BH - 3;
-  toList[100+1] =      2; epList[100+1] =      0; ep2List[100+1] =      3;
-  toList[100+2] = bsize - bRanks - 2; epList[100+2] = bsize - bRanks - 1; ep2List[100+2] = bsize - bRanks - 3;
-  toList[100+3] = bsize - bFiles + 2; epList[100+3] = bsize - bFiles;     ep2List[100+3] = bsize - bFiles + 3;
+  // castling (king square, rook squares)
+  toList[100]   = LR - 1; epList[100]   = LR; ep2List[100]   = LR - 2;
+  toList[100+1] = LL + 2; epList[100+1] = LL; ep2List[100+1] = LL + 3;
+  toList[100+2] = UR - 1; epList[100+2] = UR; ep2List[100+2] = UR - 2;
+  toList[100+3] = UL + 2; epList[100+1] = UL; ep2List[100+1] = UL + 3;
 
   // hash key tables
   for(i=0; i<BSIZE; i++) squareKey[i] = ~(myRandom()*myRandom());
@@ -1114,45 +1113,45 @@ Init (int var)
   // promotion zones
   for(i=0; i<bRanks; i++) for(j=0; j<bFiles; j++) {
     char v = 0;
-    if(i == 0)       v |= LAST_RANK & P_BLACK;
-    if(i < 2)        v |= CANT_DEFER & P_BLACK;
-    if(i < ZONE)     v |= (CAN_PROMOTE | DONT_DEFER) & P_BLACK; else v &= ~P_BLACK;
-    if(i >= BH-ZONE) v |= (CAN_PROMOTE | DONT_DEFER) & P_WHITE; else v &= ~P_WHITE;
-    if(i >= BH-2)    v |= CANT_DEFER & P_WHITE;
-    if(i == BH-1)    v |= LAST_RANK & P_WHITE;
+    if(i == 0)           v |= LAST_RANK & P_BLACK;
+    if(i < 2)            v |= CANT_DEFER & P_BLACK;
+    if(i < ZONE)         v |= (CAN_PROMOTE | DONT_DEFER) & P_BLACK; else v &= ~P_BLACK;
+    if(i >= bRanks-ZONE) v |= (CAN_PROMOTE | DONT_DEFER) & P_WHITE; else v &= ~P_WHITE;
+    if(i >= bRanks-2)    v |= CANT_DEFER & P_WHITE;
+    if(i == bRanks-1)    v |= LAST_RANK & P_WHITE;
     promoBoard[POS(i, j)] = v;
   }
 
   // piece-square tables
   for(i=0; i<bRanks; i++) {
    for(j=0; j<bFiles; j++) {
-    int s = POS(i, j), d = BH*(BH-2) - abs(2*i - BH + 1)*(BH-1) - (2*j - BH + 1)*(2*j - BH + 1);
-    PST[s] = 2*(i==0 | i==BH-1) + (i==1 | i==BH-2);         // last-rank markers in null table
-    PST[PST_STEPPER+s] = d/4 - (i < 2 || i > BH-3 ? 3 : 0) - (j == 0 || j == BH-1 ? 5 : 0)
-                    + 3*(i==zone || i==BH-zone-1);          // stepper centralization
+    int s = POS(i, j), d = bRanks*(bRanks-2) - abs(2*i - bRanks + 1)*(bRanks-1) - (2*j - bRanks + 1)*(2*j - bRanks + 1);
+    PST[s] = 2*(i==0 | i==bRanks-1) + (i==1 | i==bRanks-2); // last-rank markers in null table
+    PST[PST_STEPPER+s] = d/4 - (i < 2 || i > bRanks-3 ? 3 : 0) - (j == 0 || j == bFiles-1 ? 5 : 0)
+                    + 3*(i==zone || i==bRanks-zone-1);      // stepper centralization
     PST[PST_WJUMPER+s] = d/6;                               // double-stepper centralization
-    PST[PST_SLIDER +s] = d/12 - 15*(i==BH/2 || i==(BH-1)/2);// slider centralization
-    PST[PST_TRAP  +s] = j < 3 || j > BH-4 ? (i < 3 ? 7 : i == 3 ? 4 : i == 4 ? 2 : 0) : 0;
-    PST[PST_CENTER+s] = ((BH-1)*(BH-1) - (2*i - BH + 1)*(2*i - BH + 1) - (2*j - BH + 1)*(2*j - BH + 1))/6;
+    PST[PST_SLIDER +s] = d/12 - 15*(i==bRanks/2 || i==(bRanks-1)/2);// slider centralization
+    PST[PST_TRAP  +s] = j < 3 || j > bRanks-4 ? (i < 3 ? 7 : i == 3 ? 4 : i == 4 ? 2 : 0) : 0;
+    PST[PST_CENTER+s] = ((bRanks-1)*(bRanks-1) - (2*i - bRanks + 1)*(2*i - bRanks + 1) - (2*j - bRanks + 1)*(2*j - bRanks + 1))/6;
     PST[PST_WPPROM+s] = PST[PST_BPPROM+s] = PST[PST_STEPPER+s]; // as stepper, but with pre-promotion bonus W/B
     PST[PST_BJUMPER+s] = PST[PST_WJUMPER+s];                // as jumper, but with pre-promotion bonus B
     PST[PST_ZONDIST+s] = BW*(zone - 1 - i);                 // board step to enter promo zone black
     PST[PST_ADVANCE+s] = PST[PST_WFLYER-s-1] = 2*(5*i+i*i) - (i >= zone)*6*(i-zone+1)*(i-zone+1)
-	- (2*j - BH + 1)*(2*j - BH + 1)/BH + BH/2
-	- 50 - 35*(j==0 || j == BH-1) - 15*(j == 1 || BH-2); // advance-encouraging table
+	- (2*j - bRanks + 1)*(2*j - bRanks + 1)/bRanks + bRanks/2
+	- 50 - 35*(j==0 || j == bRanks-1) - 15*(j == 1 || bRanks-2); // advance-encouraging table
     PST[PST_WFLYER +s] = PST[PST_LANCE-s-1] = (i == zone-1)*40 + (i == zone-2)*20 - 20;
     PST[PST_LANCE  +s] = (PST[PST_STEPPER+j] - PST[PST_STEPPER+s])/2; 
    }
    if(zone > 0)
-	PST[PST_WPPROM+STEP(BH-1-zone, j)] += 10, PST[PST_BPPROM + STEP(zone, j)] += 10;
-   if(j > (BH-1)/2 - 3 && j < BH/2 + 3)
-	PST[PST_WPPROM + j] += 4, PST[PST_BPPROM + BW*(BH-1) + j] += 4; // fortress
-   if(j > (BH-1)/2 - 2 && j < BH/2 + 2)
-	PST[PST_WPPROM + BW + j] += 2, PST[PST_BPPROM + BW*(BH-2) + j] += 2; // fortress
+	PST[PST_WPPROM+STEP(bRanks-1-zone, j)] += 10, PST[PST_BPPROM + STEP(zone, j)] += 10;
+   if(j > (bRanks-1)/2 - 3 && j < bRanks/2 + 3)
+	PST[PST_WPPROM + j] += 4, PST[PST_BPPROM + POS(bRanks-1, j)] += 4; // fortress
+   if(j > (bRanks-1)/2 - 2 && j < bRanks/2 + 2)
+	PST[PST_WPPROM + POS(1, j)] += 2, PST[PST_BPPROM + POS(bRanks-2, j)] += 2; // fortress
 #if KYLIN
    // pre-promotion bonuses for jumpers
-   if(zone > 0) PST[PST_WJUMPER + BW*(BH-2-zone) + j] = PST[PST_BJUMPER + BW*(zone+1) + j] = 100,
-                PST[PST_WJUMPER + BW*(BH-1-zone) + j] = PST[PST_BJUMPER + BW*zone + j] = 200;
+   if(zone > 0) PST[PST_WJUMPER + POS(bRanks-2-zone, j)] = PST[PST_BJUMPER + POS(zone+1, j)] = 100,
+                PST[PST_WJUMPER + POS(bRanks-1-zone, j)] = PST[PST_BJUMPER + POS(zone, j)] = 200;
 #endif
   }
 
@@ -1163,7 +1162,7 @@ int
 PSTest ()
 {
   int r, f, score, tot=0;
-  for(r=0; r<BH; r++) for(f=0; f<BH; f++) {
+  for(r=0; r<bRanks; r++) for(f=0; f<bFiles; f++) {
     int s = POS(r, f);
     int piece = board[s];
     if(!piece) continue;
@@ -1177,7 +1176,7 @@ int
 Dtest ()
 {
   int r, f, score, tot=0;
-  for(r=0; r<BH; r++) for(f=0; f<BH; f++) {
+  for(r=0; r<bRanks; r++) for(f=0; f<bFiles; f++) {
     int s = POS(r, f);
     int piece = board[s];
     if(!piece) continue;
@@ -1903,7 +1902,7 @@ Evaluate (int difEval)
   // penalty for Lion in enemy corner, when enemy Lion is nearby
   if(wLion != ABSENT && bLion != ABSENT) { // both have a Lion
       static int distFac[36] = { 0, 0, 10, 9, 8, 7, 5, 3, 1 };
-      score -= ( (1+9*!attacks[2*wLion+WHITE]) * lionTrap[BW*(BH-1)+BH-1-wLion]
+      score -= ( (1+9*!attacks[2*wLion+WHITE]) * lionTrap[UR-wLion]
                - (1+9*!attacks[2*bLion+BLACK]) * lionTrap[bLion] ) * distFac[dist(wLion, bLion)];
   }
 
@@ -2797,9 +2796,9 @@ Highlight(char *coords)
   } else lastLift = sqr; // remember
   lastPut = ABSENT;
   q = buf;
-  for(i=BH-1; i>=0; i--) {
-    for(j=0; j<BH; j++) {
-      n = BW*i + j;
+  for(i=bRanks-1; i>=0; i--) {
+    for(j=0; j<bFiles; j++) {
+      n = POS(i, j);
       if(b[n]) *q++ = b[n]; else {
 	if(q > buf && q[-1] <= '9' && q[-1] >= '0') {
 	  q[-1]++;
