@@ -2946,9 +2946,7 @@ printf("# ponder hit\n");
       Init(V_CHU); // Chu
       seed = startTime = GetTickCount(); moveNr = 0; // initialize random
 
-      while(1) { // infinite loop
-
-        fflush(stdout);                   // make sure everything is printed before we do something that might take time
+      while(fflush(stdout) != EOF) { // infinite loop; make sure everything is printed before we do something that might take time
         *inBuf = 0; if(moveNr >= 20) randomize = OFF;
 //if(moveNr >20) printf("resign\n");
 
