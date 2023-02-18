@@ -1269,7 +1269,7 @@ MarkBurns (int x)
   for(r=b; r<=t-2; r++) rows[r] |= rows[r+1] | rows[r+2]; // smear vertically
 }
 
-void
+int
 GenCastlings ()
 { // castings for Lion Chess. Assumes board width = 8 and Kings on e-file, and K/R value = 280/300!
     int f = POS(0, BW/2), t = CASTLE;
@@ -1278,6 +1278,7 @@ GenCastlings ()
       if(p[board[f-4]].value == 300 && board[f-3] == EMPTY && board[f-2] == EMPTY && board[f-1] == EMPTY) moveStack[msp++] = f<<SQLEN | t+1;
       if(p[board[f+3]].value == 300 && board[f+1] == EMPTY && board[f+2] == EMPTY) moveStack[msp++] = f<<SQLEN | t;
     }
+    return msp;
 }
 
 int
@@ -2676,8 +2677,7 @@ MapFromScratch(attacks);
 printf("last=%d nc=%d retMSP=%d\n", msp, nonCapts, retMSP);
 #endif
   msp = retMSP;
-  if(currentVariant == V_LION) GenCastlings();
-  listEnd = msp;
+  if(currentVariant == V_LION) listEnd = GenCastlings();
   for(i=listStart; i<msp && currentVariant == V_WOLF; i++) { // mark Werewolf captures as promotions
     int to = moveStack[i] & SQUARE, from = moveStack[i] >> SQLEN & SQUARE;
     if(to >= SPECIAL) continue;
