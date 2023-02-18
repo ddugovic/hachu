@@ -745,7 +745,7 @@ int board[BSIZE] = { [0 ... BSIZE-1] = EDGE };
 // dand: attacks/attackMaps is confusing... let's try "attacks by level"
 int attacksByLevel[LEVELS][2*BSIZE];
 int *attacks = attacksByLevel[0];
-char promoBoard[2*BSIZE] = { [0 ... 2*BSIZE-1] = 0 }; // flags to indicate promotion zones
+char promoBoard[BSIZE] = { [0 ... BSIZE-1] = 0 }; // flags to indicate promotion zones
 unsigned char fireBoard[BSIZE]; // flags to indicate squares controlled by Fire Demons
 signed char PST[PSTSIZE] = { 0 };
 
@@ -1210,7 +1210,7 @@ printf("last=%d nc=%d pf=%d move=%d\n", msp, nonCapts, promoFlags, x<<SQLEN | y)
 static inline int
 NewCapture (int x, int y, int promoFlags)
 {
-  if( (promoBoard[x] | promoBoard[y]) & promoFlags) { // piece can promote with this move
+  if( (promoBoard[x] | promoBoard[(y < BSIZE ? y : x)]) & promoFlags) { // piece can promote with this move
     moveStack[msp++] = x<<SQLEN | y | PROMOTE;        // push promotion
     if((promoFlags & promoBoard[y] & (CANT_DEFER | DONT_DEFER | LAST_RANK)) == 0) { // deferral could be a better alternative
       moveStack[msp++] = x<<SQLEN | y;                // push deferral
@@ -1682,9 +1682,9 @@ if(board[x] == EDGE) { printf("    edge hit %x-%x dir=%d att=%o\n", sqr, x, i, a
 		int j;
 		for(j=0; j<8; j++) { // we can go on in 8 directions after we captured it in passing
 		  int v = kStep[j];
-		  if(sqr + v == x || board[sqr+v] == EMPTY) // hit & run; make sure we include igui (attacker is still at x!)
+		  if(sqr+v == x || board[sqr+v] == EMPTY) { // hit & run; make sure we include igui (attacker is still at x!)
 		    NewCapture(x, SPECIAL + 8*i + j + victimValue, p[attacker].promoFlag);
-		  else if((board[sqr+v] & TYPE) == xstm && board[sqr+v] > board[sqr]) {    // double capture
+		  } else if((board[sqr+v] & TYPE) == xstm && board[sqr+v] > board[sqr]) {    // double capture
 		    NewCapture(x, SPECIAL + 8*i + j + victimValue, p[attacker].promoFlag); // other victim after primary
 		    if(dist(sqr+v, x) == 1) // other victim also on first ring; reverse order is possible
 		      NewCapture(x, SPECIAL + reverse[8*i + j] + victimValue, p[attacker].promoFlag);
