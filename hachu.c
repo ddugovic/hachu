@@ -740,9 +740,7 @@ typedef struct {
 int squareKey[BSIZE];
 
 int board[BSIZE] = { [0 ... BSIZE-1] = EDGE };
-//int attacks[2*BSIZE];   // attack map
-//int attackMaps[200*BSIZE], *attacks = attackMaps; // attacks by path[level]
-// dand: attacks/attackMaps is confusing... let's try "attacks by level"
+int boardCopy[BSIZE] = { [0 ... BSIZE-1] = EDGE };
 int attacksByLevel[LEVELS][2*BSIZE];
 int *attacks = attacksByLevel[0];
 char promoBoard[BSIZE] = { [0 ... BSIZE-1] = 0 }; // flags to indicate promotion zones
@@ -2661,13 +2659,11 @@ ReadSquare (char *p, int *sqr)
   return 2 + (r + 1 > 9);
 }
 
-char boardCopy[BSIZE];
-
 int
 ListMoves (int listStart, int listEnd)
 { // create move list on move stack
   int i;
-  for(i=0; i< BSIZE; i++) boardCopy[i] = !!board[i];
+  memcpy(boardCopy, board, sizeof(board));
 MapFromScratch(attacks);
   postThinking--; repCnt = 0; tlim1 = tlim2 = tlim3 = 1e8; abortFlag = msp = 0;
   Search(-INF-1, INF+1, 0, QSdepth+1, 0, sup1 & ~PROMOTE, sup2, INF);
