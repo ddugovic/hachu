@@ -165,7 +165,7 @@ char *array, *IDs, fenArray[4000], startPos[4000], *reason, checkStack[300];
 int bFiles, bRanks, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, stalemate;
 int tsume, pvCuts, allowRep, entryProm=1, okazaki, pVal;
 int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
-int retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
+int retFirst, retMSP, retDep, pvPtr, level, cnt50, mobilityScore;
 int nodes, startTime, lastRootMove, lastRootIter, tlim1, tlim2, tlim3, repCnt, comp, abortFlag;
 Move ponderMove;
 #define LEVELS 200
@@ -2437,8 +2437,8 @@ if(PATH) printf("%-10s %6d %6d  (%d)\n", MoveToText(moveStack[curMove], 0), scor
 #endif
   } // next depth
 leave:
-  retMSP = msp;
   retFirst = firstMove;
+  retMSP = msp;
   msp = oldMSP; // pop move list
   pvPtr = myPV; // pop PV
   retMove = bestMoveNr ? moveStack[bestMoveNr] : 0;
@@ -2539,7 +2539,7 @@ typedef Move MOVE;
     int  Setup2(char *fen);                  // sets up the position from the given FEN, and returns the new side to move
     void SetMemorySize(int n);              // if n is different from last time, resize all tables to make memory usage below n MB
     char *MoveToText(MOVE move, int m);     // converts the move from your internal format to text like e2e2, e1g1, a7a8q.
-    MOVE ParseMove(char *moveText);         // converts a long-algebraic text move to your internal move format
+    MOVE ParseMove(int ls, int le, char *moveText); // converts a long-algebraic text move to your internal move format
     int  SearchBestMove(MOVE *move, MOVE *ponderMove);
     void PonderUntilInput(int stm);         // Search current position for stm, deepening forever until there is input.
 
@@ -2660,11 +2660,10 @@ ReadSquare (char *p, int *sqr)
   return 2 + (r + 1 > 9);
 }
 
-int listStart, listEnd;
 char boardCopy[BSIZE];
 
-void
-ListMoves ()
+int
+ListMoves (int listStart, int listEnd)
 { // create move list on move stack
   int i;
   for(i=0; i< BSIZE; i++) boardCopy[i] = !!board[i];
@@ -2676,7 +2675,7 @@ MapFromScratch(attacks);
 #if 0
 printf("last=%d nc=%d retMSP=%d\n", msp, nonCapts, retMSP);
 #endif
-  listStart = retFirst; msp = retMSP;
+  msp = retMSP;
   if(currentVariant == V_LION) GenCastlings();
   listEnd = msp;
   for(i=listStart; i<msp && currentVariant == V_WOLF; i++) { // mark Werewolf captures as promotions
@@ -2684,10 +2683,11 @@ printf("last=%d nc=%d retMSP=%d\n", msp, nonCapts, retMSP);
     if(to >= SPECIAL) continue;
     if(p[board[to]].ranking >= 5 && p[board[from]].ranking < 4) moveStack[i] |= PROMOTE;
   }
+  return listEnd;
 }
 
 MOVE
-ParseMove (char *moveText)
+ParseMove (int listStart, int listEnd, char *moveText)
 {
   int i, j, f, t, t2, e, ret, deferred=0;
   char c = moveText[0];
@@ -2738,7 +2738,8 @@ ParseMove (char *moveText)
   if(*moveText != '\n' && *moveText != '=') ret |= PROMOTE;
 printf("# suppress = %c%d\n", FILECH(sup1), RANK(sup1));
 #if 1
-  ListMoves();
+  // TODO: do not rely upon global side effect
+  retMSP = listEnd = ListMoves(listStart, listEnd);
 #endif
   for(i=listStart; i<listEnd; i++) {
     if(moveStack[i] == INVALID) continue;
@@ -2774,14 +2775,11 @@ printf("# deferral of %d\n", deferred);
 }
 
 void
-Highlight(char *coords)
+Highlight (int listStart, int listEnd, char *coords)
 {
   int i, j, n, sqr, cnt=0;
   char b[BSIZE]={0}, buf[2000], *q;
   ReadSquare(coords, &sqr);
-#if 1
-  ListMoves();
-#endif
   for(i=listStart; i<listEnd; i++) {
     if(sqr == (moveStack[i]>>SQLEN & SQUARE)) {
       int t = moveStack[i] & SQUARE;
@@ -2913,7 +2911,7 @@ printf("# in (mode = %d,%d): %s\n", root, abortFlag, command);
         if(!strcmp(command, "put"))     { ReadSquare(inBuf+4, &lastPut); continue; }  // ditto
         if(!strcmp(command, "."))       { inBuf[0] = 0; return; } // ignore for now
         if(!strcmp(command, "hover"))   { inBuf[0] = 0; return; } // ignore for now
-        if(!strcmp(command, "lift"))    { inBuf[0] = 0; Highlight(inBuf+5); return; } // treat here
+        if(!strcmp(command, "lift"))    { inBuf[0] = 0; retMSP = ListMoves(retFirst, retMSP); Highlight(retFirst, retMSP, inBuf+5); return; } // treat here
         if(!root && !strcmp(command, "usermove")) {
 printf("# move = %s#ponder = %s", inBuf+9, ponderMoveText);
           abortFlag = !!strcmp(inBuf+9, ponderMoveText);
@@ -2961,7 +2959,7 @@ printf("# ponder hit\n");
 #ifdef HASH
 	if(hashMask)
 #endif
-        if(listEnd == 0) ListMoves();   // always maintain a list of legal moves in root position
+        if(retMSP == 0) retMSP = ListMoves(retFirst, retMSP);   // always maintain a list of legal moves in root position
         abortFlag = -(ponder && WHITE+BLACK-stm == engineSide && moveNr); // pondering and opponent on move
         if(stm == engineSide || abortFlag && ponderMove) {      // if it is the engine's turn to move, set it thinking, and let it move
 printf("# start search: stm=%d engine=%d (flag=%d)\n", stm, engineSide, abortFlag);
@@ -3004,7 +3002,7 @@ pboard(board);
             gameMove[moveNr++] = move;   // remember game
             i = p[undoInfo.victim].ranking;
             printf("move %s%s\n", MoveToText(pMove, 1), i == 5 && p[undoInfo.piece].ranking < 4 ? pName[i-5] : "");
-            listEnd = 0;
+            retMSP = 0;                  // list has been printed
             continue;                    // go check if we should ponder
           }
         } else
@@ -3094,20 +3092,20 @@ pboard(board);
         if(!strcmp(command, "hover"))   { continue; }
         if(!strcmp(command, ""))  {  continue; }
         if(!strcmp(command, "usermove")){
-          int move = ParseMove(inBuf+9);
+          int move = ParseMove(retFirst, retMSP, inBuf+9);
 pboard(board);
           if(move == INVALID) {
             if(reason) printf("Illegal move {%s}\n", reason); else printf("%s\n", reason="Illegal move");
             if(comp) PrintResult(stm, -INF); // against computer: claim
           } else {
             stm = MakeMove2(stm, move);
-            ponderMove = INVALID; listEnd = 0;
+            ponderMove = INVALID; retMSP = 0; // list has been consumed
             gameMove[moveNr++] = move;  // remember game
           }
           continue;
         }
         ponderMove = INVALID; // the following commands change the position, invalidating ponder move
-        listEnd = 0;
+        retMSP = 0;           // list has been consumed
         if(!strcmp(command, "new"))     {
           engineSide = BLACK; Init(V_CHESS); stm = Setup2(NULL); maxDepth = MAXPLY; randomize = OFF; curVarNr = comp = 0;
           continue;
