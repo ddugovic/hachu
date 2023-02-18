@@ -2573,8 +2573,8 @@ MakeMove2 (int stm, MOVE move)
   for(i=0; i<LEVELS; i++)
     repStack[i] = repStack[i+1], checkStack[i] = checkStack[i+1];
   repStack[LEVELS-1] = hashKeyH, checkStack[LEVELS-1] = inCheck;
-// makemove is not part of http://hgm.nubati.net/CECP.html
-printf("# makemove %08x %c%d %c%d\n", move, FILECH(sup1), RANK(sup1), FILECH(sup2), RANK(sup2));
+  // makemove is not part of http://hgm.nubati.net/CECP.html
+  printf("# makemove %s %c%d %c%d\n", MoveToText(move, 0), FILECH(sup1), RANK(sup1), FILECH(sup2), RANK(sup2));
   return stm ^ WHITE;
 }
 
