@@ -2678,7 +2678,7 @@ printf("last=%d nc=%d retMSP=%d\n", msp, nonCapts, retMSP);
 #endif
   msp = retMSP;
   if(currentVariant == V_LION) listEnd = GenCastlings();
-  for(i=listStart; i<msp && currentVariant == V_WOLF; i++) { // mark Werewolf captures as promotions
+  if(currentVariant == V_WOLF) for(i=listStart; i<msp; i++) { // mark Werewolf captures as promotions
     int to = moveStack[i] & SQUARE, from = moveStack[i] >> SQLEN & SQUARE;
     if(to >= SPECIAL) continue;
     if(p[board[to]].ranking >= 5 && p[board[from]].ranking < 4) moveStack[i] |= PROMOTE;
