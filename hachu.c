@@ -21,7 +21,6 @@
 #define CHECKEXT
 #define LMR 4
 #define LIONTRAP
-#define XWINGS
 #define KINGSAFETY
 #define KSHIELD
 #define FORTRESS
@@ -67,13 +66,11 @@
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
+#define BH 16
 #define BW 16
-#define BH bRanks
-#define BHMAX 16
-#define BSIZE BW*BHMAX
-#define ZONE  zone
+#define BSIZE BW*BH
 #define STEP(X,Y) (BW*(X)+ (Y))
-#define POS(X,Y) STEP((BHMAX-bRanks)/2 + X, (BW-bFiles)/2 + Y)
+#define POS(X,Y) STEP((BH-bRanks)/2 + X, (BW-bFiles)/2 + Y)
 #define LL POS(0, 0)
 #define LR POS(0, bFiles-1)
 #define UL POS(bRanks-1, 0)
@@ -83,24 +80,22 @@
 
 #define BLACK      0
 #define WHITE      1
+#define SQLEN      8               /* bits in square number   */
 #define EMPTY      0
-#define EDGE   (1<<11)
+#define EDGE   (1<<SQLEN)
 #define TYPE   (WHITE|BLACK|EDGE)
 #define ABSENT  2047
 #define INF     8000
-#define NPIECES EDGE+1               /* length of piece list    */
+#define NPIECES EDGE+1             /* length of piece list    */
 
-#define SQLEN    11                /* bits in square number   */
 #define SQUARE  ((1<<SQLEN) - 1)   /* mask for square in move */
 #define DEFER   (1<<2*SQLEN)       /* deferral on zone entry  */
 #define PROMOTE (1<<2*SQLEN+1)     /* promotion bit in move   */
+#define INVALID     0              /* cannot occur as a valid move */
 #define SPECIAL  1400              /* start of special moves  */
 #define BURN    (SPECIAL + 96)     /* start of burn encodings */
 #define CASTLE  (SPECIAL + 100)    /* castling encodings      */
 #define SORTKEY(X) 0
-
-#define UPDATE_MOBILITY(X,Y)
-#define ADDMOVE(X,Y)
 
 // promotion codes
 #define CAN_PROMOTE 0x11
@@ -173,7 +168,8 @@ int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, fillin
 int retMSP, retFirst, retDep, pvPtr, level, cnt50, mobilityScore;
 int nodes, startTime, lastRootMove, lastRootIter, tlim1, tlim2, tlim3, repCnt, comp, abortFlag;
 Move ponderMove;
-Move retMove, moveStack[20000], path[100], repStack[300], pv[1000], repeatMove[300], killer[100][2];
+#define LEVELS 200
+Move retMove, moveStack[20000], path[100], repStack[LEVELS+(50*2)], pv[1000], repeatMove[300], killer[100][2];
 
       int maxDepth;                            // used by search
 
@@ -705,7 +701,7 @@ int one[] = { // 1 in the bit fields for the various directions
 typedef struct {
   int pos;
   int pieceKey;
-  int promo;
+  int promo; // ???
   int value;
   int pst;
   signed char range[8];
@@ -718,7 +714,7 @@ typedef struct {
   char ranking;
 } PieceInfo; // piece-list entry
 
-int last[2], royal[2], kylin[2];
+int pieces[2], royal[2], kylin[2];
 PieceInfo p[NPIECES]; // piece list
 
 typedef struct {
@@ -745,8 +741,11 @@ int squareKey[BSIZE];
 
 int board[BSIZE] = { [0 ... BSIZE-1] = EDGE };
 //int attacks[2*BSIZE];   // attack map
-int attackMaps[200*BSIZE], *attacks = attackMaps;
-char promoBoard[BSIZE] = { [0 ... BSIZE-1] = 0 }; // flags to indicate promotion zones
+//int attackMaps[200*BSIZE], *attacks = attackMaps; // attacks by path[level]
+// dand: attacks/attackMaps is confusing... let's try "attacks by level"
+int attacksByLevel[LEVELS][2*BSIZE];
+int *attacks = attacksByLevel[0];
+char promoBoard[2*BSIZE] = { [0 ... 2*BSIZE-1] = 0 }; // flags to indicate promotion zones
 unsigned char fireBoard[BSIZE]; // flags to indicate squares controlled by Fire Demons
 signed char PST[PSTSIZE] = { 0 };
 
@@ -797,18 +796,18 @@ LookUp (char *name, int var)
 }
 
 void
-SqueezeOut (int n)
+DeletePiece (int n)
 { // remove piece number n from the mentioned side's piece list (and adapt the reference to the displaced pieces!)
   int i;
-  for(i=stm+2; i<=last[stm]; i+=2)
+  for(i=stm+2; i<=pieces[stm]; i+=2)
     if(p[i].promo > n) p[i].promo -= 2;
-  for(i=n; i<last[stm]; i+=2) {
+  for(i=n; i<pieces[stm]; i+=2) {
     p[i] = p[i+2];
     if(i+2 == royal[stm]) royal[stm] -= 2; // NB: squeezing out the King moves up Crown Prince to royal[stm]
     if(i+2 == kylin[stm]) kylin[stm] -= 2;
     if(i < 10) fireFlags[i-2] = fireFlags[i];
   }
-  last[stm] -= 2;
+  pieces[stm] -= 2;
 }
 
 int
@@ -883,7 +882,7 @@ StackMultis (int col)
 {
   int i, j;
   multis[col] = col;
-  for(i=col+2; i<=last[col]; i+=2) { // scan piece list for multi-capturers
+  for(i=col+2; i<=pieces[col]; i+=2) { // scan piece list for multi-capturers
     for(j=0; j<8; j++) if(p[i].range[j] < J && p[i].range[j] >= S || p[i].value == FVAL) {
       multiMovers[multis[col]] = i; // found one: put its piece number in list
       multis[col] += 2;
@@ -896,15 +895,15 @@ void
 Compactify (int stm)
 { // remove pieces that are permanently gone (captured or promoted) from one side's piece list
   int i, k;
-  for(i=stm+2; i<=last[stm]; i+=2) { // first pass: unpromoted pieces
+  for(i=stm+2; i<=pieces[stm]; i+=2) { // first pass: unpromoted pieces
     if((k = p[i].promo) >= 0 && p[i].pos == ABSENT) { // unpromoted piece no longer there
       p[k].promo = -2; // orphan promoted version
-      SqueezeOut(i);
+      DeletePiece(i);
     }
   }
-  for(i=stm+2; i<=last[stm]; i+=2) { // second pass: promoted pieces
+  for(i=stm+2; i<=pieces[stm]; i+=2) { // second pass: promoted pieces
     if((k = p[i].promo) == -2 && p[i].pos == ABSENT) { // orphaned promoted piece not present
-      SqueezeOut(i);
+      DeletePiece(i);
     }
   }
   StackMultis(stm);
@@ -914,11 +913,11 @@ int
 AddPiece (int stm, PieceDesc *list)
 {
   int i, j, *key, v;
-  for(i=stm+2; i<=last[stm]; i += 2) {
+  for(i=stm+2; i<=pieces[stm]; i += 2) {
     if(p[i].value < list->value || p[i].value == list->value && (p[i].promo < 0)) break;
   }
-  last[stm] += 2;
-  for(j=last[stm]; j>i; j-= 2) p[j] = p[j-2];
+  pieces[stm] += 2;
+  for(j=pieces[stm]; j>i; j-= 2) p[j] = p[j-2];
   p[i].value = v = list->value;
   for(j=0; j<8; j++) p[i].range[j] = list->range[j^4*(WHITE-stm)];
   switch(Range(p[i].range)) {
@@ -936,7 +935,7 @@ AddPiece (int stm, PieceDesc *list)
   p[i].mobWeight = v > 600 ? 0 : v >= 400 ? 1 : v >= 300 ? 2 : v > 150 ? 3 : v >= 100 ? 2 : 0;
   if(Lance(list->range))
     p[i].mobWeight = 0, p[i].pst = list->range[4] ? PST_NEUTRAL : PST_LANCE; // keep back
-  for(j=stm+2; j<= last[stm]; j+=2) {
+  for(j=stm+2; j<= pieces[stm]; j+=2) {
     if(p[j].promo >= i) p[j].promo += 2;
   }
   if(royal[stm] >= i) royal[stm] += 2;
@@ -952,7 +951,7 @@ SetUp (char *array, int var)
   int i, j, n, m, color, c;
   char name[3], prince = 0;
   PieceDesc *p1, *p2;
-  last[WHITE] = 1; last[BLACK] = 0;
+  pieces[WHITE] = 1; pieces[BLACK] = 0;
   royal[WHITE] = royal[BLACK] = 0;
   for(i=bRanks-1; ; i--) {
 //printf("next rank: %s\n", array);
@@ -1019,7 +1018,7 @@ SetUp (char *array, int var)
   }
   for(i=2; i<6; i++) if(p[i].ranking == 5) p[i].promo = -1, p[i].promoFlag = 0; // take promotability away from Werewolves
   for(i=0; i<bRanks; i++) for(j=0; j<bFiles; j++) board[POS(i, j)] = EMPTY;
-  for(i=WHITE+2; i<=last[WHITE]; i+=2) if(p[i].pos != ABSENT) {
+  for(i=WHITE+2; i<=pieces[WHITE]; i+=2) if(p[i].pos != ABSENT) {
     int g = p[i].promoGain;
     if(i == kylin[WHITE]) p[i].promoGain = 1.25*KYLIN, p[i].value += KYLIN;
 //    if(j > 0 && p[i].pst == PST_STEPPER) p[i].pst = PST_WPPROM; // use white pre-prom bonus
@@ -1034,7 +1033,7 @@ SetUp (char *array, int var)
     promoDelta += p[i].promoGain;
     filling += p[i].bulk;
   } else p[i].promoGain = 0;
-  for(i=BLACK+2; i<=last[BLACK]; i+=2) if(p[i].pos != ABSENT) {
+  for(i=BLACK+2; i<=pieces[BLACK]; i+=2) if(p[i].pos != ABSENT) {
     int g = p[i].promoGain;
 //    if(j > 0 && p[i].pst == PST_STEPPER) p[i].pst = PST_BPPROM; // use black pre-prom bonus
     if(j > 0 && p[i].pst == PST_STEPPER && p[i].value >= 100)
@@ -1115,8 +1114,8 @@ Init (int var)
     char v = 0;
     if(i == 0)           v |= LAST_RANK & P_BLACK;
     if(i < 2)            v |= CANT_DEFER & P_BLACK;
-    if(i < ZONE)         v |= (CAN_PROMOTE | DONT_DEFER) & P_BLACK; else v &= ~P_BLACK;
-    if(i >= bRanks-ZONE) v |= (CAN_PROMOTE | DONT_DEFER) & P_WHITE; else v &= ~P_WHITE;
+    if(i < zone)         v |= (CAN_PROMOTE | DONT_DEFER) & P_BLACK; else v &= ~P_BLACK;
+    if(i >= bRanks-zone) v |= (CAN_PROMOTE | DONT_DEFER) & P_WHITE; else v &= ~P_WHITE;
     if(i >= bRanks-2)    v |= CANT_DEFER & P_WHITE;
     if(i == bRanks-1)    v |= LAST_RANK & P_WHITE;
     promoBoard[POS(i, j)] = v;
@@ -1186,13 +1185,10 @@ Dtest ()
   return tot;
 }
 
-int flag;
-
 static inline int
 NewNonCapture (int x, int y, int promoFlags)
 {
   if(board[y] != EMPTY) return 1; // edge, capture or own piece
-//if(flag) printf("# add %c%d%c%d, pf=%d\n", x%BW+'a',x/BW,y%BW+'a',y/BW, promoFlags);
   if( (entryProm ? promoBoard[y] & ~promoBoard[x] & CAN_PROMOTE
                  : promoBoard[y] |  promoBoard[x]       ) & promoFlags ){ // piece can promote with this move
     moveStack[msp++] = moveStack[nonCapts];           // create space for promotion
@@ -1205,7 +1201,9 @@ NewNonCapture (int x, int y, int promoFlags)
     }
   } else
     moveStack[msp++] = x<<SQLEN | y; // push normal move
-//if(flag) printf("msp=%d nc=%d\n", msp, nonCapts);	
+#if 0
+printf("last=%d nc=%d pf=%d move=%d\n", msp, nonCapts, promoFlags, x<<SQLEN | y);
+#endif
   return 0;
 }
 
@@ -1286,7 +1284,7 @@ int
 GenNonCapts (int promoSuppress)
 {
   int i, j, nullMove = ABSENT;
-  for(i=stm+2; i<=last[stm]; i+=2) {
+  for(i=stm+2; i<=pieces[stm]; i+=2) {
     int x = p[i].pos, pFlag = p[i].promoFlag;
     if(x == ABSENT) continue;
     if(x == promoSuppress && chuFlag) pFlag = 0;
@@ -1390,7 +1388,7 @@ MapOneColor (int start, int last, int *map)
         if(board[x+=v] != EMPTY) {
 	  mob += dist(x-v, p[i].pos);
 	  if(board[x] != EDGE) map[2*x + start] += one[j], mob += (board[x] ^ start) & 1;
-#if 1
+#if 1 // HGM
 	  if(p[i].range[j] > X) { // jump capturer
 	    int c = p[i].qval;
 	    if(p[board[x]].qval < c) {
@@ -1417,15 +1415,15 @@ if(!level) printf("# mobility %d = %d\n", start, totMob);
 }
 
 void
-MapFromScratch (int *map)
+MapFromScratch (int *attacks)
 {
-  bzero(map, 2*BSIZE);
-  mobilityScore  = MapOneColor(1, last[WHITE], map);
-  mobilityScore -= MapOneColor(0, last[BLACK], map);
+  bzero(attacks, 2*BSIZE);
+  mobilityScore  = MapOneColor(1, pieces[WHITE], attacks);
+  mobilityScore -= MapOneColor(0, pieces[BLACK], attacks);
 }
 
 int
-MakeMove(Move m, UndoInfo *u)
+MakeMove (Move m, UndoInfo *u)
 {
   int deferred = ABSENT;
   // first execute move on board
@@ -1888,7 +1886,10 @@ Ftest (int side)
 int
 Evaluate (int difEval)
 {
-  int wLion=ABSENT, bLion=ABSENT, wKing, bKing, score=mobilityScore, f, i, j, max=512;
+  int wLion=ABSENT, bLion=ABSENT, score=mobilityScore, f;
+#ifdef KINGSAFETY
+  int wKing, bKing, i, j, max=512;
+#endif
 
   if(tsume) return difEval;
 
@@ -1965,7 +1966,7 @@ Evaluate (int difEval)
 
 #ifdef PAWNBLOCK
   // penalty for blocking own P or GB: 20 by slider, 10 by other, but 50 if only RETRACT mode is straight back
-  for(i=last[WHITE]; i > 1 && p[i].value<=50; i-=2) {
+  for(i=pieces[WHITE]; i > 1 && p[i].value<=50; i-=2) {
     if((f = p[i].pos) != ABSENT) { // P present,
       if((j = board[f + BW])&1) // square before it white (odd) piece
 	score -= 10 + 10*(p[j].promoGain > 0) + 30*!(p[j].range[3] || p[j].range[5] || p[j].value==50);
@@ -1973,7 +1974,7 @@ Evaluate (int difEval)
 	score += 7*(p[j].promoGain == 0 & p[j].value<=151);
     }
   }
-  for(i=last[BLACK]; i > 1 && p[i].value<=50; i-=2) {
+  for(i=pieces[BLACK]; i > 1 && p[i].value<=50; i-=2) {
     if((f = p[i].pos) != ABSENT) { // P present,
       if((j = board[f - BW]) && !(j&1)) // square before non-empty and even (black)
 	score += 10 + 10*(p[j].promoGain > 0) + 30*!(p[j].range[1] || p[j].range[7] || p[j].value==50);
@@ -1985,17 +1986,17 @@ Evaluate (int difEval)
 
 #ifdef TANDEM
     if(zone > 0) {
-      int rw = BW*(BH-1-zone), rb = BW*zone, h=0;
-      for(f=0; f<BH; f++) {
+      int rw = BW*(bRanks-1-zone), rb = BW*zone, h=0;
+      for(f=0; f<bRanks; f++) {
 	if(p[board[rw+f]].pst == PST_ADVANCE) {
 	  h += (p[board[rw+f-BW]].pst == PST_ADVANCE);
 	  if(f > 0)    h += (p[board[rw+f-BW-1]].pst == PST_ADVANCE);
-	  if(f+1 < BH) h += (p[board[rw+f-BW+1]].pst == PST_ADVANCE);
+	  if(f+1 < bFiles) h += (p[board[rw+f-BW+1]].pst == PST_ADVANCE);
 	}
 	if(p[board[rb+f]].pst == PST_ADVANCE) {
 	  h -= (p[board[rb+f+BW]].pst == PST_RETRACT);
 	  if(f > 0)    h -= (p[board[rb+f+BW-1]].pst == PST_RETRACT);
-	  if(f+1 < BH) h -= (p[board[rb+f+BW+1]].pst == PST_RETRACT);
+	  if(f+1 < bFiles) h -= (p[board[rb+f+BW+1]].pst == PST_RETRACT);
 	}
       }
       score += h*TANDEM;
@@ -2021,9 +2022,9 @@ int
 Search (int alpha, int beta, int difEval, int depth, int lmr, int oldPromo, int promoSuppress, int threshold)
 {
   int i, j, k, phase, king, nextVictim, defer, autoFail=0, inCheck=0, late=100000, ep;
-  int firstMove, oldMSP = msp, curMove, sorted, bestMoveNr;
+  int firstMove, oldMSP=msp, curMove, sorted, bestMoveNr=0;
   int resDep=0, iterDep, ext;
-  int myPV = pvPtr;
+  int myPV=pvPtr;
   int score, bestScore=0, oldBest, curEval, iterAlpha;
   Move move, nullMove=ABSENT;
   UndoInfo tb;
@@ -2058,7 +2059,7 @@ if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("# search(%d) {%d,%d} eva
     }
   }
 
-if(!level) {for(i=0; i<5; i++)printf("# %d %08x, %d\n", i, repStack[200-i], checkStack[200-i]);}
+if(!level) {for(i=0; i<5; i++)printf("# %d %08x, %d\n", i, repStack[LEVELS-i], checkStack[LEVELS-i]);}
   // KING CAPTURE
   k = p[king=royal[xstm]].pos;
   if( k != ABSENT) {
@@ -2079,7 +2080,7 @@ if(!level) {for(i=0; i<5; i++)printf("# %d %08x, %d\n", i, repStack[200-i], chec
   pv[pvPtr++] = 0; // start empty PV, directly behind PV of parent
   if(inCheck) lmr = 0; else depth -= lmr; // no LMR of checking moves
 
-  firstMove = curMove = sorted = msp += 50; // leave 50 empty slots in front of move list
+  firstMove = j = curMove = sorted = msp; // leave 50 empty slots in front of move list
   iterDep = -(depth == 0); tb.fireMask = phase = 0;
 
 #ifdef HASH
@@ -2106,7 +2107,7 @@ printf("# probe hash index=%x hit=%d\n", index, hit),fflush(stdout);
   } else { // decide on replacement
     if(depth >= hashTable[index].depth[nr] ||
        depth+1 == hashTable[index].depth[nr] && !(nodes&3)) hit = nr; else hit = 4;
-    hashMove = 0;
+    hashMove = INVALID;
   }
 #if 0
 printf("# iterDep = %d score = %d move = %s\n",iterDep,bestScore,MoveToText(hashMove,0)),fflush(stdout);
@@ -2118,7 +2119,9 @@ printf("# iterDep = %d score = %d move = %s\n",iterDep,bestScore,MoveToText(hash
 printf("# iterDep=%d\n", iterDep);
 #endif
   while(++iterDep <= depth) {
-if(flag && depth>= 0) printf("iter %d:%d\n", depth,iterDep),fflush(stdout);
+#if 0
+if(depth>= 0) printf("iter %d:%d\n", depth,iterDep),fflush(stdout);
+#endif
     oldBest = bestScore;
     iterAlpha = alpha; bestScore = -INF; bestMoveNr = 0; resDep = 60;
 #if 0
@@ -2135,7 +2138,9 @@ printf("# stand pat %d (beta=%d)\n", bestScore, beta);
       }
     }
     for(curMove = firstMove; ; curMove++) { // loop over moves
-if(flag && depth>= 0) printf("phase=%d: first/curr/last = %d / %d / %d\n", phase, firstMove, curMove, msp),fflush(stdout);
+#if 0
+if(depth>= 0) printf("# phase=%d: first=%d curr=%d last=%d\n", phase, firstMove, curMove, msp),fflush(stdout);
+#endif
       // MOVE SOURCE
       if(curMove >= msp) { // we ran out of moves; generate some new
 if(PATH) printf("# new moves, phase=%d\n", phase),fflush(stdout);
@@ -2172,7 +2177,7 @@ if(PATH) printf("mask=%x\n",tb.fireMask),pbytes(fireBoard);
 	    phase = 3;
 	  case 3: // generate captures
 if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp),fflush(stdout);
-	    while(nextVictim < last[xstm]) {          // more victims exist
+	    while(nextVictim < pieces[xstm]) {        // more victims may exist
 	      int group, to = p[nextVictim += 2].pos; // take next
 	      if(to == ABSENT) continue;              // ignore if absent
 if(PATH) printf("%d:%2d:%2d to=%c%d\n", level, depth, iterDep, FILECH(to), RANK(to)), fflush(stdout);
@@ -2185,16 +2190,16 @@ if(PATH) printf("%d:%2d:%2d to=%c%d\n", level, depth, iterDep, FILECH(to), RANK(
 	      }
 if(PATH) printf("%d:%2d:%2d group=%d, to=%c%d\n", level, depth, iterDep, group, FILECH(to), RANK(to)), fflush(stdout);
 	      GenCapts(to, 0);
-if(PATH) printf("%d:%2d:%2d first=%d msp=%d\n",level,depth,iterDep,firstMove,msp),fflush(stdout);
-	      while(nextVictim < last[xstm] && p[nextVictim+2].value == group) { // more victims of same value exist
+if(PATH) printf("%d:%2d:%2d first=%d last=%d\n",level,depth,iterDep,firstMove,msp),fflush(stdout);
+	      while(nextVictim < pieces[xstm] && p[nextVictim+2].value == group) { // more victims of same value exist
 		to = p[nextVictim += 2].pos;          // take next
 		if(to == ABSENT) continue;            // ignore if absent
 		if(!attacks[2*to + stm]) continue;    // skip if not attacked
 if(PATH) printf("%d:%2d:%2d p=%d, to=%c%d\n", level, depth, iterDep, nextVictim, FILECH(to), RANK(to)), fflush(stdout);
 		GenCapts(to, 0);
-if(PATH) printf("%d:%2d:%2d msp=%d\n",level,depth,iterDep,msp),fflush(stdout);
+if(PATH) printf("%d:%2d:%2d last=%d\n",level,depth,iterDep,msp),fflush(stdout);
 	      }
-if(PATH) printf("# captures on %c%d generated, msp=%d, group=%d, threshold=%d\n", FILECH(nextVictim), RANK(nextVictim), msp, group, threshold),fflush(stdout);
+if(PATH) printf("# captures on %c%d generated, last=%d, group=%d, threshold=%d\n", FILECH(nextVictim), RANK(nextVictim), msp, group, threshold),fflush(stdout);
 	      goto extractMove; // in auto-fail phase, only search if they might auto-fail-hi
 	    }
 if(PATH) printf("# autofail=%d\n", autoFail);
@@ -2252,20 +2257,27 @@ if(PATH) printf("# null = %0x\n", nullMove);
 	}
       }
 
-      // MOVE EXTRACTION
+      // MOVE EXTRACTION (FROM GENERATED MOVES)
     extractMove:
-//if(flag & depth >= 0 || (PATH)) printf("# %2d:%d extract %d/%d\n", depth, iterDep, curMove, msp);
+#if 0
+if(depth >= 0 || (PATH)) printf("# %d:%2d extract %d/%d (%d)\n\n", depth, iterDep, curMove, msp, sorted);
+#endif
       if(curMove > sorted) {
 	move = moveStack[sorted=j=curMove];
 	for(i=curMove+1; i<msp; i++)
-	  if(moveStack[i] > move) move = moveStack[j=i]; // search move with highest priority
-	moveStack[j] = moveStack[curMove]; moveStack[curMove] = move; // swap highest-priority move to front of remaining
-	if(move == 0) { msp = curMove--; continue; } // all remaining moves must be 0; clip off move list
+	  if(move == INVALID || moveStack[i] > move) move = moveStack[j=i]; // search move with highest priority
+	if(j>curMove) { moveStack[j] = moveStack[curMove]; moveStack[curMove] = move; } // swap highest-priority move to front of remaining
+#if 0
+printf("depth=%d:%2d phase=%d last=%d nc=%d sorted=%d\n", depth, iterDep, phase, msp, nonCapts, sorted);
+#endif
+	if(move == INVALID) { msp = curMove--; continue; } // remaining moves are invalid; clip off move list
       } else {
 	move = moveStack[curMove];
-	if(move == 0) continue; // skip invalidated move
+	if(move == INVALID) continue; // skip invalidated move
       }
-if(flag & depth >= 0) printf("#             %2d:%d found %d/%d %08x %s\n", depth, iterDep, curMove, msp, moveStack[curMove], MoveToText(moveStack[curMove], 0));
+#if 0
+if(depth >= 0) printf("#             %2d:%d found %d/%d %08x %s\n", depth, iterDep, curMove, msp, moveStack[curMove], MoveToText(moveStack[curMove], 0));
+#endif
 
       // RECURSION
       stm ^= WHITE;
@@ -2285,29 +2297,36 @@ if(flag & depth >= 0) printf("#             %2d:%d found %d/%d %08x %s\n", depth
         } else continue; // ignore for now if not obvious refutation
       }
 
-if(flag & depth >= 0) printf("%2d:%d made %d/%d %s\n", depth, iterDep, curMove, msp, MoveToText(moveStack[curMove], 0));
-      for(i=2; i<=cnt50; i+=2) if(repStack[level-i+200] == hashKeyH) {
+#if 0
+if(depth >= 0) printf("%2d:%d made %d/%d %s\n", depth, iterDep, curMove, msp, MoveToText(moveStack[curMove], 0));
+#endif
+      for(i=2; i<=cnt50; i+=2) if(repStack[LEVELS+level-i] == hashKeyH) {
+#if 0
+if(depth >= 0) printf("%2d:%d repetition %d/%d %s\n", depth, iterDep, curMove, msp, MoveToText(moveStack[curMove], 0));
+#endif
 	retDep = iterDep;
 	if(repDraws) { score = 0; goto repetition; }
 	if(!allowRep) {
-	  moveStack[curMove] = 0;         // erase forbidden move
+	  moveStack[curMove] = INVALID; // erase forbidden repetition move
 	  if(!level) repeatMove[repCnt++] = move & 0xFFFFFF; // remember outlawed move
 	} else { // check for perpetuals
 //	  int repKey = 1;
-//	  for(i-=level; i>1; i-=2) {repKey &= checkStack[200-i]; if(!level)printf("# repkey[%d] = %d\n", 200-i, repKey);}
+//	  for(i-=level; i>1; i-=2) {repKey &= checkStack[LEVELS-i]; if(!level)printf("# repkey[%d] = %d\n", LEVELS-i, repKey);}
 	  if(inCheck) { score = INF-20; goto repetition; } // we might be subject to perpetual check: score as win
-	  if(i == 2 && repStack[level+199] == hashKeyH) { score = INF-20; goto repetition; } // consecutive passing
+	  if(i == 2 && repStack[LEVELS+level-1] == hashKeyH) { score = INF-20; goto repetition; } // consecutive passing
 	}
 	score = -INF + 8*allowRep; goto repetition;
       }
-      repStack[level+200] = hashKeyH;
+      repStack[level+LEVELS] = hashKeyH;
 
 if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), score, bestScore),fflush(stdout);
 path[level++] = move;
-attacks += 2*BSIZE;
+attacks = attacksByLevel[level];
 MapFromScratch(attacks); // for as long as incremental update does not work.
-//if(flag & depth >= 0) printf("%2d:%d mapped %d/%d %s\n", depth, iterDep, curMove, msp, MoveToText(moveStack[curMove], 0));
-if(PATH) pmap(attacks, stm);
+#if 0
+if(depth >= 0) printf("%2d:%d mapped %d/%d %s\n", depth, iterDep, curMove, msp, MoveToText(moveStack[curMove], 0));
+#endif
+//if(PATH) pmap(attacks, stm);
       if(chuFlag && (p[tb.victim].value == LVAL || p[tb.epVictim[0]].value == LVAL)) {// verify legality of Lion capture in Chu Shogi
 	score = 0;
 	if(p[tb.piece].value == LVAL) {          // Ln x Ln: can make Ln 'vulnerable' (if distant and not through intemediate > GB)
@@ -2321,21 +2340,21 @@ if(PATH) pmap(attacks, stm);
 	}
         if(score == -INF) {
           if(level == 1) repeatMove[repCnt++] = move & 0xFFFFFF | (p[tb.piece].value == LVAL ? 3<<24 : 1 << 24);
-          moveStack[curMove] = 0; // zap illegal moves
+          moveStack[curMove] = INVALID; // zap illegal lion moves
           goto abortMove;
         }
       }
-#if 1
+#if 1 // HGM
       score = -Search(-beta, -iterAlpha, -difEval - tb.booty, iterDep-1+ext,
-                       curMove >= late && iterDep > QSdepth + LMR,
+                       curMove >= late && iterDep > QSdepth + lmr,
                                                       promoSuppress & ~PROMOTE, defer, depth ? INF : tb.gain);
 
 #else
       score = 0;
 #endif
     abortMove:
-attacks -= 2*BSIZE;
 level--;
+attacks = attacksByLevel[level];
     repetition:
       UnMake(&tb);
       xstm = stm; stm ^= WHITE;
@@ -2344,8 +2363,9 @@ printf("# abort (%d) @ %d\n", abortFlag, level);
         if(curMove == firstMove) bestScore = oldBest, bestMoveNr = firstMove; // none searched yet
         goto leave;
       }
-#if 1
-if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d  (%d)\n", level, depth, iterDep, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), score, bestScore, GetTickCount()),fflush(stdout);
+#if 1 // HGM
+if(PATH) printf("%d:%2d:%d %3d %6x ", level, depth, iterDep, curMove, moveStack[curMove]),fflush(stdout);
+if(PATH) printf("%-10s %6d %6d  (%d)\n", MoveToText(moveStack[curMove], 0), score, bestScore, GetTickCount()),fflush(stdout);
 
       // ALPHA-BETA STUFF
       if(score > bestScore) {
@@ -2438,7 +2458,7 @@ pplist()
 	for(j=0; j<8; j++) printf(" %3d", p[i].range[j]);
 	if(i<2 || i>11) printf("\n"); else printf("  %02x %d\n", fireFlags[i-2]&255, p[i].ranking);
   }
-  printf("last: %d / %d\nroyal %d / %d\n", last[WHITE], last[BLACK], royal[WHITE], royal[BLACK]);
+  printf("last: %d / %d\nroyal %d / %d\n", pieces[WHITE], pieces[BLACK], royal[WHITE], royal[BLACK]);
 }
 
 void
@@ -2501,9 +2521,6 @@ pmoves(int start, int end)
     #define NONE    3
     #define ANALYZE 4
 
-    // some value that cannot occur as a valid move
-    #define INVALID 0
-
     // some parameter of your engine
     #define MAXMOVES 2000 /* maximum game length  */
     #define MAXPLY   60   /* maximum search depth */
@@ -2552,10 +2569,10 @@ MakeMove2 (int stm, MOVE move)
   sup2 = MakeMove(move, &undoInfo);
   if(chuFlag && p[undoInfo.victim].value == LVAL && p[undoInfo.piece].value != LVAL) sup2 |= PROMOTE;
   rootEval = -rootEval - undoInfo.booty;
-  for(i=0; i<200; i++) repStack[i] = repStack[i+1], checkStack[i] = checkStack[i+1];
-
-
-  repStack[199] = hashKeyH, checkStack[199] = inCheck;
+  for(i=0; i<LEVELS; i++)
+    repStack[i] = repStack[i+1], checkStack[i] = checkStack[i+1];
+  repStack[LEVELS-1] = hashKeyH, checkStack[LEVELS-1] = inCheck;
+// makemove is not part of http://hgm.nubati.net/CECP.html
 printf("# makemove %08x %c%d %c%d\n", move, FILECH(sup1), RANK(sup1), FILECH(sup2), RANK(sup2));
   return stm ^ WHITE;
 }
@@ -2566,7 +2583,7 @@ UnMake2 (MOVE move)
   int i;
   rootEval = -rootEval - undoInfo.booty;
   UnMake(&undoInfo);
-  for(i=200; i>0; i--) repStack[i] = repStack[i-1], checkStack[i] = checkStack[i-1];
+  for(i=LEVELS; i>0; i--) repStack[i] = repStack[i-1], checkStack[i] = checkStack[i-1];
   sup2 = sup1; sup1 = sup0;
 }
 
@@ -2656,6 +2673,9 @@ MapFromScratch(attacks);
   Search(-INF-1, INF+1, 0, QSdepth+1, 0, sup1 & ~PROMOTE, sup2, INF);
   postThinking++;
 
+#if 0
+printf("last=%d nc=%d retMSP=%d\n", msp, nonCapts, retMSP);
+#endif
   listStart = retFirst; msp = retMSP;
   if(currentVariant == V_LION) GenCastlings();
   listEnd = msp;
@@ -2717,7 +2737,9 @@ ParseMove (char *moveText)
   if(currentVariant == V_WOLF && *moveText == 'w') *moveText = '\n';
   if(*moveText != '\n' && *moveText != '=') ret |= PROMOTE;
 printf("# suppress = %c%d\n", FILECH(sup1), RANK(sup1));
-//  ListMoves();
+#if 1
+  ListMoves();
+#endif
   for(i=listStart; i<listEnd; i++) {
     if(moveStack[i] == INVALID) continue;
     if(c == '@' && (moveStack[i] & SQUARE) == (moveStack[i] >> SQLEN & SQUARE)) break; // any null move matches @@@@
@@ -2757,7 +2779,9 @@ Highlight(char *coords)
   int i, j, n, sqr, cnt=0;
   char b[BSIZE]={0}, buf[2000], *q;
   ReadSquare(coords, &sqr);
-//  ListMoves();
+#if 1
+  ListMoves();
+#endif
   for(i=listStart; i<listEnd; i++) {
     if(sqr == (moveStack[i]>>SQLEN & SQUARE)) {
       int t = moveStack[i] & SQUARE;
@@ -2821,7 +2845,7 @@ char inBuf[8000], command[80], ponderMoveText[20];
 void
 SetSearchTimes (int timeLeft)
 {
-  int targetTime, movesLeft = BSIZE/4 + 20;
+  int targetTime, movesLeft = bRanks*bFiles/4 + 20;
   if(mps) movesLeft = mps - (moveNr>>1)%mps;
   targetTime = (timeLeft - 1000*inc) / (movesLeft + 2) + 1000 * inc;
   if(moveNr < 30) targetTime *= 0.5 + moveNr/60.; // speedup in opening
@@ -2846,7 +2870,7 @@ MapFromScratch(attacks);
   *move = retMove;
   *ponderMove = pv[1];
 printf("# best=%s\n", MoveToText(pv[0],0));
-printf("# ponder=%s\n", MoveToText(pv[1],0));
+if(pv[1]) printf("# ponder=%s\n", MoveToText(pv[1],0));
   return score;
 }
 
@@ -3056,8 +3080,8 @@ pboard(board);
 	// non-standard commands
         if(!strcmp(command, "p"))       { pboard(board); continue; }
         if(!strcmp(command, "f"))       { pbytes(fireBoard); continue; }
-        if(!strcmp(command, "w"))       { MapOneColor(WHITE, last[WHITE], attacks); pmap(attacks, WHITE); continue; }
-        if(!strcmp(command, "b"))       { MapOneColor(BLACK, last[BLACK], attacks); pmap(attacks, BLACK); continue; }
+        if(!strcmp(command, "w"))       { MapOneColor(WHITE, pieces[WHITE], attacks); pmap(attacks, WHITE); continue; }
+        if(!strcmp(command, "b"))       { MapOneColor(BLACK, pieces[BLACK], attacks); pmap(attacks, BLACK); continue; }
         if(!strcmp(command, "l"))       { pplist(); continue; }
         // ignored commands:
         if(!strcmp(command, "xboard"))  { continue; }
@@ -3125,7 +3149,7 @@ pboard(board);
                    "piece T!& vRsW2flBfrF\npiece T'& fFvW2\npiece L'& lfrbBfRbW\npiece N& K\npiece R'& rflbBfRbW\npiece I'& FvrW\n"
                    "piece +X& F3vRsW2\npiece +O& F3sRvW2\npiece H'& WfF2\npiece +H'& Q\npiece C'& F\npiece D!& sRvW2frBflF\npiece P'& sWfDbA\n"
                    "piece K'& W2fF\npiece +K'& WBmasB\npiece +P'& RmasR\npiece +N& fRfBbF2bsW2\npiece F& FvW\npiece V& fF2sW\n", cashewArray);
-	  repStack[199] = hashKeyH, checkStack[199] = 0;
+	  repStack[LEVELS-1] = hashKeyH, checkStack[LEVELS-1] = 0;
           continue;
         }
         if(!strcmp(command, "setboard")){ engineSide = NONE;  Init(curVarNr); stm = Setup2(inBuf+9); continue; }
