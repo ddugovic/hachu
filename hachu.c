@@ -126,7 +126,7 @@
 typedef unsigned int Move;
 
 char *MoveToText(Move move, int m);     // from WB driver
-void pmap(int *m, int color);
+void pmap(int color);
 void pboard(int *b);
 void pbytes(unsigned char *b);
 int myRandom();
@@ -742,7 +742,6 @@ int squareKey[BSIZE];
 int board[BSIZE] = { [0 ... BSIZE-1] = EDGE };
 int boardCopy[BSIZE] = { [0 ... BSIZE-1] = EDGE };
 int attacksByLevel[LEVELS][2*BSIZE];
-int *attacks = attacksByLevel[0];
 char promoBoard[BSIZE] = { [0 ... BSIZE-1] = 0 }; // flags to indicate promotion zones
 unsigned char fireBoard[BSIZE]; // flags to indicate squares controlled by Fire Demons
 signed char PST[PSTSIZE] = { 0 };
@@ -1322,8 +1321,9 @@ GenNonCapts (int promoSuppress)
 }
 
 int
-MapOneColor (int start, int last, int *map)
+MapOneColor (int start, int last)
 {
+  int *map = attacksByLevel[level];
   int i, j, totMob = 0;
   for(i=start+2; i<=last; i+=2) {
     int mob = 0;
@@ -1413,17 +1413,20 @@ if(!level) printf("# mobility %d = %d\n", start, totMob);
   return totMob;
 }
 
-void
-MapFromScratch (int *attacks)
+int*
+MapFromScratch ()
 {
+  int *attacks = attacksByLevel[level];
   bzero(attacks, 2*BSIZE);
-  mobilityScore  = MapOneColor(1, pieces[WHITE], attacks);
-  mobilityScore -= MapOneColor(0, pieces[BLACK], attacks);
+  mobilityScore  = MapOneColor(1, pieces[WHITE]);
+  mobilityScore -= MapOneColor(0, pieces[BLACK]);
+  return attacks;
 }
 
 int
 MakeMove (Move m, UndoInfo *u)
 {
+  int *attacks = attacksByLevel[level];
   int deferred = ABSENT;
   // first execute move on board
   u->from = m>>SQLEN & SQUARE;
@@ -1611,6 +1614,7 @@ UnMake(UndoInfo *u)
 void
 GenCapts (int sqr, int victimValue)
 { // generate all moves that capture the piece on the given square
+  int *attacks = attacksByLevel[level];
   int i, att = attacks[2*sqr + stm];
 #if 0
 printf("GenCapts(%c%d,%d) %08x\n", FILECH(sqr), RANK(sqr), victimValue, att);
@@ -1885,6 +1889,7 @@ Ftest (int side)
 int
 Evaluate (int difEval)
 {
+  int *attacks = attacksByLevel[level];
   int wLion=ABSENT, bLion=ABSENT, score=mobilityScore, f;
 #ifdef KINGSAFETY
   int wKing, bKing, i, j, max=512;
@@ -2020,6 +2025,7 @@ void TerminationCheck();
 int
 Search (int alpha, int beta, int difEval, int depth, int lmr, int oldPromo, int promoSuppress, int threshold)
 {
+  int *attacks = attacksByLevel[level];
   int i, j, k, phase, king, nextVictim, defer, autoFail=0, inCheck=0, late=100000, ep;
   int firstMove, oldMSP=msp, curMove, sorted, bestMoveNr=0;
   int resDep=0, iterDep, ext;
@@ -2030,7 +2036,7 @@ Search (int alpha, int beta, int difEval, int depth, int lmr, int oldPromo, int 
 #ifdef HASH
   Move hashMove; int index, nr, hit;
 #endif
-if(PATH) /*pboard(board),pmap(attacks, BLACK),*/printf("# search(%d) {%d,%d} eval=%d, stm=%d (flag=%d)\n",depth,alpha,beta,difEval,stm,abortFlag),fflush(stdout);
+if(PATH) /*pboard(board),pmap(BLACK),*/printf("# search(%d) {%d,%d} eval=%d, stm=%d (flag=%d)\n",depth,alpha,beta,difEval,stm,abortFlag),fflush(stdout);
   xstm = stm ^ WHITE;
 //printf("map made\n");fflush(stdout);
 
@@ -2179,7 +2185,6 @@ if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp
 	    while(nextVictim < pieces[xstm]) {        // more victims may exist
 	      int group, to = p[nextVictim += 2].pos; // take next
 	      if(to == ABSENT) continue;              // ignore if absent
-if(PATH) printf("%d:%2d:%2d to=%c%d\n", level, depth, iterDep, FILECH(to), RANK(to)), fflush(stdout);
 	      if(!attacks[2*to + stm]) continue;      // skip if not attacked
 	      group = p[nextVictim].value;            // remember value of this found victim
 	      if(iterDep <= QSdepth + 1 && 2*group + curEval + 30 < alpha) {
@@ -2320,12 +2325,11 @@ if(depth >= 0) printf("%2d:%d repetition %d/%d %s\n", depth, iterDep, curMove, m
 
 if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), score, bestScore),fflush(stdout);
 path[level++] = move;
-attacks = attacksByLevel[level];
-MapFromScratch(attacks); // for as long as incremental update does not work.
+int *attacks = MapFromScratch(); // for as long as incremental update does not work.
 #if 0
 if(depth >= 0) printf("%2d:%d mapped %d/%d %s\n", depth, iterDep, curMove, msp, MoveToText(moveStack[curMove], 0));
 #endif
-//if(PATH) pmap(attacks, stm);
+//if(PATH) pmap(stm);
       if(chuFlag && (p[tb.victim].value == LVAL || p[tb.epVictim[0]].value == LVAL)) {// verify legality of Lion capture in Chu Shogi
 	score = 0;
 	if(p[tb.piece].value == LVAL) {          // Ln x Ln: can make Ln 'vulnerable' (if distant and not through intemediate > GB)
@@ -2353,7 +2357,6 @@ if(depth >= 0) printf("%2d:%d mapped %d/%d %s\n", depth, iterDep, curMove, msp, 
 #endif
     abortMove:
 level--;
-attacks = attacksByLevel[level];
     repetition:
       UnMake(&tb);
       xstm = stm; stm ^= WHITE;
@@ -2485,14 +2488,15 @@ pbytes (unsigned char *b)
 }
 
 void
-pmap (int *m, int color)
+pmap (int color)
 {
+  int *attacks = attacksByLevel[level];
   // decode out of double-wide "attacks" array
   // surely attacks[color][sq] would be cleaner
   int i, j;
   for(i=bFiles-1; i>=0; i--) {
     printf("#");
-    for(j=0; j<bRanks; j++) printf("%10o", m[2*POS(i, j)+color]);
+    for(j=0; j<bRanks; j++) printf("%10o", attacks[2*POS(i, j)+color]);
     printf("\n");
   }
 }
@@ -2553,7 +2557,7 @@ InCheck ()
   if( k == ABSENT) k = p[royal[stm] + 2].pos;
   else if(p[royal[stm] + 2].pos != ABSENT) k = ABSENT; // two kings is no king...
   if( k != ABSENT) {
-    MapFromScratch(attacks);
+    int *attacks = MapFromScratch();
     if(attacks[2*k + 1 - stm]) return 1;
   }
   return 0;
@@ -2664,7 +2668,7 @@ ListMoves (int listStart, int listEnd)
 { // create move list on move stack
   int i;
   memcpy(boardCopy, board, sizeof(board));
-MapFromScratch(attacks);
+MapFromScratch();
   postThinking--; repCnt = 0; tlim1 = tlim2 = tlim3 = 1e8; abortFlag = msp = 0;
   Search(-INF-1, INF+1, 0, QSdepth+1, 0, sup1 & ~PROMOTE, sup2, INF);
   postThinking++;
@@ -2858,7 +2862,7 @@ printf("# SearchBestMove\n");
   startTime = GetTickCount();
   nodes = 0;
 printf("# s=%d\n", startTime);fflush(stdout);
-MapFromScratch(attacks);
+MapFromScratch();
   retMove = INVALID; repCnt = 0;
   score = Search(-INF-1, INF+1, rootEval, maxDepth + QSdepth, 0, sup1, sup2, INF);
   *move = retMove;
@@ -2971,6 +2975,7 @@ pboard(board);
           } else
           if(move == INVALID) {         // game apparently ended
             int kcapt = 0, xstm = stm ^ WHITE, king, k = p[king=royal[xstm]].pos;
+            int *attacks = attacksByLevel[level];
             if( k != ABSENT) { // test if King capture possible
               if(attacks[2*k + stm]) {
                 if( p[king + 2].pos == ABSENT ) kcapt = 1; // we have an attack on his only King
@@ -3072,8 +3077,8 @@ pboard(board);
 	// non-standard commands
         if(!strcmp(command, "p"))       { pboard(board); continue; }
         if(!strcmp(command, "f"))       { pbytes(fireBoard); continue; }
-        if(!strcmp(command, "w"))       { MapOneColor(WHITE, pieces[WHITE], attacks); pmap(attacks, WHITE); continue; }
-        if(!strcmp(command, "b"))       { MapOneColor(BLACK, pieces[BLACK], attacks); pmap(attacks, BLACK); continue; }
+        if(!strcmp(command, "w"))       { MapOneColor(WHITE, pieces[WHITE]); pmap(WHITE); continue; }
+        if(!strcmp(command, "b"))       { MapOneColor(BLACK, pieces[BLACK]); pmap(BLACK); continue; }
         if(!strcmp(command, "l"))       { pplist(); continue; }
         // ignored commands:
         if(!strcmp(command, "xboard"))  { continue; }
