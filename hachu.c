@@ -1222,13 +1222,11 @@ NewCapture (int x, int y, int promoFlags)
   return 0;
 }
 
-char map[49]; // 7x7 map for area movers
 char mapStep[] = { 7, 8, 1, -6, -7, -8, -1, 6 };
 char rowMask[] = { 0100, 0140, 0160, 070, 034, 016, 07, 03, 01 };
-char rows[9];
 
 void
-AreaStep (int from, int x, int flags, int n, int d)
+AreaStep (int *map, int from, int x, int flags, int n, int d)
 {
   int i;
   for(i=0; i<8; i++) {
@@ -1237,22 +1235,24 @@ AreaStep (int from, int x, int flags, int n, int d)
     if(map[m] >= d) continue;   // already done
     if(!map[m]) moveStack[msp++] = from<<SQLEN | to;
     map[m] = d;
-    if(d > 1 && board[to] == EMPTY) AreaStep(from, to, flags, m, d-1);
+    if(d > 1 && board[to] == EMPTY) AreaStep(map, from, to, flags, m, d-1);
   }
 }
 
 void
 AreaMoves (int from, int piece, int range)
 {
+  int map[49]; // 7x7 map for area movers
   int i;
   for(i=0; i<49; i++) map[i] = 0;
   map[3*7+7] = range;
-  AreaStep(from, from, p[piece].promoFlag, 3*7+3, range);
+  AreaStep(map, from, from, p[piece].promoFlag, 3*7+3, range);
 }
 
 void
 MarkBurns (int x)
 { // make bitmap of squares in FI (7x7) neighborhood where opponents can be captured or burned
+  char rows[9];
   int r=x>>5, f=x&15, top=8, bottom=0, b=0, t=8, left=0, right=8; // 9x9 area; assumes 32x16 board
   if(r < 4) bottom = 4 - r, rows[b=bottom-1] = 0; else
   if(r > 11) top   = 19 - r, rows[t=top+1] = 0; // adjust area to board edges
