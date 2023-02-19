@@ -1325,7 +1325,6 @@ GenNonCapts (int promoSuppress)
 int
 MapOneColor (int color, int pieces)
 {
-  int *map = attacks;
   int i, j, totMob = 0;
   for(i=color+2; i<=pieces; i+=2) {
     int mob = 0;
@@ -1336,24 +1335,24 @@ MapOneColor (int color, int pieces)
 	if(r == N) {
 	  x += nStep[j];
 	  if(board[x] != EMPTY && board[x] != EDGE)
-	    map[2*x + color] += one[8];
+	    ATTACK(x, color) += one[8];
 	} else
 	if(r >= S) { // in any case, do a jump of 2
 	  if(board[x + 2*v] != EMPTY && board[x + 2*v] != EDGE)
-	    map[2*(x + 2*v) + color] += one[j], mob += (board[x + 2*v] ^ color) & 1;
+	    ATTACK((x + 2*v), color) += one[j], mob += (board[x + 2*v] ^ color) & 1;
 	  if(r < J) { // more than plain jump
 	    if(board[x + v] != EMPTY && board[x + v] != EDGE)
-	      map[2*(x + v) + color] += one[j]; // single step (completes D and I)
+	      ATTACK((x + v), color) += one[j]; // single step (completes D and I)
 	    if(r < I) {  // Lion power
 	    if(r >= T) { // Lion Dog, also do a jump of 3
 	      if(board[x + 3*v] != EMPTY && board[x + 3*v] != EDGE)
-		map[2*(x + 3*v) + color] += one[j];
+		ATTACK((x + 3*v), color) += one[j];
 	      if(r == K) { // Teaching King also range move
 		int y = x, n = 0;
 		while(1) {
 		  if(board[y+=v] == EDGE) break;
  		  if(board[y] != EMPTY) {
-		    if(n > 2) map[2*y + color] += one[j]; // outside Lion range
+		    if(n > 2) ATTACK(y, color) += one[j]; // outside Lion range
 		    break;
 		  }
 		  n++;
@@ -1367,28 +1366,28 @@ MapOneColor (int color, int pieces)
 		while(n++ < rg) {
 		  if(board[y+=v] == EDGE) break;
 		  if(board[y] != EMPTY) {
-		    if(n > 2) map[2*y + color] += one[j]; // outside Lion range
+		    if(n > 2) ATTACK(y, color) += one[j]; // outside Lion range
 		    break;
 		  }
 		}
 	      }
 	      v = nStep[j];
 	      if(board[x + v] != EMPTY && board[x + v] != EDGE && r != W)
-		map[2*(x + v) + color] += one[8];
+		ATTACK((x + v), color) += one[8];
 	    }
 	    }
 	  }
 	} else
 	if(r == C) { // FIDE Pawn diagonal
 	  if(board[x + v] != EMPTY && board[x + v] != EDGE)
-	    map[2*(x + v) + color] += one[j];
+	    ATTACK((x + v), color) += one[j];
 	}
 	continue;
       }
       while(r-- > 0) {
         if(board[x+=v] != EMPTY) {
 	  mob += dist(x-v, p[i].pos);
-	  if(board[x] != EDGE) map[2*x + color] += one[j], mob += (board[x] ^ color) & 1;
+	  if(board[x] != EDGE) ATTACK(x, color) += one[j], mob += (board[x] ^ color) & 1;
 #if 1 // HGM
 	  if(p[i].range[j] > X) { // jump capturer
 	    int c = p[i].qval;
@@ -1396,9 +1395,9 @@ MapOneColor (int color, int pieces)
 	      x += v; // go behind directly captured piece, if jumpable
 	      while(p[board[x]].qval < c) { // kludge alert: EDGE has qval = 5, blocking everything
 		if(board[x] != EMPTY) {
-//		  int n = map[2*x + color] & attackMask[j];
-//		  map[2*x + color] += (n < 3*one[j] ? 3*one[j] : one[j]); // first jumper gets 2 extra (to ease incremental update)
-		  map[2*x + color] += one[j]; // for now use true count
+//		  int n = ATTACK(x, color) & attackMask[j];
+//		  ATTACK(x, color) += (n < 3*one[j] ? 3*one[j] : one[j]); // first jumper gets 2 extra (to ease incremental update)
+		  ATTACK(x, color) += one[j]; // for now use true count
 		}
 		x += v;
 	      }
