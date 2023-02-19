@@ -53,6 +53,7 @@
 
 #define BLACK      0
 #define WHITE      1
+#define COLORS     2
 #define SQLEN      8               /* bits in square number   */
 #define EMPTY      0
 #define EDGE   (1<<SQLEN)
@@ -688,7 +689,7 @@ typedef struct {
   char ranking;
 } PieceInfo; // piece-list entry
 
-int pieces[2], royal[2], kylin[2];
+int pieces[COLORS], royal[COLORS], kylin[COLORS];
 PieceInfo p[NPIECES]; // piece list
 
 typedef struct {
@@ -714,7 +715,6 @@ typedef struct {
 int squareKey[BSIZE];
 
 int board[BSIZE] = { [0 ... BSIZE-1] = EDGE };
-int boardCopy[BSIZE] = { [0 ... BSIZE-1] = EDGE };
 // Stockfish and many engines compute attacks on demand using magic bitboards
 // whereas HaChu attempts in vain to maintain "this square attacks these rays"
 // further compounded by "level" (search depth).
@@ -725,9 +725,9 @@ int boardCopy[BSIZE] = { [0 ... BSIZE-1] = EDGE };
 // and you are certain magic bitboards are inadequate.
 // The question of "what squares does my piece attack?" could benefit from a map
 // of squares to PieceDesc (or range) however "is a square attacked?" might not.
-int attacksByLevel[LEVELS][2*BSIZE];
+int attacksByLevel[LEVELS][COLORS][BSIZE];
 #define attacks attacksByLevel[level]
-#define ATTACK(pos, color) attacks[2*pos + color]
+#define ATTACK(pos, color) attacks[color][pos]
 char promoBoard[BSIZE] = { [0 ... BSIZE-1] = 0 }; // flags to indicate promotion zones
 unsigned char fireBoard[BSIZE]; // flags to indicate squares controlled by Fire Demons
 signed char PST[PSTSIZE] = { 0 };

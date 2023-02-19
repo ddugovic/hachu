@@ -17,14 +17,13 @@
 #include <signal.h>
 #include <stdint.h>
 
-//define PATH level==0 || path[0] == 0x82906b &&  (level==1 || path[1] == 0x8790d9 && (level == 2 || path[2] == 0x8598ca && (level == 3 /*|| path[3] == 0x3e865 && (level == 4 || path[4] == 0x4b865 && (level == 5))*/)))
-#define PATH 0
-
 #define HASH
 #define KILLERS
 #define NULLMOVE
 #define CHECKEXT
 #define LMR 4
+#define PATH 0
+#define QSDEPTH 4
 #define LIONTRAP
 #define KINGSAFETY
 #define KSHIELD
@@ -151,8 +150,8 @@ Range (signed char *range)
   int i, m=0;
   for(i=0; i<RAYS; i++) {
     int d = range[i];
-    if(range[i] < 0) d = range[i] >= L ? 2 : 36;
-    if(d > m) m = d;
+    if(d < 0) d = (d >= L ? 2 : 36);
+    m = MAX(m, d);
   }
   return m;
 }
@@ -606,14 +605,16 @@ GenNonCapts (int promoSuppress)
 }
 
 int
-MapOneColor (int color, int pieces)
+MapAttacksByColor (int color, int pieces)
 {
+  bzero(attacks[color], sizeof(attacks[color]));
   int i, j, totMob = 0;
   for(i=color+2; i<=pieces; i+=2) {
     int mob = 0;
-    if(p[i].pos == ABSENT) continue;
+    const PieceInfo *pi = &(p[i]);
+    if(pi->pos == ABSENT) continue;
     for(j=0; j<RAYS; j++) {
-      int x = p[i].pos, v = kStep[j], r = p[i].range[j];
+      int x = pi->pos, v = kStep[j], r = pi->range[j];
       if(r < 0) { // jumping piece, special treatment
 	if(r == N) {
 	  x += nStep[j];
@@ -667,42 +668,37 @@ MapOneColor (int color, int pieces)
 	}
 	continue;
       }
-      while(r-- > 0) {
-        if(board[x+=v] != EMPTY) {
-	  mob += dist(x-v, p[i].pos);
-	  if(board[x] != EDGE) ATTACK(x, color) += ray[j], mob += (board[x] ^ color) & 1;
-#if 1 // HGM
-	  if(p[i].range[j] > X) { // jump capturer
-	    int c = p[i].qval;
-	    if(p[board[x]].qval < c) {
-	      x += v; // go behind directly captured piece, if jumpable
-	      while(p[board[x]].qval < c) { // kludge alert: EDGE has qval = 5, blocking everything
-		if(board[x] != EMPTY) {
-//		  int n = ATTACK(x, color) & attackMask[j];
-//		  ATTACK(x, color) += (n < 3*one[j] ? 3*one[j] : ray[j]); // first jumper gets 2 extra (to ease incremental update)
-		  ATTACK(x, color) += ray[j]; // for now use true count
-		}
-		x += v;
-	      }
-	    }
-	  }
-#endif
-	  break;
-	}
+      for(int y=x; r-- > 0 && board[y+=v] != EDGE; ) {
+        mob += dist(y, x);
+        ATTACK(y, color) += ray[j], mob += (board[y] ^ color) & 1;
+        if(pi->range[j] > X) { // jump capturer
+          int c = pi->qval;
+          if(p[board[y]].qval < c) {
+            y += v; // go behind directly captured piece, if jumpable
+            while(p[board[y]].qval < c) { // kludge alert: EDGE has qval = 5, blocking everything
+              if(board[y] != EMPTY) {
+//              int n = ATTACK(y, color) & attackMask[j];
+//              ATTACK(y, color) += (n < 3*one[j] ? 3*one[j] : ray[j]); // first jumper gets 2 extra (to ease incremental update)
+                ATTACK(y, color) += ray[j]; // for now use true count
+              }
+              y += v;
+            }
+          }
+        }
+        if(board[y] != EMPTY) break;
       }
     }
-    totMob += mob * p[i].mobWeight;
+    totMob += mob * pi->mobWeight;
   }
 if(!level) printf("# mobility %d = %d\n", color, totMob);
   return totMob;
 }
 
 void
-MapFromScratch ()
+MapAttacks ()
 {
-  bzero(attacks, 2*BSIZE);
-  mobilityScore  = MapOneColor(WHITE, pieces[WHITE]);
-  mobilityScore -= MapOneColor(BLACK, pieces[BLACK]);
+  mobilityScore  = MapAttacksByColor(WHITE, pieces[WHITE]);
+  mobilityScore -= MapAttacksByColor(BLACK, pieces[BLACK]);
 }
 
 int
@@ -1299,8 +1295,6 @@ FireSet (UndoInfo *tb)
 
 void TerminationCheck();
 
-#define QSdepth 4
-
 int
 Search (int alpha, int beta, int difEval, int depth, int lmr, int oldPromo, int promoSuppress, int threshold)
 {
@@ -1314,7 +1308,10 @@ Search (int alpha, int beta, int difEval, int depth, int lmr, int oldPromo, int 
 #ifdef HASH
   Move hashMove; int index, nr, hit;
 #endif
-if(PATH) /*pboard(board),pmap(BLACK),*/printf("# search(%d) {%d,%d} eval=%d, stm=%d (flag=%d)\n",depth,alpha,beta,difEval,stm,abortFlag);
+/*if(PATH) pboard(board),pmap(BLACK);*/
+#if 0
+printf("\n# search(%d) {%d,%d} eval=%d stm=%d ",level,alpha,beta,difEval,stm);
+#endif
   xstm = stm ^ WHITE;
 //printf("map made\n");fflush(stdout);
 
@@ -1337,7 +1334,7 @@ if(PATH) /*pboard(board),pmap(BLACK),*/printf("# search(%d) {%d,%d} eval=%d, stm
         }
       }
 #ifdef CHECKEXT
-      else { inCheck = 1; if(depth >= QSdepth) depth++; }
+      else { inCheck = 1; if(depth >= QSDEPTH) depth++; }
 #endif
     }
   }
@@ -1345,15 +1342,16 @@ if(PATH) /*pboard(board),pmap(BLACK),*/printf("# search(%d) {%d,%d} eval=%d, stm
 if(!level) {for(i=0; i<5; i++)printf("# %d %08x, %d\n", i, repStack[LEVELS-i], checkStack[LEVELS-i]);}
   // KING CAPTURE
   k = p[king=royal[xstm]].pos;
-  if( k != ABSENT) {
-    if(ATTACK(k, stm)) {
-      if( p[king + 2].pos == ABSENT ) return INF; // we have an attack on his only King
+  if(k != ABSENT) {
+    if(ATTACK(k, stm) && p[king + 2].pos == ABSENT) { // we have an attack on his only King
+      return INF;
     }
   } else { // he has no king! Test for attacks on Crown Prince
     k = p[king + 2].pos;
-    if(k == ABSENT ? !tsume : ATTACK(k, stm)) return INF; // we have attack on Crown Prince
+    if(k == ABSENT ? !tsume : ATTACK(k, stm)) { // we have attack on Crown Prince
+      return INF;
+    }
   }
-//printf("King safe\n");fflush(stdout);
   // EVALUATION & WINDOW SHIFT
   curEval = Evaluate(difEval) -20*inCheck;
   alpha -= (alpha < curEval);
@@ -1366,6 +1364,9 @@ if(!level) {for(i=0; i<5; i++)printf("# %d %08x, %d\n", i, repStack[LEVELS-i], c
   firstMove = j = curMove = sorted = msp; // leave 50 empty slots in front of move list
   iterDep = -(depth == 0); tb.fireMask = phase = 0;
 
+#if 0
+  printf("depth=%d iterDep=%d resDep=%d\n", depth, iterDep, resDep);
+#endif
 #ifdef HASH
   index = hashKeyL ^ 327*stm ^ (oldPromo + 987981)*(63121 + promoSuppress);
   index = index + (index >> 16) & hashMask;
@@ -1393,25 +1394,19 @@ printf("# probe hash index=%x hit=%d\n", index, hit);
     hashMove = INVALID;
   }
 #if 0
-printf("# iterDep = %d score = %d move = %s\n",iterDep,bestScore,MoveToText(hashMove,0));
+printf("# iterDep = %d score = %d hash move = %s\n",iterDep,bestScore,MoveToText(hashMove,0));
 #endif
 #endif
 
-  if(depth > QSdepth && iterDep < QSdepth) iterDep = QSdepth; // full-width: start at least from 1-ply
-#if 0
-printf("# iterDep=%d\n", iterDep);
-#endif
+  if(depth > QSDEPTH) iterDep = MAX(iterDep, QSDEPTH); // full-width: start at least from 1-ply
   while(++iterDep <= depth) {
 #if 0
-if(depth>= 0) printf("iter %d:%d\n", depth,iterDep);
+if(depth >= QSDEPTH) printf("# new iter %d:%d\n", depth, iterDep);
 #endif
     oldBest = bestScore;
     iterAlpha = alpha; bestScore = -INF; bestMoveNr = 0; resDep = 60;
-#if 0
-printf("# new iter %d\n", iterDep);
-#endif
-    if(depth <= QSdepth) {
-      bestScore = curEval; resDep = QSdepth;
+    if(depth <= QSDEPTH) {
+      bestScore = curEval; resDep = QSDEPTH;
       if(bestScore > alpha) {
 	alpha = bestScore;
 #if 0
@@ -1421,21 +1416,19 @@ printf("# stand pat %d (beta=%d)\n", bestScore, beta);
       }
     }
     for(curMove = firstMove; ; curMove++) { // loop over moves
-#if 0
-if(depth>= 0) printf("# phase=%d: first=%d curr=%d last=%d\n", phase, firstMove, curMove, msp);
-#endif
+if(PATH) printf("# phase=%d: first=%d curr=%d last=%d depth=%d:%d (%d)\n", phase, firstMove, curMove, msp, iterDep, depth, resDep);
       // MOVE SOURCE
       if(curMove >= msp) { // we ran out of moves; generate some new
 if(PATH) printf("# new moves, phase=%d\n", phase);
 	switch(phase) {
 	  case 0: // null move
 #ifdef NULLMOVE
-	    if(depth > QSdepth && curEval >= beta && !inCheck && filling > 10) {
+	    if(depth > QSDEPTH && curEval >= beta && !inCheck && filling > 10) {
               int nullDep = depth - 3;
 	      stm ^= WHITE;
 path[level++] = 0;
 if(PATH) printf("%d:%d null move\n", level, depth);
-	      score = -Search(-beta, 1-beta, -difEval, nullDep<QSdepth ? QSdepth : nullDep, 0, promoSuppress & SQUARE, ABSENT, INF);
+	      int score = -Search(-beta, 1-beta, -difEval, nullDep<QSDEPTH ? QSDEPTH : nullDep, 0, promoSuppress & SQUARE, ABSENT, INF);
 if(PATH) printf("%d:%d null move score = %d\n", level, depth, score);
 level--;
 	      xstm = stm; stm ^= WHITE;
@@ -1449,7 +1442,7 @@ if(PATH && tenFlag) printf("fireMask=%x\n",tb.fireMask),pbytes(fireBoard);
 	  case 1: // hash move
 	    phase = 2;
 #ifdef HASH
-	    if(hashMove && (depth > QSdepth || // must be capture in QS
+	    if(hashMove && (depth > QSDEPTH || // must be capture in QS
 		 (hashMove & SQUARE) >= SPECIAL || board[hashMove & SQUARE] != EMPTY)) {
 	      moveStack[sorted = msp++] = hashMove;
 	      goto extractMove;
@@ -1463,10 +1456,10 @@ if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp
 	    while(nextVictim < pieces[xstm]) {        // more victims may exist
 	      int group, to = p[nextVictim += 2].pos; // take next
 	      if(to == ABSENT) continue;              // ignore if absent
-	      if(!ATTACK(to, stm)) continue;      // skip if not attacked
+	      if(!ATTACK(to, stm)) continue;          // skip if not attacked
 	      group = p[nextVictim].value;            // remember value of this found victim
-	      if(iterDep <= QSdepth + 1 && 2*group + curEval + 30 < alpha) {
-		resDep = QSdepth + 1; nextVictim -= 2;
+	      if(iterDep <= QSDEPTH + 1 && 2*group + curEval + 30 < alpha) {
+		resDep = QSDEPTH + 1; nextVictim -= 2;
 		if(bestScore < 2*group + curEval + 30) bestScore = 2*group + curEval + 30;
 		goto cutoff;
 	      }
@@ -1474,20 +1467,20 @@ if(PATH) printf("%d:%2d:%2d group=%d, to=%c%d\n", level, depth, iterDep, group, 
 	      GenCapts(to, 0);
 if(PATH) printf("%d:%2d:%2d first=%d last=%d\n",level,depth,iterDep,firstMove,msp);
 	      while(nextVictim < pieces[xstm] && p[nextVictim+2].value == group) { // more victims of same value exist
-		to = p[nextVictim += 2].pos;          // take next
-		if(to == ABSENT) continue;            // ignore if absent
-		if(!ATTACK(to, stm)) continue;    // skip if not attacked
+		to = p[nextVictim += 2].pos;   // take next
+		if(to == ABSENT) continue;     // ignore if absent
+		if(!ATTACK(to, stm)) continue; // skip if not attacked
 if(PATH) printf("%d:%2d:%2d p=%d, to=%c%d\n", level, depth, iterDep, nextVictim, FILECH(to), RANK(to)), fflush(stdout);
 		GenCapts(to, 0);
 if(PATH) printf("%d:%2d:%2d last=%d\n",level,depth,iterDep,msp);
 	      }
-if(PATH) printf("# captures on %c%d generated, last=%d, group=%d, threshold=%d\n", FILECH(nextVictim), RANK(nextVictim), msp, group, threshold);
+if(PATH) printf("# captures on %c%d generated, last=%d, group=%d, threshold=%d\n", FILECH(to), RANK(to), msp, group, threshold);
 	      goto extractMove; // in auto-fail phase, only search if they might auto-fail-hi
 	    }
-if(PATH) printf("# autofail=%d\n", autoFail);
+if(PATH) printf("# phase=%d autofail=%d\n", phase, autoFail);
 	    if(autoFail) { // non-captures cannot auto-fail; flush queued captures first
-if(PATH) printf("# autofail end (%d-%d)\n", firstMove, msp);
-	      autoFail = 0; curMove = firstMove - 1; continue; // release stashed moves for search
+if(PATH) printf("# phase=%d autofail end (%d-%d)\n", phase, firstMove, msp);
+	      autoFail = 0; curMove = firstMove - 1; continue; // release stashed moves for search (next phase)
 	    }
 	    phase = 4; // out of victims: all captures generated
 	    if(chessFlag && (ep = promoSuppress & SQUARE) != ABSENT) { // e.p. rights. Create e.p. captures as Lion moves
@@ -1505,7 +1498,7 @@ if(PATH) printf("# autofail end (%d-%d)\n", firstMove, msp);
 #endif
 	    phase = 5;
 	  case 5: // killers
-	    if(depth <= QSdepth) { if(resDep > QSdepth) resDep = QSdepth; goto cutoff; }
+	    if(depth <= QSDEPTH) { if(resDep > QSDEPTH) resDep = QSDEPTH; goto cutoff; }
 	    phase = 6;
 	  case 6: // non-captures
 	    nonCapts = msp;
@@ -1541,24 +1534,19 @@ if(PATH) printf("# null = %0x\n", nullMove);
 
       // MOVE EXTRACTION (FROM GENERATED MOVES)
     extractMove:
-#if 0
-if(depth >= 0 || (PATH)) printf("# %d:%2d extract %d/%d (%d)\n\n", depth, iterDep, curMove, msp, sorted);
-#endif
+if(PATH) printf("# extract sorted=%d\n", sorted);
       if(curMove > sorted) {
 	move = moveStack[sorted=j=curMove];
 	for(i=curMove+1; i<msp; i++)
 	  if(move == INVALID || moveStack[i] > move) move = moveStack[j=i]; // search move with highest priority
 	if(j>curMove) { moveStack[j] = moveStack[curMove]; moveStack[curMove] = move; } // swap highest-priority move to front of remaining
-#if 0
-printf("depth=%d:%2d phase=%d last=%d nc=%d sorted=%d\n", depth, iterDep, phase, msp, nonCapts, sorted);
-#endif
 	if(move == INVALID) { msp = curMove--; continue; } // remaining moves are invalid; clip off move list
       } else {
 	move = moveStack[curMove];
 	if(move == INVALID) continue; // skip invalidated move
       }
 #if 0
-if(depth >= 0) printf("#             %2d:%d found %d/%d %08x %s\n", depth, iterDep, curMove, msp, moveStack[curMove], MoveToText(moveStack[curMove], 0));
+if(depth >= 0) printf("# (%d) evaluate 0x%04X %s level=%d autofail=%d\n", curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), level, autoFail);
 #endif
 
       // RECURSION
@@ -1571,8 +1559,11 @@ if(depth >= 0) printf("#             %2d:%d found %d/%d %08x %s\n", depth, iterD
       if(autoFail) {
 	UnMake(&tb); // never search moves during auto-fail phase
 	xstm = stm; stm ^= WHITE;
-	if(tb.gain <= threshold) { // we got to moves that cannot possibly auto-fail
-	  autoFail = 0; curMove = firstMove-1; continue; // release all for search
+#if 0
+printf("#       prune %d-%d ?= %d\n", tb.gain, tb.loss, threshold);
+#endif
+	if(tb.gain <= threshold) { // found refutations that cannot possibly auto-fail
+	  autoFail = 0; curMove = firstMove-1; continue; // release all for search (next phase)
 	}
         if(tb.gain - tb.loss > threshold) {
           bestScore = INF+1; resDep = 0; goto leave; // auto-fail-hi
@@ -1580,11 +1571,11 @@ if(depth >= 0) printf("#             %2d:%d found %d/%d %08x %s\n", depth, iterD
       }
 
 #if 0
-if(depth >= 0) printf("%2d:%d made %d/%d %s\n", depth, iterDep, curMove, msp, MoveToText(moveStack[curMove], 0));
+printf("#       validate 0x%04X %s\n", moveStack[curMove], MoveToText(moveStack[curMove], 0));
 #endif
       for(i=2; i<=cnt50; i+=2) if(repStack[LEVELS+level-i] == hashKeyH) {
 #if 0
-if(depth >= 0) printf("%2d:%d repetition %d/%d %s\n", depth, iterDep, curMove, msp, MoveToText(moveStack[curMove], 0));
+printf("#       repetition %d\n", i);
 #endif
 	retDep = iterDep;
 	if(repDraws) { score = 0; goto repetition; }
@@ -1601,14 +1592,13 @@ if(depth >= 0) printf("%2d:%d repetition %d/%d %s\n", depth, iterDep, curMove, m
       }
       repStack[level+LEVELS] = hashKeyH;
 
-if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), score, bestScore);
 path[level++] = move;
-MapFromScratch(); // for as long as incremental update does not work.
-#if 0
-if(depth >= 0) printf("%2d:%d mapped %d/%d %s\n", depth, iterDep, curMove, msp, MoveToText(moveStack[curMove], 0));
-#endif
+MapAttacks(); // for as long as incremental update does not work.
 //if(PATH) pmap(stm);
       if(chuFlag && (p[tb.victim].value == LVAL || p[tb.epVictim[0]].value == LVAL)) {// verify legality of Lion capture in Chu Shogi
+#if 0
+printf("#       revalidate %d 0x%04X %s\n", level, moveStack[curMove], MoveToText(moveStack[curMove], 0));
+#endif
 	score = 0;
 	if(p[tb.piece].value == LVAL) {          // Ln x Ln: can make Ln 'vulnerable' (if distant and not through intemediate > GB)
 	  if(dist(tb.from, tb.to) != 1 && ATTACK(tb.to, stm) && p[tb.epVictim[0]].value <= 50)
@@ -1627,9 +1617,8 @@ if(depth >= 0) printf("%2d:%d mapped %d/%d %s\n", depth, iterDep, curMove, msp, 
       }
 #if 1 // HGM
       score = -Search(-beta, -iterAlpha, -difEval - tb.booty, iterDep-1+ext,
-                       curMove >= late && iterDep > QSdepth + lmr,
+                       curMove >= late && iterDep > QSDEPTH + lmr,
                                                       promoSuppress & ~PROMOTE, defer, depth ? INF : tb.gain);
-
 #else
       score = 0;
 #endif
@@ -1643,7 +1632,6 @@ printf("# abort (%d) @ %d\n", abortFlag, level);
         if(curMove == firstMove) bestScore = oldBest, bestMoveNr = firstMove; // none searched yet
         goto leave;
       }
-#if 1 // HGM
 if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d (%d)\n", level, depth, iterDep, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), score, bestScore, GetTickCount());
 
       // ALPHA-BETA STUFF
@@ -1678,26 +1666,26 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d (%d)\n", level, depth, iterDep,
 	    pv[myPV] = move;                              // behind our move (pvPtr left at end of copy)
 	  }
 	}
-
       }
       if(retDep+1-ext < resDep) resDep = retDep+1-ext;
-#endif
     } // next move
   cutoff:
     if(!level) { // root node
       lastRootIter = GetTickCount() - startTime;
       if(postThinking > 0) {
         int i;   // WB thinking output
-	printf("%d %d %d %d", iterDep-QSdepth, bestScore, lastRootIter/10, nodes);
+	printf("%d %d %d %d", iterDep-QSDEPTH, bestScore, lastRootIter/10, nodes);
         if(ponderMove) printf(" (%s)", MoveToText(ponderMove, 0));
 	for(i=0; pv[i]; i++) printf(" %s", MoveToText(pv[i], 0));
-        if(iterDep == QSdepth+1) printf(" { root eval = %4.2f dif = %4.2f; abs = %4.2f f=%d D=%4.2f %d/%d}", curEval/100., difEval/100., PSTest()/100., filling, promoDelta/100., Ftest(0), Ftest(1));
+        if(iterDep == QSDEPTH+1) printf(" { root eval = %4.2f dif = %4.2f; abs = %4.2f f=%d D=%4.2f %d/%d}", curEval/100., difEval/100., PSTest()/100., filling, promoDelta/100., Ftest(0), Ftest(1));
 	printf("\n");
-        fflush(stdout);
       }
       if(!(abortFlag & 1) && GetTickCount() - startTime > tlim1) break; // do not start iteration we can (most likely) not finish
     }
-    if(resDep > iterDep) iterDep = resDep; // skip iterations if we got them for free
+#if 0
+    printf("# (%d) %d CUT %d %d %d MAX(%d) %d\n", curMove, phase, depth, iterDep, resDep, MAX(iterDep, resDep), level);
+#endif
+    iterDep = MAX(iterDep, resDep); // skip iterations if we got them for free
 #ifdef LMR
     if(lmr && bestScore <= alpha && iterDep == depth)
       depth++, lmr--; // self-deepen on fail-low reply to late move by lowering reduction
@@ -1720,10 +1708,10 @@ leave:
   retMSP = msp;
   msp = oldMSP; // pop move list
   pvPtr = myPV; // pop PV
-  retMove = bestMoveNr ? moveStack[bestMoveNr] : 0;
-  retDep = resDep - (inCheck & depth >= QSdepth) + lmr;
+  retMove = bestMoveNr ? moveStack[bestMoveNr] : INVALID;
+  retDep = resDep - (inCheck & depth >= QSDEPTH) + lmr;
 #if 0
-printf("return %d: %d %d (t=%d s=%d lim=%d)\n", depth, bestScore, curEval, GetTickCount(), startTime, tlim1);
+printf("#       %d %s (t=%d s=%d lim=%d)\n", bestScore, MoveToText(retMove, 0), GetTickCount(), startTime, tlim1);
 #endif
   return bestScore + (bestScore < curEval);
 }
@@ -1771,7 +1759,7 @@ pmap (int color)
   int i, j;
   for(i=bFiles-1; i>=0; i--) {
     printf("#");
-    for(j=0; j<bRanks; j++) printf("%10o", ATTACK(POS(i, j), color));
+    for(j=0; j<bRanks; j++) printf("%11o", ATTACK(POS(i, j), color));
     printf("\n");
   }
 }
@@ -1832,7 +1820,7 @@ InCheck ()
   if( k == ABSENT) k = p[royal[stm] + 2].pos;
   else if(p[royal[stm] + 2].pos != ABSENT) k = ABSENT; // two kings is no king...
   if( k != ABSENT) {
-    MapFromScratch();
+    MapAttacks();
     if(ATTACK(k, WHITE-stm)) return 1;
   }
   return 0;
@@ -1942,10 +1930,9 @@ int
 ListMoves (int listStart, int listEnd)
 { // create move list on move stack
   int i;
-  memcpy(boardCopy, board, sizeof(board));
-MapFromScratch();
+MapAttacks();
   postThinking--; repCnt = 0; tlim1 = tlim2 = tlim3 = 1e8; abortFlag = msp = 0;
-  Search(-INF-1, INF+1, 0, QSdepth+1, 0, sup1 & ~PROMOTE, sup2, INF);
+  Search(-INF-1, INF+1, 0, QSDEPTH+1, 0, sup1 & ~PROMOTE, sup2, INF);
   postThinking++;
 
 #if 0
@@ -2052,6 +2039,9 @@ printf("# deferral of %d\n", deferred);
 void
 Highlight (int listStart, int listEnd, char *coords)
 {
+  int boardCopy[BSIZE];
+  memcpy(boardCopy, board, sizeof(board));
+
   int i, j, n, sqr, cnt=0;
   char b[BSIZE]={0}, buf[2000], *q;
   ReadSquare(coords, &sqr);
@@ -2137,9 +2127,9 @@ printf("# SearchBestMove\n");
   startTime = GetTickCount();
   nodes = 0;
 printf("# s=%d\n", startTime);fflush(stdout);
-MapFromScratch();
+MapAttacks();
   retMove = INVALID; repCnt = 0;
-  score = Search(-INF-1, INF+1, rootEval, maxDepth + QSdepth, 0, sup1, sup2, INF);
+  score = Search(-INF-1, INF+1, rootEval, maxDepth + QSDEPTH, 0, sup1, sup2, INF);
   *move = retMove;
   *ponderMove = pv[1];
 printf("# best=%s\n", MoveToText(pv[0],0));
@@ -2351,8 +2341,8 @@ pboard(board);
 	// non-standard commands
         if(!strcmp(command, "p"))       { pboard(board); continue; }
         if(!strcmp(command, "f"))       { pbytes(fireBoard); continue; }
-        if(!strcmp(command, "w"))       { MapOneColor(WHITE, pieces[WHITE]); pmap(WHITE); continue; }
-        if(!strcmp(command, "b"))       { MapOneColor(BLACK, pieces[BLACK]); pmap(BLACK); continue; }
+        if(!strcmp(command, "w"))       { MapAttacksByColor(WHITE, pieces[WHITE]); pmap(WHITE); continue; }
+        if(!strcmp(command, "b"))       { MapAttacksByColor(BLACK, pieces[BLACK]); pmap(BLACK); continue; }
         if(!strcmp(command, "l"))       { pplist(); continue; }
         // ignored commands:
         if(!strcmp(command, "xboard"))  { continue; }
