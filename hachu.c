@@ -1323,11 +1323,11 @@ GenNonCapts (int promoSuppress)
 }
 
 int
-MapOneColor (int start, int last)
+MapOneColor (int color, int pieces)
 {
   int *map = attacks;
   int i, j, totMob = 0;
-  for(i=start+2; i<=last; i+=2) {
+  for(i=color+2; i<=pieces; i+=2) {
     int mob = 0;
     if(p[i].pos == ABSENT) continue;
     for(j=0; j<8; j++) {
@@ -1336,24 +1336,24 @@ MapOneColor (int start, int last)
 	if(r == N) {
 	  x += nStep[j];
 	  if(board[x] != EMPTY && board[x] != EDGE)
-	    map[2*x + start] += one[8];
+	    map[2*x + color] += one[8];
 	} else
 	if(r >= S) { // in any case, do a jump of 2
 	  if(board[x + 2*v] != EMPTY && board[x + 2*v] != EDGE)
-	    map[2*(x + 2*v) + start] += one[j], mob += (board[x + 2*v] ^ start) & 1;
+	    map[2*(x + 2*v) + color] += one[j], mob += (board[x + 2*v] ^ color) & 1;
 	  if(r < J) { // more than plain jump
 	    if(board[x + v] != EMPTY && board[x + v] != EDGE)
-	      map[2*(x + v) + start] += one[j]; // single step (completes D and I)
+	      map[2*(x + v) + color] += one[j]; // single step (completes D and I)
 	    if(r < I) {  // Lion power
 	    if(r >= T) { // Lion Dog, also do a jump of 3
 	      if(board[x + 3*v] != EMPTY && board[x + 3*v] != EDGE)
-		map[2*(x + 3*v) + start] += one[j];
+		map[2*(x + 3*v) + color] += one[j];
 	      if(r == K) { // Teaching King also range move
 		int y = x, n = 0;
 		while(1) {
 		  if(board[y+=v] == EDGE) break;
  		  if(board[y] != EMPTY) {
-		    if(n > 2) map[2*y + start] += one[j]; // outside Lion range
+		    if(n > 2) map[2*y + color] += one[j]; // outside Lion range
 		    break;
 		  }
 		  n++;
@@ -1367,28 +1367,28 @@ MapOneColor (int start, int last)
 		while(n++ < rg) {
 		  if(board[y+=v] == EDGE) break;
 		  if(board[y] != EMPTY) {
-		    if(n > 2) map[2*y + start] += one[j]; // outside Lion range
+		    if(n > 2) map[2*y + color] += one[j]; // outside Lion range
 		    break;
 		  }
 		}
 	      }
 	      v = nStep[j];
 	      if(board[x + v] != EMPTY && board[x + v] != EDGE && r != W)
-		map[2*(x + v) + start] += one[8];
+		map[2*(x + v) + color] += one[8];
 	    }
 	    }
 	  }
 	} else
 	if(r == C) { // FIDE Pawn diagonal
 	  if(board[x + v] != EMPTY && board[x + v] != EDGE)
-	    map[2*(x + v) + start] += one[j];
+	    map[2*(x + v) + color] += one[j];
 	}
 	continue;
       }
       while(r-- > 0) {
         if(board[x+=v] != EMPTY) {
 	  mob += dist(x-v, p[i].pos);
-	  if(board[x] != EDGE) map[2*x + start] += one[j], mob += (board[x] ^ start) & 1;
+	  if(board[x] != EDGE) map[2*x + color] += one[j], mob += (board[x] ^ color) & 1;
 #if 1 // HGM
 	  if(p[i].range[j] > X) { // jump capturer
 	    int c = p[i].qval;
@@ -1396,9 +1396,9 @@ MapOneColor (int start, int last)
 	      x += v; // go behind directly captured piece, if jumpable
 	      while(p[board[x]].qval < c) { // kludge alert: EDGE has qval = 5, blocking everything
 		if(board[x] != EMPTY) {
-//		  int n = map[2*x + start] & attackMask[j];
-//		  map[2*x + start] += (n < 3*one[j] ? 3*one[j] : one[j]); // first jumper gets 2 extra (to ease incremental update)
-		  map[2*x + start] += one[j]; // for now use true count
+//		  int n = map[2*x + color] & attackMask[j];
+//		  map[2*x + color] += (n < 3*one[j] ? 3*one[j] : one[j]); // first jumper gets 2 extra (to ease incremental update)
+		  map[2*x + color] += one[j]; // for now use true count
 		}
 		x += v;
 	      }
@@ -1411,7 +1411,7 @@ MapOneColor (int start, int last)
     }
     totMob += mob * p[i].mobWeight;
   }
-if(!level) printf("# mobility %d = %d\n", start, totMob);
+if(!level) printf("# mobility %d = %d\n", color, totMob);
   return totMob;
 }
 
@@ -1419,8 +1419,8 @@ void
 MapFromScratch ()
 {
   bzero(attacks, 2*BSIZE);
-  mobilityScore  = MapOneColor(1, pieces[WHITE]);
-  mobilityScore -= MapOneColor(0, pieces[BLACK]);
+  mobilityScore  = MapOneColor(WHITE, pieces[WHITE]);
+  mobilityScore -= MapOneColor(BLACK, pieces[BLACK]);
 }
 
 int
