@@ -743,6 +743,7 @@ int board[BSIZE] = { [0 ... BSIZE-1] = EDGE };
 int boardCopy[BSIZE] = { [0 ... BSIZE-1] = EDGE };
 int attacksByLevel[LEVELS][2*BSIZE];
 #define attacks attacksByLevel[level]
+#define ATTACK(pos, color) attacks[2*pos + color]
 char promoBoard[BSIZE] = { [0 ... BSIZE-1] = 0 }; // flags to indicate promotion zones
 unsigned char fireBoard[BSIZE]; // flags to indicate squares controlled by Fire Demons
 signed char PST[PSTSIZE] = { 0 };
@@ -1553,7 +1554,7 @@ MakeMove (Move m, UndoInfo *u)
   u->gain  += p[u->victim].value;
   if(u->victim != EMPTY) {
     cnt50 = 0; // capture irreversible
-    if(attacks[2*u->to + xstm]) u->loss = p[u->piece].value; // protected
+    if(ATTACK(u->to, xstm)) u->loss = p[u->piece].value; // protected
   }
 
   p[u->new].pos = u->to;
@@ -1612,7 +1613,7 @@ UnMake(UndoInfo *u)
 void
 GenCapts (int sqr, int victimValue)
 { // generate all moves that capture the piece on the given square
-  int i, att = attacks[2*sqr + stm];
+  int i, att = ATTACK(sqr, stm);
 #if 0
 printf("GenCapts(%c%d,%d) %08x\n", FILECH(sqr), RANK(sqr), victimValue, att);
 #endif
@@ -1903,8 +1904,8 @@ Evaluate (int difEval)
   // penalty for Lion in enemy corner, when enemy Lion is nearby
   if(wLion != ABSENT && bLion != ABSENT) { // both have a Lion
       static int distFac[36] = { 0, 0, 10, 9, 8, 7, 5, 3, 1 };
-      score -= ( (1+9*!attacks[2*wLion+WHITE]) * lionTrap[UR-wLion]
-               - (1+9*!attacks[2*bLion+BLACK]) * lionTrap[bLion] ) * distFac[dist(wLion, bLion)];
+      score -= ( (1+9*!ATTACK(wLion, WHITE)) * lionTrap[UR-wLion]
+               - (1+9*!ATTACK(bLion, BLACK)) * lionTrap[bLion] ) * distFac[dist(wLion, bLion)];
   }
 
 # ifdef WINGS
@@ -2048,7 +2049,7 @@ if(PATH) /*pboard(board),pmap(BLACK),*/printf("# search(%d) {%d,%d} eval=%d, stm
       k = ABSENT; // two kings is no king...
     }
     if( k != ABSENT) { // check is possible
-      if(!attacks[2*k + xstm]) {
+      if(!ATTACK(k, xstm)) {
 	if(tsume && tsume & stm+1) {
 	  retDep = 60; return INF; // we win when not in check
         }
@@ -2063,12 +2064,12 @@ if(!level) {for(i=0; i<5; i++)printf("# %d %08x, %d\n", i, repStack[LEVELS-i], c
   // KING CAPTURE
   k = p[king=royal[xstm]].pos;
   if( k != ABSENT) {
-    if(attacks[2*k + stm]) {
+    if(ATTACK(k, stm)) {
       if( p[king + 2].pos == ABSENT ) return INF; // we have an attack on his only King
     }
   } else { // he has no king! Test for attacks on Crown Prince
     k = p[king + 2].pos;
-    if(k == ABSENT ? !tsume : attacks[2*k + stm]) return INF; // we have attack on Crown Prince
+    if(k == ABSENT ? !tsume : ATTACK(k, stm)) return INF; // we have attack on Crown Prince
   }
 //printf("King safe\n");fflush(stdout);
   // EVALUATION & WINDOW SHIFT
@@ -2180,7 +2181,7 @@ if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp
 	    while(nextVictim < pieces[xstm]) {        // more victims may exist
 	      int group, to = p[nextVictim += 2].pos; // take next
 	      if(to == ABSENT) continue;              // ignore if absent
-	      if(!attacks[2*to + stm]) continue;      // skip if not attacked
+	      if(!ATTACK(to, stm)) continue;      // skip if not attacked
 	      group = p[nextVictim].value;            // remember value of this found victim
 	      if(iterDep <= QSdepth + 1 && 2*group + curEval + 30 < alpha) {
 		resDep = QSdepth + 1; nextVictim -= 2;
@@ -2193,7 +2194,7 @@ if(PATH) printf("%d:%2d:%2d first=%d last=%d\n",level,depth,iterDep,firstMove,ms
 	      while(nextVictim < pieces[xstm] && p[nextVictim+2].value == group) { // more victims of same value exist
 		to = p[nextVictim += 2].pos;          // take next
 		if(to == ABSENT) continue;            // ignore if absent
-		if(!attacks[2*to + stm]) continue;    // skip if not attacked
+		if(!ATTACK(to, stm)) continue;    // skip if not attacked
 if(PATH) printf("%d:%2d:%2d p=%d, to=%c%d\n", level, depth, iterDep, nextVictim, FILECH(to), RANK(to)), fflush(stdout);
 		GenCapts(to, 0);
 if(PATH) printf("%d:%2d:%2d last=%d\n",level,depth,iterDep,msp),fflush(stdout);
@@ -2328,11 +2329,11 @@ if(depth >= 0) printf("%2d:%d mapped %d/%d %s\n", depth, iterDep, curMove, msp, 
       if(chuFlag && (p[tb.victim].value == LVAL || p[tb.epVictim[0]].value == LVAL)) {// verify legality of Lion capture in Chu Shogi
 	score = 0;
 	if(p[tb.piece].value == LVAL) {          // Ln x Ln: can make Ln 'vulnerable' (if distant and not through intemediate > GB)
-	  if(dist(tb.from, tb.to) != 1 && attacks[2*tb.to + stm] && p[tb.epVictim[0]].value <= 50)
+	  if(dist(tb.from, tb.to) != 1 && ATTACK(tb.to, stm) && p[tb.epVictim[0]].value <= 50)
 	    score = -INF;                           // our Lion is indeed made vulnerable and can be recaptured
 	} else {                                    // other x Ln
 	  if(promoSuppress & PROMOTE) {             // non-Lion captures Lion after opponent did same
-	    if(!okazaki || attacks[2*tb.to + stm]) score = -INF;
+	    if(!okazaki || ATTACK(tb.to, stm)) score = -INF;
 	  }
 	  defer |= PROMOTE;                         // if we started, flag  he cannot do it in reply
 	}
@@ -2486,11 +2487,10 @@ void
 pmap (int color)
 {
   // decode out of double-wide "attacks" array
-  // surely attacks[color][sq] would be cleaner
   int i, j;
   for(i=bFiles-1; i>=0; i--) {
     printf("#");
-    for(j=0; j<bRanks; j++) printf("%10o", attacks[2*POS(i, j)+color]);
+    for(j=0; j<bRanks; j++) printf("%10o", ATTACK(POS(i, j), color));
     printf("\n");
   }
 }
@@ -2552,7 +2552,7 @@ InCheck ()
   else if(p[royal[stm] + 2].pos != ABSENT) k = ABSENT; // two kings is no king...
   if( k != ABSENT) {
     MapFromScratch();
-    if(attacks[2*k + 1 - stm]) return 1;
+    if(ATTACK(k, 1-stm)) return 1;
   }
   return 0;
 }
@@ -2970,12 +2970,12 @@ pboard(board);
           if(move == INVALID) {         // game apparently ended
             int kcapt = 0, xstm = stm ^ WHITE, king, k = p[king=royal[xstm]].pos;
             if( k != ABSENT) { // test if King capture possible
-              if(attacks[2*k + stm]) {
+              if(ATTACK(k, stm)) {
                 if( p[king + 2].pos == ABSENT ) kcapt = 1; // we have an attack on his only King
               }
             } else { // he has no king! Test for attacks on Crown Prince
               k = p[king + 2].pos;
-              if(attacks[2*k + stm]) kcapt = 1; // we have attack on Crown Prince
+              if(ATTACK(k, stm)) kcapt = 1; // we have attack on Crown Prince
             }
             if(kcapt) { // print King capture before claiming
               GenCapts(k, 0);
