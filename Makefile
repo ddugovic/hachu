@@ -6,6 +6,7 @@ CFLAGS?= -O2 -s -Wall -Wno-parentheses
 prefix=/usr/local
 DATADIR=`xboard --show-config Datadir`
 
+.PHONY: clean dist dist-clean install
 ALL= hachu hachu.6.gz
 
 all: ${ALL}
@@ -27,8 +28,8 @@ install: ${ALL} ${srcdir}/svg/*
 	install -d -m0755 $(DESTDIR)/usr/share/games/plugins/xboard
 	cp -u ${srcdir}/hachu.eng $(DESTDIR)/usr/share/games/plugins/xboard
 
-hachu.6.gz: hachu.pod
-	pod2man -s 6 hachu.pod | gzip -9n > hachu.6.gz
+hachu.6.gz: README.pod
+	pod2man -s 6 README.pod | gzip -9n > hachu.6.gz
 
 clean:
 	rm -f ${ALL} *.o
@@ -40,7 +41,7 @@ dist:
 	install -d -m0755 HaChu
 	install -d -m0755 HaChu/svg
 	rm -f hachu.tar hachu.tar.gz
-	cp hachu.c hachu.pod Makefile hachu.eng logo.png HaChu
+	cp hachu.c README.pod Makefile hachu.eng logo.png HaChu
 	cp svg/* HaChu/svg
 	(md5sum HaChu/* HaChu/svg/* > HaChu/md5sums) || true
 	tar -cvvf hachu.tar HaChu
