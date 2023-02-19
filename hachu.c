@@ -1601,7 +1601,7 @@ if(depth >= 0) printf("%2d:%d repetition %d/%d %s\n", depth, iterDep, curMove, m
       }
       repStack[level+LEVELS] = hashKeyH;
 
-if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), score, bestScore),fflush(stdout);
+if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d\n", level, depth, iterDep, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), score, bestScore);
 path[level++] = move;
 MapFromScratch(); // for as long as incremental update does not work.
 #if 0
@@ -1644,8 +1644,7 @@ printf("# abort (%d) @ %d\n", abortFlag, level);
         goto leave;
       }
 #if 1 // HGM
-if(PATH) printf("%d:%2d:%d %3d %6x ", level, depth, iterDep, curMove, moveStack[curMove]),fflush(stdout);
-if(PATH) printf("%-10s %6d %6d  (%d)\n", MoveToText(moveStack[curMove], 0), score, bestScore, GetTickCount()),fflush(stdout);
+if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d (%d)\n", level, depth, iterDep, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), score, bestScore, GetTickCount());
 
       // ALPHA-BETA STUFF
       if(score > bestScore) {
