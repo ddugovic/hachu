@@ -1444,7 +1444,7 @@ level--;
 	    }
 #endif
 	    if(tenFlag) FireSet(&tb); // in tenjiku we must identify opposing Fire Demons to perform any moves
-if(PATH) printf("mask=%x\n",tb.fireMask),pbytes(fireBoard);
+if(PATH && tenFlag) printf("fireMask=%x\n",tb.fireMask),pbytes(fireBoard);
 	    phase = 1;
 	  case 1: // hash move
 	    phase = 2;
