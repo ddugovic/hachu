@@ -1314,7 +1314,7 @@ Search (int alpha, int beta, int difEval, int depth, int lmr, int oldPromo, int 
 #ifdef HASH
   Move hashMove; int index, nr, hit;
 #endif
-if(PATH) /*pboard(board),pmap(BLACK),*/printf("# search(%d) {%d,%d} eval=%d, stm=%d (flag=%d)\n",depth,alpha,beta,difEval,stm,abortFlag),fflush(stdout);
+if(PATH) /*pboard(board),pmap(BLACK),*/printf("# search(%d) {%d,%d} eval=%d, stm=%d (flag=%d)\n",depth,alpha,beta,difEval,stm,abortFlag);
   xstm = stm ^ WHITE;
 //printf("map made\n");fflush(stdout);
 
@@ -1373,7 +1373,7 @@ if(!level) {for(i=0; i<5; i++)printf("# %d %08x, %d\n", i, repStack[LEVELS-i], c
   if(hashTable[index].lock[nr] == hashKeyH) hit = nr; else
   if(hashTable[index].lock[4]  == hashKeyH) hit = 4;
 #if 0
-printf("# probe hash index=%x hit=%d\n", index, hit),fflush(stdout);
+printf("# probe hash index=%x hit=%d\n", index, hit);
 #endif
   if(hit >= 0) {
     bestScore = hashTable[index].score[hit];
@@ -1393,7 +1393,7 @@ printf("# probe hash index=%x hit=%d\n", index, hit),fflush(stdout);
     hashMove = INVALID;
   }
 #if 0
-printf("# iterDep = %d score = %d move = %s\n",iterDep,bestScore,MoveToText(hashMove,0)),fflush(stdout);
+printf("# iterDep = %d score = %d move = %s\n",iterDep,bestScore,MoveToText(hashMove,0));
 #endif
 #endif
 
@@ -1403,7 +1403,7 @@ printf("# iterDep=%d\n", iterDep);
 #endif
   while(++iterDep <= depth) {
 #if 0
-if(depth>= 0) printf("iter %d:%d\n", depth,iterDep),fflush(stdout);
+if(depth>= 0) printf("iter %d:%d\n", depth,iterDep);
 #endif
     oldBest = bestScore;
     iterAlpha = alpha; bestScore = -INF; bestMoveNr = 0; resDep = 60;
@@ -1422,11 +1422,11 @@ printf("# stand pat %d (beta=%d)\n", bestScore, beta);
     }
     for(curMove = firstMove; ; curMove++) { // loop over moves
 #if 0
-if(depth>= 0) printf("# phase=%d: first=%d curr=%d last=%d\n", phase, firstMove, curMove, msp),fflush(stdout);
+if(depth>= 0) printf("# phase=%d: first=%d curr=%d last=%d\n", phase, firstMove, curMove, msp);
 #endif
       // MOVE SOURCE
       if(curMove >= msp) { // we ran out of moves; generate some new
-if(PATH) printf("# new moves, phase=%d\n", phase),fflush(stdout);
+if(PATH) printf("# new moves, phase=%d\n", phase);
 	switch(phase) {
 	  case 0: // null move
 #ifdef NULLMOVE
@@ -1434,9 +1434,9 @@ if(PATH) printf("# new moves, phase=%d\n", phase),fflush(stdout);
               int nullDep = depth - 3;
 	      stm ^= WHITE;
 path[level++] = 0;
-if(PATH) printf("%d:%d null move\n", level, depth),fflush(stdout);
+if(PATH) printf("%d:%d null move\n", level, depth);
 	      score = -Search(-beta, 1-beta, -difEval, nullDep<QSdepth ? QSdepth : nullDep, 0, promoSuppress & SQUARE, ABSENT, INF);
-if(PATH) printf("%d:%d null move score = %d\n", level, depth, score),fflush(stdout);
+if(PATH) printf("%d:%d null move score = %d\n", level, depth, score);
 level--;
 	      xstm = stm; stm ^= WHITE;
 	      if(score >= beta) { msp = oldMSP; retDep += 3; pvPtr = myPV; return score + (score < curEval); }
@@ -1459,7 +1459,7 @@ if(PATH) printf("mask=%x\n",tb.fireMask),pbytes(fireBoard);
 	    nextVictim = xstm; autoFail = (depth == 0);
 	    phase = 3;
 	  case 3: // generate captures
-if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp),fflush(stdout);
+if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp);
 	    while(nextVictim < pieces[xstm]) {        // more victims may exist
 	      int group, to = p[nextVictim += 2].pos; // take next
 	      if(to == ABSENT) continue;              // ignore if absent
@@ -1470,18 +1470,18 @@ if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp
 		if(bestScore < 2*group + curEval + 30) bestScore = 2*group + curEval + 30;
 		goto cutoff;
 	      }
-if(PATH) printf("%d:%2d:%2d group=%d, to=%c%d\n", level, depth, iterDep, group, FILECH(to), RANK(to)), fflush(stdout);
+if(PATH) printf("%d:%2d:%2d group=%d, to=%c%d\n", level, depth, iterDep, group, FILECH(to), RANK(to));
 	      GenCapts(to, 0);
-if(PATH) printf("%d:%2d:%2d first=%d last=%d\n",level,depth,iterDep,firstMove,msp),fflush(stdout);
+if(PATH) printf("%d:%2d:%2d first=%d last=%d\n",level,depth,iterDep,firstMove,msp);
 	      while(nextVictim < pieces[xstm] && p[nextVictim+2].value == group) { // more victims of same value exist
 		to = p[nextVictim += 2].pos;          // take next
 		if(to == ABSENT) continue;            // ignore if absent
 		if(!ATTACK(to, stm)) continue;    // skip if not attacked
 if(PATH) printf("%d:%2d:%2d p=%d, to=%c%d\n", level, depth, iterDep, nextVictim, FILECH(to), RANK(to)), fflush(stdout);
 		GenCapts(to, 0);
-if(PATH) printf("%d:%2d:%2d last=%d\n",level,depth,iterDep,msp),fflush(stdout);
+if(PATH) printf("%d:%2d:%2d last=%d\n",level,depth,iterDep,msp);
 	      }
-if(PATH) printf("# captures on %c%d generated, last=%d, group=%d, threshold=%d\n", FILECH(nextVictim), RANK(nextVictim), msp, group, threshold),fflush(stdout);
+if(PATH) printf("# captures on %c%d generated, last=%d, group=%d, threshold=%d\n", FILECH(nextVictim), RANK(nextVictim), msp, group, threshold);
 	      goto extractMove; // in auto-fail phase, only search if they might auto-fail-hi
 	    }
 if(PATH) printf("# autofail=%d\n", autoFail);
@@ -1723,7 +1723,7 @@ leave:
   retMove = bestMoveNr ? moveStack[bestMoveNr] : 0;
   retDep = resDep - (inCheck & depth >= QSdepth) + lmr;
 #if 0
-printf("return %d: %d %d (t=%d s=%d lim=%d)\n", depth, bestScore, curEval, GetTickCount(), startTime, tlim1),fflush(stdout);
+printf("return %d: %d %d (t=%d s=%d lim=%d)\n", depth, bestScore, curEval, GetTickCount(), startTime, tlim1);
 #endif
   return bestScore + (bestScore < curEval);
 }
