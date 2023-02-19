@@ -1281,7 +1281,7 @@ MarkBurns (int x)
 
 int
 GenCastlings ()
-{ // castings for Lion Chess. Assumes board width = 8 and Kings on e-file, and K/R value = 280/300!
+{ // castlings for Lion Chess. Assumes board width = 8 and Kings on e-file, and K/R value = 280/300!
     int f = POS(0, BW/2), t = CASTLE;
     if(stm != WHITE) f += (bRanks*BW) - BW, t += 2;
     if(p[board[f]].value = 280) {
@@ -2681,7 +2681,7 @@ MapFromScratch();
 printf("last=%d nc=%d retMSP=%d\n", msp, nonCapts, retMSP);
 #endif
   msp = retMSP;
-  if(currentVariant == V_LION) listEnd = GenCastlings();
+  if(currentVariant == V_LION) listEnd = GenCastlings();      // castlings for Lion Chess
   if(currentVariant == V_WOLF) for(i=listStart; i<msp; i++) { // mark Werewolf captures as promotions
     int to = moveStack[i] & SQUARE, from = moveStack[i] >> SQLEN & SQUARE;
     if(to >= SPECIAL) continue;
@@ -2742,7 +2742,7 @@ ParseMove (int listStart, int listEnd, char *moveText)
   if(*moveText != '\n' && *moveText != '=') ret |= PROMOTE;
 printf("# suppress = %c%d\n", FILECH(sup1), RANK(sup1));
 #if 1
-  // TODO: do not rely upon global side effect
+  // TODO: do not rely upon global retMSP assignment (castlings for Lion Chess)
   retMSP = listEnd = ListMoves(listStart, listEnd);
 #endif
   for(i=listStart; i<listEnd; i++) {
