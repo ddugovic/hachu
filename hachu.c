@@ -742,6 +742,16 @@ int squareKey[BSIZE];
 
 int board[BSIZE] = { [0 ... BSIZE-1] = EDGE };
 int boardCopy[BSIZE] = { [0 ... BSIZE-1] = EDGE };
+// Stockfish and many engines compute attacks on demand using magic bitboards
+// whereas HaChu attempts in vain to maintain "this square attacks these rays"
+// further compounded by "level" (search depth).
+// There isn't a simple algorithm to generate and cache discovered attacks;
+// therefore, attacksByLevel is recalculated for all pieces for both players
+// after every move.  Please do not attempt to implement complex algorithms...
+// it's not worth the complexity or effort, unless performance is critical
+// and you are certain magic bitboards are inadequate.
+// The question of "what squares does my piece attack?" could benefit from a map
+// of squares to PieceDesc (or range) however "is a square attacked?" might not.
 int attacksByLevel[LEVELS][2*BSIZE];
 #define attacks attacksByLevel[level]
 #define ATTACK(pos, color) attacks[2*pos + color]
