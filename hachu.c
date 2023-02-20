@@ -11,6 +11,7 @@
 // promotion on capture
 
 #include "hachu.h"
+#include "variant.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
