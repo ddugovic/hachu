@@ -19,14 +19,15 @@ typedef struct {
 } HashBucket;
 
 typedef struct {
-  int from, to, piece, victim, new, booty, epSquare, epVictim[9], ep2Square, revMoveCount;
-  int savKeyL, savKeyH, gain, loss, filling, saveDelta;
-  char fireMask;
-} UndoInfo;
-
-typedef struct {
-  int x, y;
-} Vector;
+  int lock;
+  Move move;
+  Flag upper; // bound type
+  Flag lower; // bound type
+  char depthU;
+  char depthL;
+  char flags;
+  char age;
+} HashEntry; // hash-table entry
 
 #define RAYS 8
 typedef struct {
@@ -36,7 +37,7 @@ typedef struct {
   int value;
   int pst;
   signed char range[RAYS];
-  char promoFlag;
+  Flag promoFlag;
   char qval;
   char mobility;
   char mobWeight;
@@ -46,12 +47,11 @@ typedef struct {
 } PieceInfo; // piece-list entry
 
 typedef struct {
-  int lock;
-  Move move;
-  short int upper;
-  short int lower;
-  char depthU;
-  char depthL;
-  char flags;
-  char age;
-} HashEntry; // hash-table entry
+  int from, to, piece, victim, new, booty, epSquare, epVictim[9], ep2Square, revMoveCount;
+  int savKeyL, savKeyH, gain, loss, filling, saveDelta;
+  Flag fireMask;
+} UndoInfo;
+
+typedef struct {
+  int x, y;
+} Vector;

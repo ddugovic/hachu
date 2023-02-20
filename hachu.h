@@ -110,12 +110,13 @@ int hashMask;
 #define H_UPPER 2
 #define H_LOWER 1
 
+Flag abortFlag, chessFlag, chuFlag, tenFlag;
 char *array, *IDs, fenArray[4000], startPos[4000], *reason, checkStack[300];
-int bFiles, bRanks, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, stalemate;
+int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
 int tsume, pvCuts, allowRep, entryProm=1, okazaki, pVal;
 int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
 int retFirst, retMSP, retDep, pvPtr, level, cnt50, mobilityScore;
-int nodes, startTime, lastRootMove, lastRootIter, tlim1, tlim2, tlim3, repCnt, comp, abortFlag;
+int nodes, startTime, lastRootMove, lastRootIter, tlim1, tlim2, tlim3, repCnt, comp;
 Move ponderMove;
 #define FIFTY 50
 #define LEVELS 200
@@ -146,7 +147,7 @@ Vector direction[] = { // clockwise!
 int epList[104], ep2List[104], toList[104], reverse[104];  // decoding tables for double and triple moves
 int kingStep[10], knightStep[10];         // raw tables for step vectors (indexed as -1 .. 8)
 int neighbors[9];   // similar to kingStep, but starts with null-step
-char fireFlags[10]; // flags for Fire-Demon presence (last two are dummies, which stay 0, for compactify)
+Flag fireFlags[10]; // flags for Fire-Demon presence (last two are dummies, which stay 0, for compactify)
 #define kStep (kingStep+1)
 #define nStep (knightStep+1)
 

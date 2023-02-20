@@ -127,7 +127,7 @@ EasyProm (signed char *r)
   return 0;
 }
 
-int
+Flag
 IsUpwardCompatible (signed char *r, signed char *s)
 {
   int i;
