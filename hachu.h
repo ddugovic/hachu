@@ -134,8 +134,9 @@ int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, fillin
 int retFirst, retMSP, retDep, pvPtr, level, cnt50, mobilityScore;
 int nodes, startTime, lastRootMove, lastRootIter, tlim1, tlim2, tlim3, repCnt, comp, abortFlag;
 Move ponderMove;
+#define FIFTY 50
 #define LEVELS 200
-Move retMove, moveStack[20000], path[100], repStack[LEVELS+(50*2)], pv[1000], repeatMove[300], killer[100][2];
+Move retMove, moveStack[20000], path[100], repStack[LEVELS+(FIFTY*2)], pv[1000], repeatMove[300], killer[100][2];
 
       int maxDepth;                            // used by search
 

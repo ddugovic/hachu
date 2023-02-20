@@ -1795,19 +1795,17 @@ pmoves(int start, int end)
     #define OFF 0
     #define ON  1
 
-typedef Move MOVE;
-
     int moveNr;              // part of game state; incremented by MakeMove
-    MOVE gameMove[MAXMOVES]; // holds the game history
+    Move gameMove[MAXMOVES]; // holds the game history
 
     // Some routines your engine should have to do the various essential things
-    int  MakeMove2(int stm, MOVE move);      // performs move, and returns new side to move
-    void UnMake2(MOVE move);                 // unmakes the move;
+    int  MakeMove2(int stm, Move move);      // performs move, and returns new side to move
+    void UnMake2(Move move);                 // unmakes the move;
     int  Setup2(char *fen);                  // sets up the position from the given FEN, and returns the new side to move
     void SetMemorySize(int n);              // if n is different from last time, resize all tables to make memory usage below n MB
-    char *MoveToText(MOVE move, int m);     // converts the move from your internal format to text like e2e2, e1g1, a7a8q.
-    MOVE ParseMove(int ls, int le, char *moveText); // converts a long-algebraic text move to your internal move format
-    int  SearchBestMove(MOVE *move, MOVE *ponderMove);
+    char *MoveToText(Move move, int m);     // converts the move from your internal format to text like e2e2, e1g1, a7a8q.
+    Move ParseMove(int ls, int le, char *moveText); // converts a long-algebraic text move to your internal move format
+    int  SearchBestMove(Move *move, Move *ponderMove);
     void PonderUntilInput(int stm);         // Search current position for stm, deepening forever until there is input.
 
 UndoInfo undoInfo;
@@ -1828,7 +1826,7 @@ InCheck ()
 }
 
 int
-MakeMove2 (int stm, MOVE move)
+MakeMove2 (int stm, Move move)
 {
   int i, inCheck = InCheck();
   FireSet(&undoInfo);
@@ -1845,7 +1843,7 @@ MakeMove2 (int stm, MOVE move)
 }
 
 void
-UnMake2 (MOVE move)
+UnMake2 (Move move)
 {
   int i;
   rootEval = -rootEval - undoInfo.booty;
@@ -1890,7 +1888,7 @@ SetMemorySize (int n)
 }
 
 char *
-MoveToText (MOVE move, int multiLine)
+MoveToText (Move move, int multiLine)
 {
   static char buf[50];
   int from = move>>SQLEN & SQUARE, to = move & SQUARE;
@@ -1949,7 +1947,7 @@ printf("last=%d nc=%d retMSP=%d\n", msp, nonCapts, retMSP);
   return listEnd;
 }
 
-MOVE
+Move
 ParseMove (int listStart, int listEnd, char *moveText)
 {
   int i, j, f, t, t2, e, ret, deferred=0;
@@ -2121,7 +2119,7 @@ printf("# limits %d, %d, %d mode = %d\n", tlim1, tlim2, tlim3, abortFlag);
 }
 
 int
-SearchBestMove (MOVE *move, MOVE *ponderMove)
+SearchBestMove (Move *move, Move *ponderMove)
 {
   int score;
 printf("# SearchBestMove\n");
@@ -2208,7 +2206,7 @@ printf("# ponder hit\n");
     main()
     {
       int engineSide=NONE;                // side played by engine
-      MOVE move;
+      Move move;
       int i, score, curVarNr = 0;
 
       setvbuf(stdin, NULL, _IOLBF, 1024); // buffering more than one line flaws test for pending input!
@@ -2257,7 +2255,7 @@ pboard(board);
             engineSide = NONE;          // so stop playing
             PrintResult(stm, score);
           } else {
-            MOVE f, pMove = move;
+            Move f, pMove = move;
             static char *pName[] = { "w", "z", "j" };
             if((move & SQUARE) >= SPECIAL && p[board[f = move>>SQLEN & SQUARE]].value == pVal) { // e.p. capture
               pMove = move & ~SQUARE | f + toList[(move & SQUARE) - SPECIAL]; // print as a single move
