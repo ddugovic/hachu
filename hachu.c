@@ -10,13 +10,13 @@
 // promotions by pieces with Lion power stepping in & out the zone in same turn
 // promotion on capture
 
-#include "hachu.h"
-#include "variant.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
 #include <stdint.h>
+#include "hachu.h"
+#include "variant.h"
 
 #define HASH
 #define KILLERS
@@ -1744,7 +1744,7 @@ pboard (int *b)
 }
 
 void
-pbytes (unsigned char *b)
+pbytes (Flag *b)
 {
   int i, j;
   for(i=0; i<bRanks; i++) {

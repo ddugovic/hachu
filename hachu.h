@@ -6,6 +6,7 @@
 /**************************************************************************/
 
 #include <time.h>
+#include "types.h"
 
 #define VERSION "0.21"
 
@@ -97,35 +98,17 @@
 #define PST_LANCE   (7*BSIZE)
 #define PSTSIZE     (8*BSIZE)
 
-typedef unsigned int Move;
-
 char *MoveToText(Move move, int m);     // from WB driver
 void pmap(int color);
 void pboard(int *b);
-void pbytes(unsigned char *b);
+void pbytes(Flag *b);
 int myRandom();
-
-typedef struct {
-  int lock[5];
-  int move[5];
-  short int score[5];
-  char depth[5];
-  char flag[5];
-  char age[4];
-} HashBucket;
 
 HashBucket *hashTable;
 int hashMask;
 
 #define H_UPPER 2
 #define H_LOWER 1
-#define RAYS 8
-
-typedef struct {
-  int from, to, piece, victim, new, booty, epSquare, epVictim[9], ep2Square, revMoveCount;
-  int savKeyL, savKeyH, gain, loss, filling, saveDelta;
-  char fireMask;
-} UndoInfo;
 
 char *array, *IDs, fenArray[4000], startPos[4000], *reason, checkStack[300];
 int bFiles, bRanks, zone, currentVariant, chuFlag, tenFlag, chessFlag, repDraws, stalemate;
@@ -139,10 +122,6 @@ Move ponderMove;
 Move retMove, moveStack[20000], path[100], repStack[LEVELS+(FIFTY*2)], pv[1000], repeatMove[300], killer[100][2];
 
       int maxDepth;                            // used by search
-
-typedef struct {
-  int x, y;
-} Vector;
 
 Vector direction[] = { // clockwise!
   {1,  0},
@@ -216,60 +195,38 @@ int ray[RAYS+1] = { // 1 in the bit fields for the various directions
 //   In the root the list is packed to eliminate all captured pieces
 //   The list contains a table for how far the piece moves in each direction
 //   Range encoding: -3 = full Lion, -2 = on-ray Lion, -1 = plain jump, 0 = none, 1 = step, >1 = (limited) range
+
 // Attack table:
 //   A table in board format, containing pairs of consecutive integers for each square (indexed as 2*sqr and 2*sqr+1)
 //   The first integer contains info on black attacks to the square, the second similarly for white attacks
 //   Each integer contains eight 3-bit fields, which count the number of attacks on it with moves in a particular direction
 //   (If there are attacks by range-jumpers, the 3-bit count is increased by 2 over the actual value)
+
 // Board:
 //   The board has twice as many files as actually used, in 0x88 fashion
 //   The used squares hold the piece numbers (for use as index in the piece list)
 //   Unused squares are set to the invalid piece number EDGE
 //   There are also 3 guard ranks of EDGE on each side
+
 // Moves:
 //   Moves are encoded as 11-bit from-square and to-square numbers packed in the low bits of an int
 //   Special moves (like Lion double moves) are encoded by off-board to-squares above a certain value
 //   Promotions are indicated by bit 22
+
 // Hash table:
 //   Entries of 16 bytes, holding a 32-bit signature, 16-bit lower- and upper-bound scores,
 //   8-bit draft of each of those scores, an age counter that stores the search number of the last access.
 //   The hash key is derived as the XOR of the products pieceKey[piece]*squareKey[square].
-// Promotion zones
+
+// Promotion zones:
 //   the promoBoard contains one byte with flags for each square, to indicate for each side whether the square
 //   is in the promotion zone (twice), on the last two ranks, or on the last rank
 //   the promoFlag field in the piece list can select which bits of this are tested, to see if it
 //   (1) can promote (2) can defer when the to-square is on last rank, last two ranks, or anywhere.
 //   Pawns normally can't defer anywhere, but if the user defers with them, their promoFlag is set to promote on last rank only
 
-typedef struct {
-  int pos;
-  int pieceKey;
-  int promo; // ???
-  int value;
-  int pst;
-  signed char range[RAYS];
-  char promoFlag;
-  char qval;
-  char mobility;
-  char mobWeight;
-  unsigned char promoGain;
-  char bulk;
-  char ranking;
-} PieceInfo; // piece-list entry
-
 int pieces[COLORS], royal[COLORS], kylin[COLORS];
 PieceInfo p[NPIECES]; // piece list
-
-typedef struct {
-  int lock;
-  Move move;
-  short int upper;
-  short int lower;
-  char depthU;
-  char depthL;
-  char flags;
-  char age;
-} HashEntry; // hash-table entry
 
     // Some global variables that control your engine's behavior
     int ponder;
@@ -297,7 +254,7 @@ int attacksByLevel[LEVELS][COLORS][BSIZE];
 #define attacks attacksByLevel[level]
 #define ATTACK(pos, color) attacks[color][pos]
 char promoBoard[BSIZE] = { [0 ... BSIZE-1] = 0 }; // flags to indicate promotion zones
-unsigned char fireBoard[BSIZE]; // flags to indicate squares controlled by Fire Demons
+Flag fireBoard[BSIZE]; // flags to indicate squares controlled by Fire Demons
 signed char PST[PSTSIZE] = { 0 };
 
 // Maximum of (ranks, files) of ray between squares
