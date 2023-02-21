@@ -395,13 +395,6 @@ char dadaIDs[]  = "RVB C DKEFFLG DHI ..K L SMNKKNP FKR S ..SGVBEWPH...."  // L (
                   "ABEBCSHDEaFDPRFHLGRGOKLCOMNoORPS  RCSoST  W WeVO    "  // L'
                   "RAWB  BD    LGHM      LN        SQ    WTRUVMLD      "; // L!
 
-typedef struct {
-  int boardFiles, boardRanks, zoneDepth, varNr; // board sizes
-  char *name;  // WinBoard name
-  char *array; // initial position
-  char *IDs;
-} VariantDesc;
-
 typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_TENJIKU,
 	       V_CASHEW, V_MACAD, V_SHATRANJ, V_MAKRUK, V_LION, V_WA, V_WOLF } Variant;
 

@@ -62,5 +62,12 @@ typedef struct {
 } UndoInfo;
 
 typedef struct {
+  int boardFiles, boardRanks, zoneDepth, varNr; // board sizes
+  char *name;  // WinBoard name
+  char *array; // initial position
+  char *IDs;
+} VariantDesc;
+
+typedef struct {
   int x, y;
 } Vector;
