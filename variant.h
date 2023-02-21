@@ -24,15 +24,6 @@
 #define LVAL 1000 /* piece value of Lion. Used in chu for recognizing it to implement Lion-trade rules  */
 #define FVAL 5000 /* piece value of Fire Demon. Used in code for recognizing moves with it and do burns */
 
-typedef struct {
-  char *name, *promoted;
-  int value;
-  signed char range[RAYS];
-  char bulk;
-  char ranking;
-  int whiteKey, blackKey;
-} PieceDesc;
-
 PieceDesc chuPieces[] = {
   {"LN", "",  LVAL, { L,L,L,L,L,L,L,L }, 4 }, // lion
   {"FK", "",   600, { X,X,X,X,X,X,X,X }, 4 }, // free king

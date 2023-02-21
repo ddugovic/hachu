@@ -31,6 +31,15 @@ typedef struct {
 
 #define RAYS 8
 typedef struct {
+  char *name, *promoted;
+  int value;
+  signed char range[RAYS];
+  char bulk;
+  char ranking;
+  int whiteKey, blackKey;
+} PieceDesc;
+
+typedef struct {
   int pos;
   int pieceKey;
   int promo;
