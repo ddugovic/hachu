@@ -12,8 +12,11 @@ ALL= hachu hachu.6.gz
 
 all: ${ALL}
 
-hachu: hachu.c hachu.h types.h variant.h
-	$(CC) $(CPPFLAGS) $(CFLAGS) hachu.c $(LDFLAGS) -o hachu
+hachu: hachu.o piece.o variant.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) hachu.o piece.o variant.o $(LDFLAGS) -o hachu
+
+%.o: %.c %.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
 
 install: ${ALL} ${srcdir}/svg/*
 	install -d -m0755 $(DESTDIR)$(prefix)/games
