@@ -39,13 +39,13 @@ clean:
 	rm -f ${ALL} *.o
 
 dist-clean:
-	rm -f ${ALL} *~ chu/*~ md5sums
+	rm -f hachu.tar.gz ${ALL} *~ chu/*~ md5sums
 
 dist:
 	install -d -m0755 HaChu
 	install -d -m0755 HaChu/svg
 	rm -f hachu.tar hachu.tar.gz
-	cp hachu.c README.pod Makefile hachu.eng logo.png HaChu
+	cp *.c *.h README.pod Makefile hachu.eng logo.png HaChu
 	cp svg/* HaChu/svg
 	(md5sum HaChu/* HaChu/svg/* > HaChu/md5sums) || true
 	tar -cvvf hachu.tar HaChu
