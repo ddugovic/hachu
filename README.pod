@@ -74,4 +74,8 @@ WinBoard, B<xboard>(6) interface ("Chess Engine Communication Protocol")
 
 H.G.Muller <h.g.muller@hccnet.nl>.
 
+=head1 LICENSE
+
+This source code is released in the public domain.
+
 This manual page was generated with pod2man(1).
