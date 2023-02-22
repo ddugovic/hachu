@@ -1379,7 +1379,7 @@ printf("# setup done");fflush(stdout);
       else printf("0-1%s\n", tail);
     }
 
-    void GetLine(int root)
+    void GetLine(Flag root)
     {
 
       int i, c;
@@ -1500,7 +1500,7 @@ pboard(board);
             abortFlag = pvCuts = 0;
         }
 
-        fflush(stdout);         // make sure everything is printed before we do something that might take time
+        if(fflush(stdout) == EOF) break; // make sure everything is printed before we do something that might take time
         if(!*inBuf) GetLine(1); // takes care of time and otim commands
 
         // recognize the command,and execute it

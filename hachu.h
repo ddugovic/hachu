@@ -14,7 +14,7 @@
 #define VERSION "0.21"
 
 #ifdef WIN32
-#    include <windows.h>
+#include <windows.h>
      int InputWaiting()
      {  // checks for waiting input in pipe
 	static int pipe, init;
@@ -26,8 +26,8 @@
 	return cnt;
     }
 #else
-#    include <sys/time.h>
-#    include <sys/ioctl.h>
+#include <sys/time.h>
+#include <sys/ioctl.h>
      int InputWaiting()
      {
 	int cnt;
