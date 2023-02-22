@@ -13,8 +13,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <signal.h>
-#include <stdint.h>
 #include "piece.h"
 #include "variant.h"
 
@@ -34,9 +32,9 @@
 #define KYLIN 100 /* extra end-game value of Kylin for promotability */
 #define PROMO 0 /* extra bonus for 'vertical' piece when it actually promotes (diagonal pieces get half) */
 
-Flag chessFlag, chuFlag, tenFlag;
 char *array, *IDs;
 int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
+
 int tsume, pvCuts, allowRep, entryProm=1, okazaki, pVal;
 int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
 int level, cnt50, mobilityScore;
@@ -62,8 +60,8 @@ Vector direction[2*RAYS] = { // clockwise!
 };
 
 int epList[104], ep2List[104], toList[104], reverse[104];  // decoding tables for double and triple moves
-int kingStep[10], knightStep[10];         // raw tables for step vectors (indexed as -1 .. 8)
-int neighbors[9];   // similar to kingStep, but starts with null-step
+int kingStep[RAYS+2], knightStep[RAYS+2]; // raw tables for step vectors (indexed as -1 .. 8)
+int neighbors[RAYS+1];                    // similar to kingStep, but starts with null-step
 Flag fireFlags[10]; // flags for Fire-Demon presence (last two are dummies, which stay 0, for compactify)
 
 int attackMask[RAYS] = { // indicate which bits in attack-map item are used to count attacks from which direction
@@ -301,7 +299,7 @@ AddPiece (int stm, PieceDesc *list)
   if(royal[stm] >= i) royal[stm] += 2;
   if(kylin[stm] >= i) kylin[stm] += 2;
   if(p[i].value == (currentVariant == V_SHO || currentVariant == V_WA ? 410 : 280) ) royal[stm] = i, p[i].pst = 0;
-  p[i].qval = (currentVariant == V_TENJIKU ? list->ranking : 0); // jump-capture hierarchy
+  p[i].qval = (tenFlag ? list->ranking : 0); // jump-capture hierarchy
   return i;
 }
 
@@ -433,14 +431,11 @@ Init (int var)
   array  = variants[var].array;
   IDs    = variants[var].IDs;
   }
-  chuFlag = (currentVariant == V_CHU || currentVariant == V_LION);
-  tenFlag = (currentVariant == V_TENJIKU);
-  chessFlag = (currentVariant == V_CHESS || currentVariant == V_LION || currentVariant == V_WOLF);
-  stalemate = (currentVariant == V_CHESS || currentVariant == V_MAKRUK || currentVariant == V_LION || currentVariant == V_WOLF);
+  stalemate = (chessFlag || currentVariant == V_MAKRUK || currentVariant == V_LION || currentVariant == V_WOLF);
   repDraws  = (stalemate || currentVariant == V_SHATRANJ);
   pawn = LookUp("P", currentVariant); pVal = pawn ? pawn->value : 0; // get Pawn value
 
-  for(i=-1; i<9; i++) { // board steps in linear coordinates
+  for(i=-1; i<RAYS+1; i++) { // board steps in linear coordinates
     kStep[i] = STEP(direction[i&7].x,        direction[i&7].y);        // King
     nStep[i] = STEP(direction[(i&7)+RAYS].x, direction[(i&7)+RAYS].y); // Knight
   }

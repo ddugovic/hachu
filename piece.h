@@ -62,9 +62,12 @@ void pbytes(Flag *b);
 void pmap(int color);
 int InCheck();
 
-extern Flag chessFlag, chuFlag, tenFlag;
 extern char *array, *IDs;
 extern int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
+#define chessFlag (currentVariant == V_CHESS || currentVariant == V_LION || currentVariant == V_WOLF)
+#define chuFlag (currentVariant == V_CHU || currentVariant == V_LION)
+#define tenFlag (currentVariant == V_TENJIKU)
+
 extern int tsume, pvCuts, allowRep, entryProm, okazaki, pVal;
 extern int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
 extern int level, cnt50, mobilityScore;
@@ -72,8 +75,8 @@ extern int level, cnt50, mobilityScore;
 extern Vector direction[2*RAYS];
 
 extern int epList[104], ep2List[104], toList[104], reverse[104];  // decoding tables for double and triple moves
-extern int kingStep[10], knightStep[10];         // raw tables for step vectors (indexed as -1 .. 8)
-extern int neighbors[9];   // similar to kingStep, but starts with null-step
+extern int kingStep[RAYS+2], knightStep[RAYS+2]; // raw tables for step vectors (indexed as -1 .. 8)
+extern int neighbors[RAYS+1];                    // similar to kingStep, but starts with null-step
 extern Flag fireFlags[10]; // flags for Fire-Demon presence (last two are dummies, which stay 0, for compactify)
 #define kStep (kingStep+1)
 #define nStep (knightStep+1)
