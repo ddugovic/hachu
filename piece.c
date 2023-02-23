@@ -32,7 +32,7 @@
 #define KYLIN 100 /* extra end-game value of Kylin for promotability */
 #define PROMO 0 /* extra bonus for 'vertical' piece when it actually promotes (diagonal pieces get half) */
 
-char *array, *IDs;
+VariantDesc *variant;
 int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
 
 int pVal;
@@ -304,7 +304,7 @@ AddPiece (int stm, PieceDesc *list)
 }
 
 void
-SetUp (char *array, int var)
+SetUp (char *fen, char *IDs, int var)
 {
   int i, j, n, m, color, c;
   char name[3], prince = 0;
@@ -312,15 +312,15 @@ SetUp (char *array, int var)
   pieces[WHITE] = 1; pieces[BLACK] = 0;
   royal[WHITE] = royal[BLACK] = 0;
   for(i=bRanks-1; ; i--) {
-//printf("next rank: %s\n", array);
+//printf("next rank: %s\n", fen);
     for(j = bFiles*i; ; j++) {
       int pflag=0;
-      if(*array == '+') pflag++, array++;
-      c = name[0] = *array++;
+      if(*fen == '+') pflag++, fen++;
+      c = name[0] = *fen++;
       if(!c) goto eos;
       if(c == '.') continue;
       if(c > '0' && c <= '9') {
-        c -= '0'; if(*array >= '0' && *array <= '9') c = 10*c + *array++ - '0';
+        c -= '0'; if(*fen >= '0' && *fen <= '9') c = 10*c + *fen++ - '0';
         j += c - 1; continue;
       }
       if(c == '/') break;
@@ -329,8 +329,8 @@ SetUp (char *array, int var)
 	color = BLACK;
 	c += 'A' - 'a';
       } else color = WHITE;
-      if(*array == '\'') c += 26, array++; else
-      if(*array == '!')  c += 52, array++;
+      if(*fen == '\'') c += 26, fen++; else
+      if(*fen == '!')  c += 52, fen++;
       name[0] = IDs[2*(c - 'A')];
       name[1] = IDs[2*(c - 'A') + 1]; if(name[1] == ' ') name[1] = 0;
       if(!strcmp(name, "CP") || pflag && !strcmp(name, "DE")) prince |= color+1; // remember if we added Crown Prince
@@ -423,13 +423,12 @@ Init (int var)
   int i, j, k;
   PieceDesc *pawn;
 
+  variant = &(variants[var]);
   if(var != SAME) { // the following should be already set if we stay in same variant (for TakeBack)
   currentVariant = variants[var].varNr;
   bFiles = variants[var].boardFiles;
   bRanks = variants[var].boardRanks;
   zone   = variants[var].zoneDepth;
-  array  = variants[var].array;
-  IDs    = variants[var].IDs;
   }
   stalemate = (chessFlag || currentVariant == V_MAKRUK || currentVariant == V_LION || currentVariant == V_WOLF);
   repDraws  = (stalemate || currentVariant == V_SHATRANJ);

@@ -47,7 +47,7 @@ int Range(signed char *range);
 void StackMultis(int col);
 void Compactify(int stm);
 int AddPiece(int stm, PieceDesc *list);
-void SetUp(char *array, int var);
+void SetUp(char *fen, char *IDs, int var);
 int myRandom();
 void Init(int var);
 int PSTest();
@@ -62,7 +62,7 @@ void pbytes(Flag *b);
 void pmap(int color);
 int InCheck();
 
-extern char *array, *IDs;
+extern VariantDesc *variant;
 extern int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
 #define chessFlag (currentVariant == V_CHESS || currentVariant == V_LION || currentVariant == V_WOLF)
 #define chuFlag (currentVariant == V_CHU || currentVariant == V_LION)

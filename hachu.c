@@ -1084,9 +1084,9 @@ Setup2 (char *fen)
     char *q = strchr(fen, '\n');
     if(q) *q = 0;
     if(q = strchr(fen, ' ')) stm = (q[1] == 'b' ? BLACK : WHITE); // fen contains color field
-  } else fen = array;
+  } else fen = variant->array;
   rootEval = promoDelta = filling = cnt50 = moveNr = 0;
-  SetUp(fen, currentVariant);
+  SetUp(fen, variant->IDs, currentVariant);
   sup0 = sup1 = sup2 = ABSENT;
   hashKeyH = hashKeyL = 87620895*currentVariant + !!fen;
   for(p=startPos; *p++ = *fen++; ) {} // remember last start position for undo
