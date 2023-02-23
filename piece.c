@@ -35,7 +35,7 @@
 char *array, *IDs;
 int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
 
-int tsume, pvCuts, allowRep, entryProm=1, okazaki, pVal;
+int pVal;
 int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
 int level, cnt50, mobilityScore;
 

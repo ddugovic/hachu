@@ -68,7 +68,7 @@ extern int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
 #define chuFlag (currentVariant == V_CHU || currentVariant == V_LION)
 #define tenFlag (currentVariant == V_TENJIKU)
 
-extern int tsume, pvCuts, allowRep, entryProm, okazaki, pVal;
+extern int pVal;
 extern int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
 extern int level, cnt50, mobilityScore;
 

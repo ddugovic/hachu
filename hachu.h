@@ -132,4 +132,5 @@ int noCut=1;        // engine-defined option
 int resign;         // engine-defined option
 int contemptFactor; // likewise
 int seed;
+int tsume, pvCuts, allowRep, entryProm=1, okazaki;
 #endif
