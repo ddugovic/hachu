@@ -52,15 +52,15 @@ int myRandom();
 void Init(int var);
 int PSTest();
 int Dtest();
-int MapAttacksByColor(int color, int pieces);
-void MapAttacks();
+int MapAttacksByColor(int color, int pieces, int level);
+int MapAttacks(int level);
 int MakeMove(Move m, UndoInfo *u);
 void UnMake(UndoInfo *u);
 void pplist();
 void pboard(int *b);
 void pbytes(Flag *b);
 void pmap(int color);
-int InCheck();
+int InCheck(int level);
 
 extern VariantDesc *variant;
 extern int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;

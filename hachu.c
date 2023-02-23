@@ -878,7 +878,7 @@ printf("#       repetition %d\n", i);
       repStack[level+LEVELS] = hashKeyH;
 
 path[level++] = move;
-MapAttacks(); // for as long as incremental update does not work.
+MapAttacks(level); // for as long as incremental update does not work.
 //if(PATH) pmap(stm);
       if(chuFlag && (p[tb.victim].value == LVAL || p[tb.epVictim[0]].value == LVAL)) {// verify legality of Lion capture in Chu Shogi
 #if 0
@@ -1051,7 +1051,7 @@ int lastLift, lastPut;
 int
 MakeMove2 (int stm, Move move)
 {
-  int i, inCheck = InCheck();
+  int i, inCheck = InCheck(level);
   FireSet(&undoInfo);
   sup0 = sup1; sup1 = sup2;
   sup2 = MakeMove(move, &undoInfo);
@@ -1152,7 +1152,7 @@ int
 ListMoves (int listStart, int listEnd)
 { // create move list on move stack
   int i;
-MapAttacks();
+MapAttacks(level);
   postThinking--; repCnt = 0; tlim1 = tlim2 = tlim3 = 1e8; abortFlag = msp = 0;
   Search(-INF-1, INF+1, 0, QSDEPTH+1, 0, sup1 & ~PROMOTE, sup2, INF);
   postThinking++;
@@ -1349,7 +1349,7 @@ printf("# SearchBestMove\n");
   startTime = GetTickCount();
   nodes = 0;
 printf("# s=%d\n", startTime);fflush(stdout);
-MapAttacks();
+MapAttacks(level);
   retMove = INVALID; repCnt = 0;
   score = Search(-INF-1, INF+1, rootEval, maxDepth + QSDEPTH, 0, sup1, sup2, INF);
   *move = retMove;
@@ -1563,8 +1563,8 @@ pboard(board);
 	// non-standard commands
         if(!strcmp(command, "p"))       { pboard(board); continue; }
         if(!strcmp(command, "f"))       { pbytes(fireBoard); continue; }
-        if(!strcmp(command, "w"))       { MapAttacksByColor(WHITE, pieces[WHITE]); pmap(WHITE); continue; }
-        if(!strcmp(command, "b"))       { MapAttacksByColor(BLACK, pieces[BLACK]); pmap(BLACK); continue; }
+        if(!strcmp(command, "w"))       { MapAttacksByColor(WHITE, pieces[WHITE], level); pmap(WHITE); continue; }
+        if(!strcmp(command, "b"))       { MapAttacksByColor(BLACK, pieces[BLACK], level); pmap(BLACK); continue; }
         if(!strcmp(command, "l"))       { pplist(); continue; }
         // ignored commands:
         if(!strcmp(command, "xboard"))  { continue; }
