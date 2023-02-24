@@ -44,6 +44,7 @@
 typedef int Color;
 typedef unsigned char Flag;
 typedef unsigned int Move;
+typedef signed char MoveType;
 
 typedef struct {
   int lock[5];
@@ -69,7 +70,7 @@ typedef struct {
 typedef struct {
   char *name, *promoted;
   int value;
-  signed char range[RAYS];
+  MoveType range[RAYS];
   char bulk;
   char ranking;
   int whiteKey, blackKey;
@@ -81,7 +82,7 @@ typedef struct {
   int promo;
   int value;
   int pst;
-  signed char range[RAYS];
+  MoveType range[RAYS];
   Flag promoFlag;
   char qval;
   char mobility;

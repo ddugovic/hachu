@@ -375,7 +375,7 @@ Guard (int sqr)
 int
 Fortress (int forward, int king, int lion)
 { // penalty for lack of Lion-proof fortress
-  int rank = PST[king], anchor, r, l, q, res = 0;
+  int rank = PSQ(PST_NEUTRAL, king, BLACK), anchor, r, l, q, res = 0;
   if(rank != 2) return 25*(rank-2);
   anchor = king + forward*(rank-1);
 
@@ -463,12 +463,11 @@ Evaluate (int difEval)
   if(bLion == ABSENT && p[BLACK+4].value == LVAL) bLion = p[BLACK+4].pos;
 
 #ifdef LIONTRAP
-# define lionTrap (PST + PST_TRAP)
   // penalty for Lion in enemy corner, when enemy Lion is nearby
   if(wLion != ABSENT && bLion != ABSENT) { // both have a Lion
       static int distFac[36] = { 0, 0, 10, 9, 8, 7, 5, 3, 1 };
-      score -= ( (1+9*!ATTACK(wLion, WHITE)) * lionTrap[UR-wLion]
-               - (1+9*!ATTACK(bLion, BLACK)) * lionTrap[bLion] ) * distFac[dist(wLion, bLion)];
+      score -= ( (1+9*!ATTACK(wLion, WHITE)) * PSQ(PST_TRAP, wLion, WHITE)
+               - (1+9*!ATTACK(bLion, BLACK)) * PSQ(PST_TRAP, bLion, BLACK) ) * distFac[dist(wLion, bLion)];
   }
 
 # ifdef WINGS
@@ -494,9 +493,9 @@ Evaluate (int difEval)
   bKing = p[royal[BLACK]].pos; if(bKing == ABSENT) bKing = p[royal[BLACK]+2].pos;
   if(filling < 32) {
     int lead = (stm == WHITE ? difEval : -difEval);
-    score += (PST[PST_CENTER+wKing] - PST[PST_CENTER+bKing])*(32 - filling) >> 7;
-    if(lead  > 100) score -= PST[PST_CENTER+bKing]*(32 - filling) >> 3; // white leads, drive black K to corner
-    if(lead < -100) score += PST[PST_CENTER+wKing]*(32 - filling) >> 3; // black leads, drive white K to corner
+    score += (PSQ(PST_CENTER, wKing, WHITE) - PSQ(PST_CENTER, bKing, BLACK))*(32 - filling) >> 7;
+    if(lead  > 100) score -= PSQ(PST_CENTER, bKing, BLACK)*(32 - filling) >> 3; // white leads, drive black K to corner
+    if(lead < -100) score += PSQ(PST_CENTER, wKing, WHITE)*(32 - filling) >> 3; // black leads, drive white K to corner
     max = 16*filling;
   }
 
@@ -518,12 +517,12 @@ Evaluate (int difEval)
   if(filling < 128) {
     int sq;
     if((wLion = kylin[WHITE]) && (sq = p[wLion].pos) != ABSENT) {
-      int anchor = sq - PST[5*BSIZE - 1 - sq]; // FIXME: PST_ZONDIST indexed backwards
-      score += (512 - Surround(BLACK, anchor, 0, 512))*(128 - filling)*PST[p[wLion].pst + sq] >> 15;
+      int anchor = sq - PSQ(PST_ZONDIST, sq, WHITE); // FIXME: PST_ZONDIST indexed backwards
+      score += (512 - Surround(BLACK, anchor, 0, 512))*(128 - filling)*PSQ(p[wLion].pst, sq, WHITE) >> 15;
     }
     if((bLion = kylin[BLACK]) && (sq = p[bLion].pos) != ABSENT) {
-      int anchor = sq + PST[PST_ZONDIST + sq];
-      score -= (512 - Surround(WHITE, anchor, 0, 512))*(128 - filling)*PST[p[bLion].pst + sq] >> 15;
+      int anchor = sq + PSQ(PST_ZONDIST, sq, BLACK);
+      score -= (512 - Surround(WHITE, anchor, 0, 512))*(128 - filling)*PSQ(p[bLion].pst, sq, BLACK) >> 15;
     }
   }
 #endif

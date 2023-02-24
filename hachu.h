@@ -83,24 +83,6 @@
 #define P_WHITE     0x0F
 #define P_BLACK     0xF0
 
-// Piece-Square Tables
-#define PST_NEUTRAL 0
-#define PST_STEPPER BW
-#define PST_WJUMPER (BSIZE)
-#define PST_SLIDER  (BSIZE+BW)
-#define PST_TRAP    (2*BSIZE)
-#define PST_CENTER  (2*BSIZE+BW)
-#define PST_WPPROM  (3*BSIZE)
-#define PST_BPPROM  (3*BSIZE+BW)
-#define PST_BJUMPER (4*BSIZE)
-#define PST_ZONDIST (4*BSIZE+BW)
-#define PST_ADVANCE (5*BSIZE)
-#define PST_RETRACT (5*BSIZE+BW)
-#define PST_WFLYER  (6*BSIZE)
-#define PST_BFLYER  (6*BSIZE+BW)
-#define PST_LANCE   (7*BSIZE)
-#define PSTSIZE     (8*BSIZE)
-
 char *MoveToText(Move move, int m);     // from WB driver
 void pmap(int color);
 void pboard(int *b);

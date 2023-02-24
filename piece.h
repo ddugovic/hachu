@@ -18,32 +18,32 @@
 #define P_BLACK     0xF0
 
 // Piece-Square Tables/Flags
-#define PST_NEUTRAL 0
-#define PST_STEPPER BW
-#define PST_WJUMPER (BSIZE)
-#define PST_SLIDER  (BSIZE+BW)
-#define PST_TRAP    (2*BSIZE)
-#define PST_CENTER  (2*BSIZE+BW)
-#define PST_WPPROM  (3*BSIZE)
-#define PST_BPPROM  (3*BSIZE+BW)
-#define PST_BJUMPER (4*BSIZE)
-#define PST_ZONDIST (4*BSIZE+BW)
-#define PST_ADVANCE (5*BSIZE)
-#define PST_RETRACT (5*BSIZE+BW)
-#define PST_WFLYER  (6*BSIZE)
-#define PST_BFLYER  (6*BSIZE+BW)
-#define PST_LANCE   (7*BSIZE)
-#define PSTSIZE     (8*BSIZE)
+#define PST_NEUTRAL  0
+#define PST_STEPPER  1
+#define PST_WJUMPER  2
+#define PST_SLIDER   3
+#define PST_TRAP     4
+#define PST_CENTER   5
+#define PST_WPPROM   6
+#define PST_BPPROM   7
+#define PST_BJUMPER  8
+#define PST_ZONDIST  9
+#define PST_ADVANCE 10
+#define PST_RETRACT 11
+#define PST_WFLYER  12
+#define PST_BFLYER  13
+#define PST_LANCE   14
+#define PSTSIZE     15 // number of PST types
 
 PieceDesc *ListLookUp(char *name, PieceDesc *list);
 PieceDesc *LookUp(char *name, int var);
 void DeletePiece(int stm, int n);
 int Worse(int a, int b);
-int Lance(signed char *r);
-int EasyProm(signed char *r);
-Flag IsUpwardCompatible(signed char *r, signed char *s);
-int ForwardOnly(signed char *range);
-int Range(signed char *range);
+int Lance(MoveType *r);
+int EasyProm(MoveType *r);
+Flag IsUpwardCompatible(MoveType *r, MoveType *s);
+int ForwardOnly(MoveType *range);
+int Range(MoveType *range);
 void StackMultis(int col);
 void Compactify(int stm);
 int AddPiece(int stm, PieceDesc *list);
@@ -146,9 +146,10 @@ extern int board[BSIZE];
 extern int attacksByLevel[LEVELS][COLORS][BSIZE];
 #define attacks attacksByLevel[level]
 #define ATTACK(pos, color) attacks[color][pos]
-extern char promoBoard[BSIZE]; // flags to indicate promotion zones
-extern Flag fireBoard[BSIZE];  // flags to indicate squares controlled by Fire Demons
-extern signed char PST[PSTSIZE];
+extern char promoBoard[BSIZE];   // flags to indicate promotion zones
+extern Flag fireBoard[BSIZE];    // flags to indicate squares controlled by Fire Demons
+extern signed char psq[PSTSIZE][BSIZE]; // cache of piece-value-per-square
+#define PSQ(type, sq, color) psq[type][color == BLACK ? sq : BSIZE-sq-1]
 
 // Maximum of (ranks, files) of ray between squares
 #define dist(s1, s2) MAX(abs((s1-s2)/BW), abs((s1-s2)%BW))

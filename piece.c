@@ -108,7 +108,7 @@ int attacksByLevel[LEVELS][COLORS][BSIZE];
 
 char promoBoard[BSIZE] = { [0 ... BSIZE-1] = 0 }; // flags to indicate promotion zones
 Flag fireBoard[BSIZE]; // flags to indicate squares controlled by Fire Demons
-signed char PST[PSTSIZE] = { 0 };
+signed char psq[PSTSIZE][BSIZE] = { 0 }; // cache of piece-value-per-square
 
 PieceDesc *
 ListLookUp (char *name, PieceDesc *list)
@@ -188,7 +188,7 @@ Worse (int a, int b)
 }
 
 int
-Lance (signed char *r)
+Lance (MoveType *r)
 { // File-bound forward slider
   int i;
   for(i=1; i<4; i++) if(r[i] || r[i+4]) return 0;
@@ -196,7 +196,7 @@ Lance (signed char *r)
 }
 
 int
-EasyProm (signed char *r)
+EasyProm (MoveType *r)
 {
   if(r[0] == X) return 30 + PROMO*((unsigned int)(r[1] | r[2] | r[3] | r[5] | r[6] | r[7]) <= 1);
   if(r[1] == X || r[7] == X) return 30 + PROMO/2;
@@ -204,7 +204,7 @@ EasyProm (signed char *r)
 }
 
 Flag
-IsUpwardCompatible (signed char *r, signed char *s)
+IsUpwardCompatible (MoveType *r, MoveType *s)
 {
   int i;
   for(i=0; i<RAYS; i++) {
@@ -214,7 +214,7 @@ IsUpwardCompatible (signed char *r, signed char *s)
 }
 
 int
-ForwardOnly (signed char *range)
+ForwardOnly (MoveType *range)
 {
   int i;
   for(i=2; i<RAYS-1; i++) if(range[i]) return 0; // sideways and/or backwards
@@ -222,7 +222,7 @@ ForwardOnly (signed char *range)
 }
 
 int
-Range (signed char *range)
+Range (MoveType *range)
 {
   int i, m=0;
   for(i=0; i<RAYS; i++) {
@@ -298,7 +298,7 @@ AddPiece (int stm, PieceDesc *list)
   }
   if(royal[stm] >= i) royal[stm] += 2;
   if(kylin[stm] >= i) kylin[stm] += 2;
-  if(p[i].value == (currentVariant == V_SHO || currentVariant == V_WA ? 410 : 280) ) royal[stm] = i, p[i].pst = 0;
+  if(p[i].value == (currentVariant == V_SHO || currentVariant == V_WA ? 410 : 280) ) royal[stm] = i, p[i].pst = PST_NEUTRAL;
   p[i].qval = (tenFlag ? list->ranking : 0); // jump-capture hierarchy
   return i;
 }
@@ -387,7 +387,7 @@ SetUp (char *fen, char *IDs, int var)
       p[i].promoGain = (p[j].value - p[i].value - g)*0.9, p[i].value = p[j].value - g;
     else p[i].promoGain = 0;
     board[p[i].pos] = i;
-    rootEval += p[i].value + PST[p[i].pst + p[i].pos];
+    rootEval += p[i].value + PSQ(p[i].pst, p[i].pos, WHITE);
     promoDelta += p[i].promoGain;
     filling += p[i].bulk;
   } else p[i].promoGain = 0;
@@ -403,7 +403,7 @@ SetUp (char *fen, char *IDs, int var)
     else p[i].promoGain = 0;
     if(i == kylin[BLACK]) p[i].promoGain = 1.25*KYLIN, p[i].value += KYLIN;
     board[p[i].pos] = i;
-    rootEval -= p[i].value + PST[p[i].pst + p[i].pos];
+    rootEval -= p[i].value + PSQ(p[i].pst, p[i].pos, BLACK);
     promoDelta -= p[i].promoGain;
     filling += p[i].bulk;
   } else p[i].promoGain = 0;
@@ -479,32 +479,32 @@ Init (int var)
   for(i=0; i<bRanks; i++) {
    for(j=0; j<bFiles; j++) {
     int s = POS(i, j), d = bRanks*(bRanks-2) - abs(2*i - bRanks + 1)*(bRanks-1) - (2*j - bRanks + 1)*(2*j - bRanks + 1);
-    PST[s] = 2*(i==0 | i==bRanks-1) + (i==1 | i==bRanks-2); // last-rank markers in null table
-    PST[PST_STEPPER+s] = d/4 - (i < 2 || i > bRanks-3 ? 3 : 0) - (j == 0 || j == bFiles-1 ? 5 : 0)
+    PSQ(PST_NEUTRAL, s, BLACK) = 2*(i==0 | i==bRanks-1) + (i==1 | i==bRanks-2); // last-rank markers in null table
+    PSQ(PST_STEPPER, s, BLACK) = d/4 - (i < 2 || i > bRanks-3 ? 3 : 0) - (j == 0 || j == bFiles-1 ? 5 : 0)
                     + 3*(i==zone || i==bRanks-zone-1);      // stepper centralization
-    PST[PST_WJUMPER+s] = d/6;                               // double-stepper centralization
-    PST[PST_SLIDER +s] = d/12 - 15*(i==bRanks/2 || i==(bRanks-1)/2);// slider centralization
-    PST[PST_TRAP  +s] = j < 3 || j > bRanks-4 ? (i < 3 ? 7 : i == 3 ? 4 : i == 4 ? 2 : 0) : 0;
-    PST[PST_CENTER+s] = ((bRanks-1)*(bRanks-1) - (2*i - bRanks + 1)*(2*i - bRanks + 1) - (2*j - bRanks + 1)*(2*j - bRanks + 1))/6;
-    PST[PST_WPPROM+s] = PST[PST_BPPROM+s] = PST[PST_STEPPER+s]; // as stepper, but with pre-promotion bonus W/B
-    PST[PST_BJUMPER+s] = PST[PST_WJUMPER+s];                // as jumper, but with pre-promotion bonus B
-    PST[PST_ZONDIST+s] = BW*(zone - 1 - i);                 // board step to enter promo zone black
-    PST[PST_ADVANCE+s] = PST[PST_WFLYER-s-1] = 2*(5*i+i*i) - (i >= zone)*6*(i-zone+1)*(i-zone+1)
+    PSQ(PST_WJUMPER, s, BLACK) = d/6;                               // double-stepper centralization
+    PSQ(PST_SLIDER , s, BLACK) = d/12 - 15*(i==bRanks/2 || i==(bRanks-1)/2);// slider centralization
+    PSQ(PST_TRAP  , s, BLACK) = j < 3 || j > bRanks-4 ? (i < 3 ? 7 : i == 3 ? 4 : i == 4 ? 2 : 0) : 0;
+    PSQ(PST_CENTER, s, BLACK) = ((bRanks-1)*(bRanks-1) - (2*i - bRanks + 1)*(2*i - bRanks + 1) - (2*j - bRanks + 1)*(2*j - bRanks + 1))/6;
+    PSQ(PST_WPPROM, s, BLACK) = PSQ(PST_BPPROM, s, BLACK) = PSQ(PST_STEPPER, s, BLACK); // as stepper, but with pre-promotion bonus W/B
+    PSQ(PST_BJUMPER, s, BLACK) = PSQ(PST_WJUMPER, s, BLACK);                // as jumper, but with pre-promotion bonus B
+    PSQ(PST_ZONDIST, s, BLACK) = BW*(zone - 1 - i);                 // board step to enter promo zone black
+    PSQ(PST_ADVANCE, s, BLACK) = PSQ(PST_WFLYER, s, WHITE) = 2*(5*i+i*i) - (i >= zone)*6*(i-zone+1)*(i-zone+1)
 	- (2*j - bRanks + 1)*(2*j - bRanks + 1)/bRanks + bRanks/2
 	- 50 - 35*(j==0 || j == bRanks-1) - 15*(j == 1 || bRanks-2); // advance-encouraging table
-    PST[PST_WFLYER +s] = PST[PST_LANCE-s-1] = (i == zone-1)*40 + (i == zone-2)*20 - 20;
-    PST[PST_LANCE  +s] = (PST[PST_STEPPER+j] - PST[PST_STEPPER+s])/2;
+    PSQ(PST_WFLYER , s, BLACK) = PSQ(PST_LANCE, s, WHITE) = (i == zone-1)*40 + (i == zone-2)*20 - 20;
+    PSQ(PST_LANCE  , s, BLACK) = (PSQ(PST_STEPPER, j, WHITE) - PSQ(PST_STEPPER, s, BLACK))/2;
    }
    if(zone > 0)
-	PST[PST_WPPROM+STEP(bRanks-1-zone, j)] += 10, PST[PST_BPPROM + STEP(zone, j)] += 10;
+	PSQ(PST_WPPROM, POS(bRanks-1-zone, j), BLACK) += 10, PSQ(PST_BPPROM, POS(zone, j), BLACK) += 10;
    if(j > (bRanks-1)/2 - 3 && j < bRanks/2 + 3)
-	PST[PST_WPPROM + j] += 4, PST[PST_BPPROM + POS(bRanks-1, j)] += 4; // fortress
+	PSQ(PST_WPPROM, j, BLACK) += 4, PSQ(PST_BPPROM, POS(bRanks-1, j), BLACK) += 4; // fortress
    if(j > (bRanks-1)/2 - 2 && j < bRanks/2 + 2)
-	PST[PST_WPPROM + POS(1, j)] += 2, PST[PST_BPPROM + POS(bRanks-2, j)] += 2; // fortress
+	PSQ(PST_WPPROM, POS(1, j), BLACK) += 2, PSQ(PST_BPPROM, POS(bRanks-2, j), BLACK) += 2; // fortress
 #if KYLIN
    // pre-promotion bonuses for jumpers
-   if(zone > 0) PST[PST_WJUMPER + POS(bRanks-2-zone, j)] = PST[PST_BJUMPER + POS(zone+1, j)] = 100,
-                PST[PST_WJUMPER + POS(bRanks-1-zone, j)] = PST[PST_BJUMPER + POS(zone, j)] = 200;
+   if(zone > 0) PSQ(PST_WJUMPER, POS(bRanks-2-zone, j), BLACK) = PSQ(PST_BJUMPER, POS(zone+1, j), BLACK) = 100,
+                PSQ(PST_WJUMPER, POS(bRanks-1-zone, j), BLACK) = PSQ(PST_BJUMPER, POS(zone, j), BLACK) = 200;
 #endif
   }
 
@@ -519,7 +519,7 @@ PSTest ()
     int s = POS(r, f);
     int piece = board[s];
     if(!piece) continue;
-    score = p[piece].value + PST[p[piece].pst + s];
+    score = p[piece].value + PSQ(p[piece].pst, s, BLACK);
     if(piece & 1) tot += score; else tot -= score;
   }
   return tot;
@@ -706,8 +706,8 @@ MakeMove (Move m, UndoInfo *u)
     p[u->epVictim[1]].pos = ABSENT;
     // decode the true to-square, and correct difEval and hash key for the e.p. captures
     u->to       = u->from + toList[u->to - SPECIAL];
-    u->booty += p[u->epVictim[1]].value + PST[p[u->epVictim[1]].pst + u->ep2Square];
-    u->booty += p[u->epVictim[0]].value + PST[p[u->epVictim[0]].pst + u->epSquare];
+    u->booty += p[u->epVictim[1]].value + PSQ(p[u->epVictim[1]].pst, u->ep2Square, BLACK);
+    u->booty += p[u->epVictim[0]].value + PSQ(p[u->epVictim[0]].pst, u->epSquare, BLACK);
     u->gain  += p[u->epVictim[1]].value;
     u->gain  += p[u->epVictim[0]].value;
     promoDelta += p[u->epVictim[0]].promoGain;
@@ -738,7 +738,7 @@ MakeMove (Move m, UndoInfo *u)
 	if(burnVictim != EMPTY && (burnVictim & TYPE) == xstm) { // opponent => actual burn
 	  board[x] = EMPTY; // remove it
 	  p[burnVictim].pos = ABSENT;
-	  u->booty += p[burnVictim].value + PST[p[burnVictim].pst + x];
+	  u->booty += p[burnVictim].value + PSQ(p[burnVictim].pst, x, BLACK);
 	  u->gain  += p[burnVictim].value;
 	  promoDelta += p[burnVictim].promoGain;
 	  filling  -= p[burnVictim].bulk;
@@ -760,11 +760,11 @@ MakeMove (Move m, UndoInfo *u)
     u->booty += p[u->new].value;
   }
 
-  u->booty += PST[p[u->new].pst + u->to] - PST[p[u->piece].pst + u->from];
+  u->booty += PSQ(p[u->new].pst, u->to, BLACK) - PSQ(p[u->piece].pst, u->from, BLACK);
 
   filling += p[u->new].bulk - p[u->piece].bulk - p[u->victim].bulk;
   promoDelta += p[u->new].promoGain - p[u->piece].promoGain + p[u->victim].promoGain;
-  u->booty += p[u->victim].value + PST[p[u->victim].pst + u->to];
+  u->booty += p[u->victim].value + PSQ(p[u->victim].pst, u->to, BLACK);
   u->gain  += p[u->victim].value;
   if(u->victim != EMPTY) {
     cnt50 = 0; // capture irreversible
