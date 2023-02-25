@@ -623,7 +623,9 @@ printf("\n# search(%d) {%d,%d} eval=%d stm=%d ",level,alpha,beta,difEval,stm);
     }
   }
 
-if(!level) {for(i=0; i<5; i++)printf("# %d %08x, %d\n", i, repStack[LEVELS-i], checkStack[LEVELS-i]);}
+#if 1
+if(!level) for(i=0; i<5 && (repStack[LEVELS-i] || checkStack[LEVELS-i]); i++)printf("# %d %08x, %d\n", i, repStack[LEVELS-i], checkStack[LEVELS-i]);
+#endif
   // KING CAPTURE
   k = p[king=royal[xstm]].pos;
   if(k != ABSENT) {
@@ -877,7 +879,7 @@ printf("#       repetition %d\n", i);
       repStack[level+LEVELS] = hashKeyH;
 
 path[level++] = move;
-MapAttacks(level); // for as long as incremental update does not work.
+mobilityScore = MapAttacks(level); // for as long as incremental update does not work.
 //if(PATH) pmap(stm);
       if(chuFlag && (p[tb.victim].value == LVAL || p[tb.epVictim[0]].value == LVAL)) {// verify legality of Lion capture in Chu Shogi
 #if 0
@@ -1035,6 +1037,7 @@ pmoves(int start, int end)
 
     // Some routines your engine should have to do the various essential things
     int  MakeMove2(int stm, Move move);      // performs move, and returns new side to move
+    int  InCheck(level);
     void UnMake2(Move move);                 // unmakes the move;
     int  Setup2(char *fen);                  // sets up the position from the given FEN, and returns the new side to move
     void SetMemorySize(int n);              // if n is different from last time, resize all tables to make memory usage below n MB
@@ -1060,8 +1063,23 @@ MakeMove2 (int stm, Move move)
     repStack[i] = repStack[i+1], checkStack[i] = checkStack[i+1];
   repStack[LEVELS-1] = hashKeyH, checkStack[LEVELS-1] = inCheck;
   // makemove is not part of http://hgm.nubati.net/CECP.html
+#if 0
   printf("# makemove %s %c%d %c%d\n", MoveToText(move, 0), FILECH(sup1), RANK(sup1), FILECH(sup2), RANK(sup2));
+#endif
   return stm ^ WHITE;
+}
+
+int
+InCheck (int level)
+{
+  int k = p[royal[stm]].pos;
+  if( k == ABSENT) k = p[royal[stm] + 2].pos;
+  else if(p[royal[stm] + 2].pos != ABSENT) k = ABSENT; // two kings is no king...
+  if( k != ABSENT) {
+    mobilityScore = MapAttacks(level);
+    if(ATTACK(k, WHITE+BLACK-stm)) return 1;
+  }
+  return 0;
 }
 
 void
@@ -1151,7 +1169,7 @@ int
 ListMoves (int listStart, int listEnd)
 { // create move list on move stack
   int i;
-MapAttacks(level);
+mobilityScore = MapAttacks(level);
   postThinking--; repCnt = 0; tlim1 = tlim2 = tlim3 = 1e8; abortFlag = msp = 0;
   Search(-INF-1, INF+1, 0, QSDEPTH+1, 0, sup1 & ~PROMOTE, sup2, INF);
   postThinking++;
@@ -1348,13 +1366,14 @@ printf("# SearchBestMove\n");
   startTime = GetTickCount();
   nodes = 0;
 printf("# s=%d\n", startTime);fflush(stdout);
-MapAttacks(level);
+mobilityScore = MapAttacks(level);
   retMove = INVALID; repCnt = 0;
   score = Search(-INF-1, INF+1, rootEval, maxDepth + QSDEPTH, 0, sup1, sup2, INF);
   *move = retMove;
   *ponderMove = pv[1];
-printf("# best=%s\n", MoveToText(pv[0],0));
-if(pv[1]) printf("# ponder=%s\n", MoveToText(pv[1],0));
+printf("# best=%s", MoveToText(pv[0],0));
+if(pv[1]) printf(" ponder=%s", MoveToText(pv[1],0));
+printf("\n");
   return score;
 }
 
@@ -1446,12 +1465,12 @@ printf("# ponder hit\n");
         if(retMSP == 0) retMSP = ListMoves(retFirst, retMSP);   // always maintain a list of legal moves in root position
         abortFlag = -(ponder && WHITE+BLACK-stm == engineSide && moveNr); // pondering and opponent on move
         if(stm == engineSide || abortFlag && ponderMove) {      // if it is the engine's turn to move, set it thinking, and let it move
-printf("# start search: stm=%d engine=%d (flag=%d)\n", stm, engineSide, abortFlag);
+printf("# start search: stm=%d engine=%d ponder=%d abort=%d\n", stm, engineSide, ponder, abortFlag);
           if(abortFlag) {
             stm = MakeMove2(stm, ponderMove);                           // for pondering, play speculative move
             gameMove[moveNr++] = ponderMove;                            // remember in game
             sprintf(ponderMoveText, "%s\n", MoveToText(ponderMove, 0)); // for detecting ponder hits
-printf("# ponder move = %s", ponderMoveText);
+printf("# ponder=%s\n", ponderMoveText);
           } else SetSearchTimes(10*timeLeft);                           // for thinking, schedule end time
 pboard(board);
           score = SearchBestMove(&move, &ponderMove);

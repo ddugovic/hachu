@@ -37,7 +37,7 @@ int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
 
 int pVal;
 int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
-int cnt50, mobilityScore;
+int cnt50;
 
 Vector direction[2*RAYS] = { // clockwise!
   {1,  0},
@@ -623,16 +623,16 @@ MapAttacksByColor (int color, int pieces, int level)
     }
     totMob += mob * pi->mobWeight;
   }
-if(!level) printf("# mobility %d = %d\n", color, totMob);
   return totMob;
 }
 
 int
 MapAttacks (int level)
 {
-  mobilityScore =  MapAttacksByColor(WHITE, pieces[WHITE], level)
-                 - MapAttacksByColor(BLACK, pieces[BLACK], level);
-  return mobilityScore;
+  int blackMob = MapAttacksByColor(BLACK, pieces[BLACK], level),
+      whiteMob = MapAttacksByColor(WHITE, pieces[WHITE], level);
+//if(!level) printf("# mobility WHITE = %d, BLACK = %d\n", whiteMob, blackMob);
+  return whiteMob - blackMob;
 }
 
 int
@@ -868,17 +868,4 @@ pmap (int color)
     for(j=0; j<bRanks; j++) printf("%11o", ATTACK(POS(i, j), color));
     printf("\n");
   }
-}
-
-int
-InCheck (int level)
-{
-  int k = p[royal[stm]].pos;
-  if( k == ABSENT) k = p[royal[stm] + 2].pos;
-  else if(p[royal[stm] + 2].pos != ABSENT) k = ABSENT; // two kings is no king...
-  if( k != ABSENT) {
-    MapAttacks(level);
-    if(ATTACK(k, WHITE-stm)) return 1;
-  }
-  return 0;
 }

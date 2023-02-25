@@ -104,7 +104,7 @@ Move ponderMove;
 #define LEVELS 200
 Move retMove, moveStack[20000], path[100], repStack[LEVELS+(FIFTY*2)], pv[1000], repeatMove[300], killer[100][2];
 
-int level, maxDepth; // used by search
+int level, maxDepth, mobilityScore; // used by search
 
 // Some global variables that control your engine's behavior
 int ponder;

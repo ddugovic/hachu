@@ -57,7 +57,6 @@ void pplist();
 void pboard(int *b);
 void pbytes(Flag *b);
 void pmap(int color);
-int InCheck(int level);
 
 extern VariantDesc *variant;
 extern int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
@@ -67,7 +66,7 @@ extern int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
 
 extern int pVal;
 extern int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
-extern int level, cnt50, mobilityScore;
+extern int level, cnt50;
 
 extern Vector direction[2*RAYS];
 
