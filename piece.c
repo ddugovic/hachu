@@ -280,7 +280,7 @@ AddPiece (int stm, PieceDesc *list)
   for(j=0; j<RAYS; j++) p[i].range[j] = list->range[j^(RAYS/2)*(WHITE-stm)];
   switch(Range(p[i].range)) {
     case 1:  p[i].pst = PST_STEPPER; break;
-    case 2:  p[i].pst = PST_WJUMPER; break;
+    case 2:  p[i].pst = PST_JUMPER; break;
     default: p[i].pst = PST_SLIDER;  break;
   }
   key = (stm == WHITE ? &list->whiteKey : &list->blackKey);
@@ -379,10 +379,10 @@ SetUp (char *fen, char *IDs, int var)
   for(i=WHITE+2; i<=pieces[WHITE]; i+=2) if(p[i].pos != ABSENT) {
     int g = p[i].promoGain;
     if(i == kylin[WHITE]) p[i].promoGain = 1.25*KYLIN, p[i].value += KYLIN;
-//    if(j > 0 && p[i].pst == PST_STEPPER) p[i].pst = PST_WPPROM; // use white pre-prom bonus
+//    if(j > 0 && p[i].pst == PST_STEPPER) p[i].pst = PST_PPROM; // use white pre-prom bonus
     if(j > 0 && p[i].pst == PST_STEPPER && p[i].value >= 100)
-	p[i].pst = p[i].value <= 150 ? PST_ADVANCE : PST_WPPROM;  // light steppers advance
-    if(j > 0 && p[i].bulk == 6) p[i].pst = PST_WFLYER, p[i].mobWeight = 4; // SM defends zone
+	p[i].pst = p[i].value <= 150 ? PST_ADVANCE : PST_PPROM;  // light steppers advance
+    if(j > 0 && p[i].bulk == 6) p[i].pst = PST_FLYER, p[i].mobWeight = 4; // SM defends zone
     if((j = p[i].promo) > 0 && g)
       p[i].promoGain = (p[j].value - p[i].value - g)*0.9, p[i].value = p[j].value - g;
     else p[i].promoGain = 0;
@@ -393,11 +393,10 @@ SetUp (char *fen, char *IDs, int var)
   } else p[i].promoGain = 0;
   for(i=BLACK+2; i<=pieces[BLACK]; i+=2) if(p[i].pos != ABSENT) {
     int g = p[i].promoGain;
-//    if(j > 0 && p[i].pst == PST_STEPPER) p[i].pst = PST_BPPROM; // use black pre-prom bonus
+//    if(j > 0 && p[i].pst == PST_STEPPER) p[i].pst = PST_PPROM; // use black pre-prom bonus
     if(j > 0 && p[i].pst == PST_STEPPER && p[i].value >= 100)
-	p[i].pst = p[i].value <= 150 ? PST_RETRACT : PST_BPPROM;  // light steppers advance
-    if(j > 0 && p[i].pst == PST_WJUMPER) p[i].pst = PST_BJUMPER;  // use black pre-prom bonus
-    if(j > 0 && p[i].bulk == 6) p[i].pst = PST_BFLYER, p[i].mobWeight = 4; // SM defends zone
+	p[i].pst = p[i].value <= 150 ? PST_RETRACT : PST_PPROM;  // light steppers advance
+    if(j > 0 && p[i].bulk == 6) p[i].pst = PST_FLYER, p[i].mobWeight = 4; // SM defends zone
     if((j = p[i].promo) > 0 && g)
       p[i].promoGain = (p[j].value - p[i].value - g)*0.9, p[i].value = p[j].value - g;
     else p[i].promoGain = 0;
@@ -481,30 +480,29 @@ Init (int var)
     int s = POS(i, j), d = bRanks*(bRanks-2) - abs(2*i - bRanks + 1)*(bRanks-1) - (2*j - bRanks + 1)*(2*j - bRanks + 1);
     PSQ(PST_NEUTRAL, s, BLACK) = 2*(i==0 | i==bRanks-1) + (i==1 | i==bRanks-2); // last-rank markers in null table
     PSQ(PST_STEPPER, s, BLACK) = d/4 - (i < 2 || i > bRanks-3 ? 3 : 0) - (j == 0 || j == bFiles-1 ? 5 : 0)
-                    + 3*(i==zone || i==bRanks-zone-1);      // stepper centralization
-    PSQ(PST_WJUMPER, s, BLACK) = d/6;                               // double-stepper centralization
-    PSQ(PST_SLIDER , s, BLACK) = d/12 - 15*(i==bRanks/2 || i==(bRanks-1)/2);// slider centralization
+                    + 3*(i==zone || i==bRanks-zone-1);                          // stepper centralization
+    PSQ(PST_JUMPER, s, BLACK) = d/6;                                            // double-stepper centralization
+    PSQ(PST_SLIDER, s, BLACK) = d/12 - 15*(i==bRanks/2 || i==(bRanks-1)/2); // slider centralization
     PSQ(PST_TRAP  , s, BLACK) = j < 3 || j > bRanks-4 ? (i < 3 ? 7 : i == 3 ? 4 : i == 4 ? 2 : 0) : 0;
     PSQ(PST_CENTER, s, BLACK) = ((bRanks-1)*(bRanks-1) - (2*i - bRanks + 1)*(2*i - bRanks + 1) - (2*j - bRanks + 1)*(2*j - bRanks + 1))/6;
-    PSQ(PST_WPPROM, s, BLACK) = PSQ(PST_BPPROM, s, BLACK) = PSQ(PST_STEPPER, s, BLACK); // as stepper, but with pre-promotion bonus W/B
-    PSQ(PST_BJUMPER, s, BLACK) = PSQ(PST_WJUMPER, s, BLACK);                // as jumper, but with pre-promotion bonus B
-    PSQ(PST_ZONDIST, s, BLACK) = BW*(zone - 1 - i);                 // board step to enter promo zone black
-    PSQ(PST_ADVANCE, s, BLACK) = PSQ(PST_WFLYER, s, WHITE) = 2*(5*i+i*i) - (i >= zone)*6*(i-zone+1)*(i-zone+1)
+    PSQ(PST_PPROM , s, BLACK) = PSQ(PST_STEPPER, s, BLACK);                     // as stepper, but with pre-promotion bonus
+    PSQ(PST_ZONDIST, s, BLACK) = BW*(zone - 1 - i);                             // board step to enter promo zone black
+    PSQ(PST_ADVANCE, s, BLACK) = 2*(5*i+i*i) - (i >= zone)*6*(i-zone+1)*(i-zone+1)
 	- (2*j - bRanks + 1)*(2*j - bRanks + 1)/bRanks + bRanks/2
-	- 50 - 35*(j==0 || j == bRanks-1) - 15*(j == 1 || bRanks-2); // advance-encouraging table
-    PSQ(PST_WFLYER , s, BLACK) = PSQ(PST_LANCE, s, WHITE) = (i == zone-1)*40 + (i == zone-2)*20 - 20;
-    PSQ(PST_LANCE  , s, BLACK) = (PSQ(PST_STEPPER, j, WHITE) - PSQ(PST_STEPPER, s, BLACK))/2;
+	- 50 - 35*(j==0 || j == bRanks-1) - 15*(j == 1 || bRanks-2);            // advance-encouraging table
+    PSQ(PST_FLYER, s, BLACK) = (i == zone-1)*40 + (i == zone-2)*20 - 20;
+    PSQ(PST_LANCE, s, BLACK) = (PSQ(PST_STEPPER, j, BLACK) - PSQ(PST_STEPPER, s, BLACK))/2;
    }
    if(zone > 0)
-	PSQ(PST_WPPROM, POS(bRanks-1-zone, j), BLACK) += 10, PSQ(PST_BPPROM, POS(zone, j), BLACK) += 10;
+	PSQ(PST_PPROM, POS(zone, j), BLACK) += 10;
    if(j > (bRanks-1)/2 - 3 && j < bRanks/2 + 3)
-	PSQ(PST_WPPROM, j, BLACK) += 4, PSQ(PST_BPPROM, POS(bRanks-1, j), BLACK) += 4; // fortress
+	PSQ(PST_PPROM, POS(bRanks-1, j), BLACK) += 4; // fortress
    if(j > (bRanks-1)/2 - 2 && j < bRanks/2 + 2)
-	PSQ(PST_WPPROM, POS(1, j), BLACK) += 2, PSQ(PST_BPPROM, POS(bRanks-2, j), BLACK) += 2; // fortress
+	PSQ(PST_PPROM, POS(bRanks-2, j), BLACK) += 2; // fortress
 #if KYLIN
    // pre-promotion bonuses for jumpers
-   if(zone > 0) PSQ(PST_WJUMPER, POS(bRanks-2-zone, j), BLACK) = PSQ(PST_BJUMPER, POS(zone+1, j), BLACK) = 100,
-                PSQ(PST_WJUMPER, POS(bRanks-1-zone, j), BLACK) = PSQ(PST_BJUMPER, POS(zone, j), BLACK) = 200;
+   if(zone > 0) PSQ(PST_JUMPER, POS(zone+1, j), BLACK) = 100,
+                PSQ(PST_JUMPER, POS(zone, j), BLACK) = 200;
 #endif
   }
 

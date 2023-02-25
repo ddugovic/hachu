@@ -20,20 +20,17 @@
 // Piece-Square Tables/Flags
 #define PST_NEUTRAL  0
 #define PST_STEPPER  1
-#define PST_WJUMPER  2
+#define PST_JUMPER   2
 #define PST_SLIDER   3
 #define PST_TRAP     4
 #define PST_CENTER   5
-#define PST_WPPROM   6
-#define PST_BPPROM   7
-#define PST_BJUMPER  8
-#define PST_ZONDIST  9
-#define PST_ADVANCE 10
-#define PST_RETRACT 11
-#define PST_WFLYER  12
-#define PST_BFLYER  13
-#define PST_LANCE   14
-#define PSTSIZE     15 // number of PST types
+#define PST_PPROM    6
+#define PST_ZONDIST  7
+#define PST_ADVANCE  8
+#define PST_RETRACT  9
+#define PST_FLYER   10
+#define PST_LANCE   11
+#define PSTSIZE     12 // number of PST types
 
 PieceDesc *ListLookUp(char *name, PieceDesc *list);
 PieceDesc *LookUp(char *name, int var);
