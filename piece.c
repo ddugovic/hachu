@@ -784,7 +784,7 @@ MakeMove (Move m, UndoInfo *u)
 }
 
 void
-UnMake(UndoInfo *u)
+UnMake (UndoInfo *u)
 {
   if(u->epVictim[0]) { // move with side effects
     if(u->epVictim[0] == EDGE) { // fire-demon burn

@@ -582,7 +582,8 @@ void TerminationCheck();
 int
 Search (int alpha, int beta, int difEval, int depth, int lmr, int oldPromo, int promoSuppress, int threshold)
 {
-  int i, j, k, phase, king, nextVictim, defer, autoFail=0, inCheck=0, late=100000, ep;
+  int i, j, k, phase, king, nextVictim, defer, autoFail=0, late=100000, ep;
+  Flag inCheck=0;
   int firstMove, oldMSP=msp, curMove, sorted, bestMoveNr=0;
   int resDep=0, iterDep, ext;
   int myPV=pvPtr;
@@ -612,16 +613,15 @@ printf("\n# search(%d) {%d,%d} eval=%d stm=%d ",level,alpha,beta,difEval,stm);
       k = ABSENT; // two kings is no king...
     }
     if( k != ABSENT) { // check is possible
-      if(!ATTACK(k, xstm)) {
-	if(tsume && tsume & stm+1) {
-	  retDep = 60; return INF; // we win when not in check
-        }
+      inCheck = InCheck(level);
+      if(!inCheck && (tsume && tsume & stm+1)) {
+        retDep = 60; return INF; // we win when not in check
       }
-#ifdef CHECKEXT
-      else { inCheck = 1; if(depth >= QSDEPTH) depth++; }
-#endif
     }
   }
+#ifdef CHECKEXT
+  if(inCheck && depth >= QSDEPTH) depth++;
+#endif
 
 #if 1
 if(!level) for(i=0; i<5 && (repStack[LEVELS-i] || checkStack[LEVELS-i]); i++)printf("# %d %08x, %d\n", i, repStack[LEVELS-i], checkStack[LEVELS-i]);
@@ -712,7 +712,7 @@ if(PATH) printf("# new moves, phase=%d\n", phase);
 	    if(depth > QSDEPTH && curEval >= beta && !inCheck && filling > 10) {
               int nullDep = depth - 3;
 	      stm ^= WHITE;
-path[level++] = 0;
+path[level++] = INVALID;
 if(PATH) printf("%d:%d null move\n", level, depth);
 	      int score = -Search(-beta, 1-beta, -difEval, nullDep<QSDEPTH ? QSDEPTH : nullDep, 0, promoSuppress & SQUARE, ABSENT, INF);
 if(PATH) printf("%d:%d null move score = %d\n", level, depth, score);
@@ -868,8 +868,8 @@ printf("#       repetition %d\n", i);
 	if(!allowRep) {
 	  moveStack[curMove] = INVALID; // erase forbidden repetition move
 	  if(!level) repeatMove[repCnt++] = move & 0xFFFFFF; // remember outlawed move
-	} else { // check for perpetuals
-//	  int repKey = 1;
+	} else { // check for perpetuals (TODO: count consecutive checks)
+//	  Flag repKey = 1;
 //	  for(i-=level; i>1; i-=2) {repKey &= checkStack[LEVELS-i]; if(!level)printf("# repkey[%d] = %d\n", LEVELS-i, repKey);}
 	  if(inCheck) { score = INF-20; goto repetition; } // we might be subject to perpetual check: score as win
 	  if(i == 2 && repStack[LEVELS+level-1] == hashKeyH) { score = INF-20; goto repetition; } // consecutive passing
@@ -1035,17 +1035,6 @@ pmoves(int start, int end)
     int moveNr;              // part of game state; incremented by MakeMove
     Move gameMove[MAXMOVES]; // holds the game history
 
-    // Some routines your engine should have to do the various essential things
-    int  MakeMove2(int stm, Move move);      // performs move, and returns new side to move
-    int  InCheck(level);
-    void UnMake2(Move move);                 // unmakes the move;
-    int  Setup2(char *fen);                  // sets up the position from the given FEN, and returns the new side to move
-    void SetMemorySize(int n);              // if n is different from last time, resize all tables to make memory usage below n MB
-    char *MoveToText(Move move, int m);     // converts the move from your internal format to text like e2e2, e1g1, a7a8q.
-    Move ParseMove(int ls, int le, char *moveText); // converts a long-algebraic text move to your internal move format
-    int  SearchBestMove(Move *move, Move *ponderMove);
-    void PonderUntilInput(int stm);         // Search current position for stm, deepening forever until there is input.
-
 UndoInfo undoInfo;
 int sup0, sup1, sup2; // promo suppression squares
 int lastLift, lastPut;
@@ -1053,7 +1042,7 @@ int lastLift, lastPut;
 int
 MakeMove2 (int stm, Move move)
 {
-  int i, inCheck = InCheck(level);
+  int i;
   FireSet(&undoInfo);
   sup0 = sup1; sup1 = sup2;
   sup2 = MakeMove(move, &undoInfo);
@@ -1061,15 +1050,14 @@ MakeMove2 (int stm, Move move)
   rootEval = -rootEval - undoInfo.booty;
   for(i=0; i<LEVELS; i++)
     repStack[i] = repStack[i+1], checkStack[i] = checkStack[i+1];
-  repStack[LEVELS-1] = hashKeyH, checkStack[LEVELS-1] = inCheck;
-  // makemove is not part of http://hgm.nubati.net/CECP.html
+  repStack[LEVELS-1] = hashKeyH, checkStack[LEVELS-1] = InCheck(level);
 #if 0
-  printf("# makemove %s %c%d %c%d\n", MoveToText(move, 0), FILECH(sup1), RANK(sup1), FILECH(sup2), RANK(sup2));
+  printf("# made move %s %c%d %c%d\n", MoveToText(move, 0), FILECH(sup1), RANK(sup1), FILECH(sup2), RANK(sup2));
 #endif
   return stm ^ WHITE;
 }
 
-int
+Flag
 InCheck (int level)
 {
   int k = p[royal[stm]].pos;
@@ -1088,7 +1076,9 @@ UnMake2 (Move move)
   int i;
   rootEval = -rootEval - undoInfo.booty;
   UnMake(&undoInfo);
-  for(i=LEVELS; i>0; i--) repStack[i] = repStack[i-1], checkStack[i] = checkStack[i-1];
+  for(i=LEVELS; i>0; i--)
+    repStack[i] = repStack[i-1], checkStack[i] = checkStack[i-1];
+  repStack[0] = 0, checkStack[0] = 0;
   sup2 = sup1; sup1 = sup0;
 }
 

@@ -96,13 +96,14 @@ int hashMask;
 #define H_LOWER 1
 
 Flag abortFlag;
-char fenArray[4000], startPos[4000], *reason, checkStack[300];
+char fenArray[4000], startPos[4000], *reason;
 int retFirst, retMSP, retDep, pvPtr;
 int nodes, startTime, lastRootMove, lastRootIter, tlim1, tlim2, tlim3, repCnt, comp;
 Move ponderMove;
 #define FIFTY 50
 #define LEVELS 200
 Move retMove, moveStack[20000], path[100], repStack[LEVELS+(FIFTY*2)], pv[1000], repeatMove[300], killer[100][2];
+Flag checkStack[LEVELS+(FIFTY*2)];
 
 int level, maxDepth, mobilityScore; // used by search
 
@@ -116,3 +117,14 @@ int contemptFactor; // likewise
 int seed;
 int tsume, pvCuts, allowRep, entryProm=1, okazaki;
 #endif
+
+// Some routines your engine should have to do the various essential things
+int  MakeMove2(int stm, Move move); // performs move, and returns new side to move
+Flag InCheck(int level);            // generates attack maps, and determines if king/prince is in check
+void UnMake2(Move move);            // unmakes the move;
+int  Setup2(char *fen);             // sets up the position from the given FEN, and returns the new side to move
+void SetMemorySize(int n);          // if n is different from last time, resize all tables to make memory usage below n MB
+char *MoveToText(Move move, int m); // converts the move from your internal format to text like e2e2, e1g1, a7a8q.
+Move ParseMove(int ls, int le, char *moveText); // converts a long-algebraic text move to your internal move format
+int  SearchBestMove(Move *move, Move *ponderMove);
+void PonderUntilInput(int stm);     // Search current position for stm, deepening forever until there is input.
