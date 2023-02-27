@@ -46,7 +46,7 @@ NewNonCapture (int x, int y, int promoFlags)
     if((promoFlags & promoBoard[y] & (CANT_DEFER | DONT_DEFER | LAST_RANK)) == 0) { // deferral could be a better alternative
       moveStack[msp++] = x<<SQLEN | y;                // push deferral
       if( (promoBoard[x] & CAN_PROMOTE) == 0 ) {      // enters zone
-	moveStack[msp-1] |= DEFER;                    // flag that promo-suppression takes place after this move
+        moveStack[msp-1] |= DEFER;                    // flag that promo-suppression takes place after this move
       }
     }
   } else
@@ -58,18 +58,18 @@ printf("last=%d nc=%d pf=%d move=%d\n", msp, nonCapts, promoFlags, x<<SQLEN | y)
 }
 
 static inline int
-NewCapture (int x, int y, int promoFlags)
+NewCapture (int from, int y, int promoFlags)
 {
-  if( (promoBoard[x] | promoBoard[(y < BSIZE ? y : x)]) & promoFlags) { // piece can promote with this move
-    moveStack[msp++] = x<<SQLEN | y | PROMOTE;        // push promotion
+  if( (promoBoard[from] | promoBoard[(y < BSIZE ? y : from)]) & promoFlags) { // piece can promote with this move
+    moveStack[msp++] = from<<SQLEN | y | PROMOTE;   // push promotion
     if((promoFlags & promoBoard[y] & (CANT_DEFER | DONT_DEFER | LAST_RANK)) == 0) { // deferral could be a better alternative
-      moveStack[msp++] = x<<SQLEN | y;                // push deferral
-      if( (promoBoard[x] & CAN_PROMOTE) == 0 ) {      // enters zone
-	moveStack[msp-1] |= DEFER;                    // flag that promo-suppression takes place after this move
+      moveStack[msp++] = from<<SQLEN | y;           // push deferral
+      if( (promoBoard[from] & CAN_PROMOTE) == 0 ) { // enters zone
+        moveStack[msp-1] |= DEFER;                  // flag that promo-suppression takes place after this move
       }
     }
   } else
-    moveStack[msp++] = x<<SQLEN | y; // push normal move
+    moveStack[msp++] = from<<SQLEN | y; // push normal move
   return 0;
 }
 
@@ -112,7 +112,7 @@ MarkBurns (int x)
     int mask = 0, y = x + 16*r;
     for(f=left; f <= right; f++) {
       if(board[y + f - (4*16+4)] != EMPTY && (board[y + f - (4*16+4)] & TYPE) == xstm)
-	mask |= rowMask[f]; // on-rank attacks
+        mask |= rowMask[f]; // on-rank attacks
     }
     rows[r+2] = mask;
   }
@@ -142,32 +142,32 @@ GenNonCapts (int promoSuppress)
     for(j=0; j<RAYS; j++) {
       int y, v = kStep[j], r = p[i].range[j];
       if(r < 0) { // jumping piece, special treatment
-	if(r == N) { // pure Knight, do off-ray jump
-	  NewNonCapture(x, x + nStep[j], pFlag);
-	} else
-	if(r >= S) { // in any case, do a jump of 2
-	  int occup = NewNonCapture(x, x + 2*v, pFlag);
-	  if(r < I) { // Lion power, also single step
-	    if(!NewNonCapture(x, x + v, pFlag)) nullMove = (r == W ? ABSENT : x); else occup = 1;
-	    if(r <= L) { // true Lion, also Knight jump
-	      if(!occup & r < L) for(y=x+2*v; !NewNonCapture(x, y+=v, pFlag) && r == S; ); // BS and FF moves
-	      v = nStep[j];
-	      if(r != W) NewNonCapture(x, x + v, pFlag);
-	    } else if(r >= T) { // T or K
-	      occup |= NewNonCapture(x, x+3*v, pFlag); // Lion Dog, also triple step
-	      if(!occup && r == K) for(y=x+3*v; !NewNonCapture(x, y+=v, pFlag); ); // Teaching King distant moves
-	    }
-	  } else if(r == I) NewNonCapture(x, x + v, pFlag); // also do step
-	} else
-	if(r == M) { // FIDE Pawn; check double-move
-	  if(!NewNonCapture(x, x+v, pFlag) && chessFlag && promoBoard[x-v] & LAST_RANK)
-	    NewNonCapture(x, x+2*v, pFlag), moveStack[msp-1] |= DEFER; // use promoSuppress flag as e.p. flag
-	}
-	continue;
+        if(r == N) { // pure Knight, do off-ray jump
+          NewNonCapture(x, x + nStep[j], pFlag);
+        } else
+        if(r >= S) { // in any case, do a jump of 2
+          int occup = NewNonCapture(x, x + 2*v, pFlag);
+          if(r < I) { // Lion power, also single step
+            if(!NewNonCapture(x, x + v, pFlag)) nullMove = (r == W ? ABSENT : x); else occup = 1;
+            if(r <= L) { // true Lion, also Knight jump
+              if(!occup & r < L) for(y=x+2*v; !NewNonCapture(x, y+=v, pFlag) && r == S; ); // BS and FF moves
+              v = nStep[j];
+              if(r != W) NewNonCapture(x, x + v, pFlag);
+            } else if(r >= T) { // T or K
+              occup |= NewNonCapture(x, x+3*v, pFlag); // Lion Dog, also triple step
+              if(!occup && r == K) for(y=x+3*v; !NewNonCapture(x, y+=v, pFlag); ); // Teaching King distant moves
+            }
+          } else if(r == I) NewNonCapture(x, x + v, pFlag); // also do step
+        } else
+        if(r == M) { // FIDE Pawn; check double-move
+          if(!NewNonCapture(x, x+v, pFlag) && chessFlag && promoBoard[x-v] & LAST_RANK)
+            NewNonCapture(x, x+2*v, pFlag), moveStack[msp-1] |= DEFER; // use promoSuppress flag as e.p. flag
+        }
+        continue;
       }
       y = x;
       while(r-- > 0)
-	if(NewNonCapture(x, y+=v, pFlag)) break;
+        if(NewNonCapture(x, y+=v, pFlag)) break;
     }
   }
   return nullMove;
@@ -190,19 +190,19 @@ printf("GenCapts(%c%d,%d) %08x\n", FILECH(sqr), RANK(sqr), victimValue, att);
 printf(" stop @ %c%d (dir %d)\n", FILECH(x), RANK(x), i);
 #endif
       if((board[x] & TYPE) == stm) {               // stop is ours
-	static int minRange[20] = {  3, 0, 0, 0, 2, 2,  2 }; // K, T, D, L, W, F, S
-	static int maxRange[20] = { 36, 0, 0, 0, 3, 3, 36 }; // K, T, D, L, W, F, S
-	int attacker = board[x], d = dist(x, sqr), r = p[attacker].range[i];
+        static int minRange[20] = {  3, 0, 0, 0, 2, 2,  2 }; // K, T, D, L, W, F, S
+        static int maxRange[20] = { 36, 0, 0, 0, 3, 3, 36 }; // K, T, D, L, W, F, S
+        int attacker = board[x], d = dist(x, sqr), r = p[attacker].range[i];
 #if 0
 printf("  attacker %d, range %d, dist %d\n", attacker, r, d);
 #endif
-	if(r >= d || r <= K && d <= maxRange[K-r] && d > minRange[K-r]) { // it has a plain move in our direction that hits us
-	  NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
-	  att -= ray[i];
-	  if(!(att & attackMask[i])) continue; // no more; next direction
-	  jcapt = p[board[x]].qval;   // jump-capturer hierarchy
-	  while(board[x+=v] == EMPTY);// one attack accounted for, but more to come, so skip to next stop
-	}
+        if(r >= d || r <= K && d <= maxRange[K-r] && d > minRange[K-r]) { // it has a plain move in our direction that hits us
+          NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
+          att -= ray[i];
+          if(!(att & attackMask[i])) continue; // no more; next direction
+          jcapt = p[board[x]].qval;   // jump-capturer hierarchy
+          while(board[x+=v] == EMPTY);// one attack accounted for, but more to come, so skip to next stop
+        }
       }
       // we get here when we are on a piece that does not attack us through a (limited) ranging move,
       // it can be our own or an enemy with not (enough) range, or which is blocked
@@ -212,127 +212,127 @@ printf("   scan %x-%x (%3d) dir=%d d=%d", sqr, x, board[x], i, dist(x, sqr)); ff
 printf(" r=%d att=%o jcapt=%d qval=%d\n", p[board[x]].range[i], att, jcapt, p[board[x]].qval);
 #endif
       if((board[x] & TYPE) == stm) {   // stop is ours
-	int attacker = board[x], d = dist(x, sqr), r = p[attacker].range[i];
-	if(jcapt < p[attacker].qval) { // it is a range jumper that jumps over the barrier
-	  if(p[attacker].range[i] > 1) { // assumes all jump-captures are infinite range
-	    NewCapture(x, sqr, p[attacker].promoFlag);
-	    att -= ray[i];
-	  }
+        int attacker = board[x], d = dist(x, sqr), r = p[attacker].range[i];
+        if(jcapt < p[attacker].qval) { // it is a range jumper that jumps over the barrier
+          if(p[attacker].range[i] > 1) { // assumes all jump-captures are infinite range
+            NewCapture(x, sqr, p[attacker].promoFlag);
+            att -= ray[i];
+          }
 #if 0
 if(board[x] == EDGE) { printf("    edge hit %x-%x dir=%d att=%o\n", sqr, x, i, att); continue; }
 #endif
-	} else
-	if(r < 0) { // stop has non-standard moves
-	  switch(p[attacker].range[i]) { // figure out what he can do (including multi-captures, which causes the complexity)
-	    case F: // Lion power + 3-step (as in FF)
-	    case S: // Lion power + ranging (as in BS)
-	    case L: // Lion
-	      if(d > 2) break;
-	      NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
-	      att -= ray[i];
-	      // now the multi-captures of designated victim together with lower-valued piece
-	      if(d == 2) { // primary victim on second ring; look for victims to take in passing
-		if((board[sqr+v] & TYPE) == xstm && board[sqr+v] > board[sqr])
-		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
-		if((i&1) == 0) { // orthogonal: two extra bent paths
-		  v = kStep[i-1];
-		  if((board[x+v] & TYPE) == xstm && board[x+v] > board[sqr])
-		    NewCapture(x, SPECIAL + RAYS*(i-1&7) + (i+1&7) + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
-		  v = kStep[i+1];
-		  if((board[x+v] & TYPE) == xstm && board[x+v] > board[sqr])
-		    NewCapture(x, SPECIAL + RAYS*(i+1&7) + (i-1&7) + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
-		}
-	      } else { // primary victim on first ring
-		int j;
-		for(j=0; j<RAYS; j++) { // we can go on in 8 directions after we captured it in passing
-		  int v = kStep[j];
-		  if(sqr+v == x || board[sqr+v] == EMPTY) { // hit & run; make sure we include igui (attacker is still at x!)
-		    NewCapture(x, SPECIAL + RAYS*i + j + victimValue, p[attacker].promoFlag);
-		  } else if((board[sqr+v] & TYPE) == xstm && board[sqr+v] > board[sqr]) {    // double capture
-		    NewCapture(x, SPECIAL + RAYS*i + j + victimValue, p[attacker].promoFlag); // other victim after primary
-		    if(dist(sqr+v, x) == 1) // other victim also on first ring; reverse order is possible
-		      NewCapture(x, SPECIAL + reverse[RAYS*i + j] + victimValue, p[attacker].promoFlag);
-		  }
-		}
-	      }
-	      break;
-	    case D: // linear Lion move (as in HF, SE)
-	      if(d > 2) break;
-	      NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
-	      att -= ray[i];
-	      if(d == 2) { // check if we can take intermediate with it
-		if((board[x-v] & TYPE) == xstm && board[x-v] > board[sqr])
-		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p.
-	      } else { // d=1; can move on to second, or move back for igui
-		NewCapture(x, SPECIAL + RAYS*i + (i^4) + victimValue, p[attacker].promoFlag); // igui
-		if(board[sqr-v] == EMPTY || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
-		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // hit and run
-	      }
-	      break;
-	    case T: // Lion-Dog move (awful!)
-	    case K:
-	      if(d > 3) break;
-	      NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
-	      att -= ray[i];
-	      if(d == 3) { // check if we can take one or two intermediates (with higher piece index) with it
-		if((board[x-v] & TYPE) == xstm && board[x-v] > board[sqr]) {
-		  NewCapture(x, SPECIAL + 64 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. first
-		  if((board[x-2*v] & TYPE) == xstm && board[x-2*v] > board[sqr])
-		    NewCapture(x, SPECIAL + 80 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. both
-		} else if((board[x-2*v] & TYPE) == xstm && board[x-2*v] > board[sqr])
-		  NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. second
-	      } else if(d == 2) { // check if we can take intermediate with it
-		if((board[x-v] & TYPE) == xstm && board[x-v] > board[sqr]) {
-		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. first, stop at 2nd
-		  NewCapture(x, SPECIAL + 88 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // shoot 2nd, take 1st
-		  if(board[sqr-v] == EMPTY || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
-		    NewCapture(x, SPECIAL + 80 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st and 2nd
-		} else if(board[sqr-v] == EMPTY || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
-		  NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 2nd
-	      } else { // d=1; can move on to second, or move back for igui
-		NewCapture(x, SPECIAL + RAYS*i + (i^4) + victimValue, p[attacker].promoFlag); // igui
-		if(board[sqr-v] == EMPTY) { // 2nd empty
-		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st and run to 2nd
-		  if(board[sqr-2*v] == EMPTY || (board[sqr-2*v] & TYPE) == xstm && board[sqr-2*v] > board[sqr])
-		    NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st, end on 3rd
-		} else if((board[sqr-v] & TYPE) == stm) { // 2nd own
-		  if(board[sqr-2*v] == EMPTY || (board[sqr-2*v] & TYPE) == xstm && board[sqr-2*v] > board[sqr])
-		    NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st, end on 3rd
-		} else if((board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr]) {
-		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st, capture and stop at 2nd
-		  NewCapture(x, SPECIAL + 88 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // shoot 2nd
-		  if(board[sqr-2*v] == EMPTY || (board[sqr-2*v] & TYPE) == xstm && board[sqr-2*v] > board[sqr])
-		    NewCapture(x, SPECIAL + 80 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st and 2nd
-		}
-	      }
-	      break;
-	    case J: // plain jump (as in KY, PH)
-	      if(d != 2) break;
-	    case I: // jump + step (as in Wa TF)
-	      if(d > 2) break;
-	      NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
-	      att -= ray[i];
-	      break;
-	    case W: // jump + locust jump + 3-slide (Werewolf)
-	      if(d > 2) break;
-	      NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
-	      att -= ray[i];
-	      if(d == 2) { // check if we can take intermediate with it
-		if((board[x-v] & TYPE) == xstm && board[x-v] > board[sqr])
-		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p.
-	      } else { // d=1; can move on to second
-		if(board[sqr-v] == EMPTY || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
-		  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // hit and run
-	      }
-	      break;
-	    case C: // FIDE Pawn
-	      if(d != 1) break;
-	      NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
-	      att -= ray[i];
-	  }
-	}
+        } else
+        if(r < 0) { // stop has non-standard moves
+          switch(p[attacker].range[i]) { // figure out what he can do (including multi-captures, which causes the complexity)
+            case F: // Lion power + 3-step (as in FF)
+            case S: // Lion power + ranging (as in BS)
+            case L: // Lion
+              if(d > 2) break;
+              NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
+              att -= ray[i];
+              // now the multi-captures of designated victim together with lower-valued piece
+              if(d == 2) { // primary (valuable) victim on second ring; look for victims to take in passing
+                if((board[sqr+v] & TYPE) == xstm && board[sqr+v] > board[sqr])
+                  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
+                if((i&1) == 0) { // orthogonal: two extra bent paths
+                  v = kStep[i-1];
+                  if((board[x+v] & TYPE) == xstm && board[x+v] > board[sqr])
+                    NewCapture(x, SPECIAL + RAYS*(i-1 % RAYS) + (i+1 % RAYS) + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
+                  v = kStep[i+1];
+                  if((board[x+v] & TYPE) == xstm && board[x+v] > board[sqr])
+                    NewCapture(x, SPECIAL + RAYS*(i+1 % RAYS) + (i-1 % RAYS) + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
+                }
+              } else { // primary (valuable) victim on first ring
+                int j;
+                for(j=0; j<RAYS; j++) { // we can go on in 8 directions after we captured it in passing
+                  int v = kStep[j];
+                  if(sqr+v == x || board[sqr+v] == EMPTY) { // hit & run; make sure we include igui (attacker is still at x!)
+                    NewCapture(x, SPECIAL + RAYS*i + j + victimValue, p[attacker].promoFlag);
+                  } else if((board[sqr+v] & TYPE) == xstm && board[sqr+v] > board[sqr]) {     // double capture
+                    NewCapture(x, SPECIAL + RAYS*i + j + victimValue, p[attacker].promoFlag); // other victim after primary
+                    if(dist(sqr+v, x) == 1) // other victim also on first ring; reverse order is possible
+                      NewCapture(x, SPECIAL + reverse[RAYS*i + j] + victimValue, p[attacker].promoFlag);
+                  }
+                }
+              }
+              break;
+            case D: // linear Lion move (as in HF, SE)
+              if(d > 2) break;
+              NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
+              att -= ray[i];
+              if(d == 2) { // check if we can take intermediate with it
+                if((board[x-v] & TYPE) == xstm && board[x-v] > board[sqr])
+                  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p.
+              } else { // d=1; can move on to second, or move back for igui
+                NewCapture(x, SPECIAL + RAYS*i + (i^4) + victimValue, p[attacker].promoFlag); // igui
+                if(board[sqr-v] == EMPTY || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
+                  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // hit and run
+              }
+              break;
+            case T: // Lion-Dog move (awful!)
+            case K:
+              if(d > 3) break;
+              NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
+              att -= ray[i];
+              if(d == 3) { // check if we can take one or two intermediates (with higher piece index) with it
+                if((board[x-v] & TYPE) == xstm && board[x-v] > board[sqr]) {
+                  NewCapture(x, SPECIAL + 64 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. first
+                  if((board[x-2*v] & TYPE) == xstm && board[x-2*v] > board[sqr])
+                    NewCapture(x, SPECIAL + 80 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. both
+                } else if((board[x-2*v] & TYPE) == xstm && board[x-2*v] > board[sqr])
+                  NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. second
+              } else if(d == 2) { // check if we can take intermediate with it
+                if((board[x-v] & TYPE) == xstm && board[x-v] > board[sqr]) {
+                  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. first, stop at 2nd
+                  NewCapture(x, SPECIAL + 88 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // shoot 2nd, take 1st
+                  if(board[sqr-v] == EMPTY || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
+                    NewCapture(x, SPECIAL + 80 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st and 2nd
+                } else if(board[sqr-v] == EMPTY || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
+                  NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 2nd
+              } else { // d=1; can move on to second, or move back for igui
+                NewCapture(x, SPECIAL + RAYS*i + (i^4) + victimValue, p[attacker].promoFlag); // igui
+                if(board[sqr-v] == EMPTY) { // 2nd empty
+                  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st and run to 2nd
+                  if(board[sqr-2*v] == EMPTY || (board[sqr-2*v] & TYPE) == xstm && board[sqr-2*v] > board[sqr])
+                    NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st, end on 3rd
+                } else if((board[sqr-v] & TYPE) == stm) { // 2nd own
+                  if(board[sqr-2*v] == EMPTY || (board[sqr-2*v] & TYPE) == xstm && board[sqr-2*v] > board[sqr])
+                    NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st, end on 3rd
+                } else if((board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr]) {
+                  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st, capture and stop at 2nd
+                  NewCapture(x, SPECIAL + 88 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // shoot 2nd
+                  if(board[sqr-2*v] == EMPTY || (board[sqr-2*v] & TYPE) == xstm && board[sqr-2*v] > board[sqr])
+                    NewCapture(x, SPECIAL + 80 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st and 2nd
+                }
+              }
+              break;
+            case J: // plain jump (as in KY, PH)
+              if(d != 2) break;
+            case I: // jump + step (as in Wa TF)
+              if(d > 2) break;
+              NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
+              att -= ray[i];
+              break;
+            case W: // jump + locust jump + 3-slide (Werewolf)
+              if(d > 2) break;
+              NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
+              att -= ray[i];
+              if(d == 2) { // check if we can take intermediate with it
+                if((board[x-v] & TYPE) == xstm && board[x-v] > board[sqr])
+                  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p.
+              } else { // d=1; can move on to second
+                if(board[sqr-v] == EMPTY || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
+                  NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // hit and run
+              }
+              break;
+            case C: // FIDE Pawn
+              if(d != 1) break;
+              NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
+              att -= ray[i];
+          }
+        }
 //printf("mask[%d] = %o\n", i, att);
-	if((att & attackMask[i]) == 0) break;
+        if((att & attackMask[i]) == 0) break;
       }
       // more attacks to come; scan for next stop
       if(jcapt < p[board[x]].qval) jcapt = p[board[x]].qval; // raise barrier for range jumpers further upstream
@@ -342,19 +342,20 @@ if(board[x] == EDGE) { printf("    edge hit %x-%x dir=%d att=%o\n", sqr, x, i, a
   }
   // off-ray attacks
   if(att & 0700000000) { // Knight attack
+    int value = p[board[sqr]].value;
     for(i=0; i<RAYS; i++) {    // scan all knight jumps to locate source
-      int x = sqr - nStep[i], attacker = board[x];
+      int to = sqr - nStep[i], attacker = board[to];
       if(attacker == EMPTY || (attacker & TYPE) != stm) continue;
       if(p[attacker].range[i] == L || p[attacker].range[i] < W && p[attacker].range[i] >= S || p[attacker].range[i] == N) { // has Knight jump in our direction
-	NewCapture(x, sqr + victimValue, p[attacker].promoFlag);   // plain jump (as in N)
-	if(p[attacker].range[i] < N) { // Lion power; generate double captures over two possible intermediates
-	  int v = kStep[i]; // leftish path
-	  if((board[x+v] & TYPE) == xstm && board[x+v] > board[sqr])
-	    NewCapture(x, SPECIAL + RAYS*i + (i+1&7) + victimValue, p[attacker].promoFlag);
-	  v = kStep[i+1];  // rightish path
-	  if((board[x+v] & TYPE) == xstm && board[x+v] > board[sqr])
-	    NewCapture(x, SPECIAL + RAYS*(i+1&7) + i + victimValue, p[attacker].promoFlag);
-	}
+        NewCapture(to, sqr + victimValue, p[attacker].promoFlag);   // plain jump (as in N)
+        if(p[attacker].range[i] < N) { // Lion power; generate double captures over two possible intermediates
+          int v = kStep[i]; // leftish path
+          if((board[to+v] & TYPE) == xstm && (value != LVAL || !ATTACK(to, xstm) || p[board[to+v]].value > 50))
+            NewCapture(to, SPECIAL + RAYS*i + (i+1 % RAYS) + victimValue, p[attacker].promoFlag);
+          v = kStep[i+1];  // rightish path
+          if((board[to+v] & TYPE) == xstm && (value != LVAL || !ATTACK(to, xstm) || p[board[to+v]].value > 50))
+            NewCapture(to, SPECIAL + RAYS*(i+1 % RAYS) + i + victimValue, p[attacker].promoFlag);
+        }
       }
     }
   }
@@ -412,9 +413,9 @@ Fortress (int forward, int king, int lion)
   switch(r - l) {
     case 1: q = 15; break;                // no shelter at all, maximum penalty
     case 2: if(Guard(l+1) == 3) q = 10;   // single Elephant offers some shelter
-	    else if(Guard(l+forward) == 3 || Guard(l+forward+2) == 3) q = 8; // better if Tiger diagonally in front of it
-	    else q = 14;                  // singe tiger almost no help;
-	    break;
+            else if(Guard(l+forward) == 3 || Guard(l+forward+2) == 3) q = 8; // better if Tiger diagonally in front of it
+            else q = 14;                  // singe tiger almost no help;
+            break;
     case 3: q = 5 - (Guard(l+1) == 3 || Guard(l+3) == 3); break; // pair is better if it contains Elephant
     case 4: q = (Guard(l+2) != 3);        // 3 wide: perfect, or nearly so if Elephant not in middle
     default: ;
@@ -532,17 +533,17 @@ Evaluate (int difEval)
   for(i=pieces[WHITE]; i > 1 && p[i].value<=50; i-=2) {
     if((f = p[i].pos) != ABSENT) { // P present,
       if((j = board[f + BW])&1) // square before it white (odd) piece
-	score -= 10 + 10*(p[j].promoGain > 0) + 30*!(p[j].range[3] || p[j].range[5] || p[j].value==50);
+        score -= 10 + 10*(p[j].promoGain > 0) + 30*!(p[j].range[3] || p[j].range[5] || p[j].value==50);
       if((j = board[f - BW])&1) // square behind it white (odd) piece
-	score += 7*(p[j].promoGain == 0 & p[j].value<=151);
+        score += 7*(p[j].promoGain == 0 & p[j].value<=151);
     }
   }
   for(i=pieces[BLACK]; i > 1 && p[i].value<=50; i-=2) {
     if((f = p[i].pos) != ABSENT) { // P present,
       if((j = board[f - BW]) && !(j&1)) // square before non-empty and even (black)
-	score += 10 + 10*(p[j].promoGain > 0) + 30*!(p[j].range[1] || p[j].range[7] || p[j].value==50);
+        score += 10 + 10*(p[j].promoGain > 0) + 30*!(p[j].range[1] || p[j].range[7] || p[j].value==50);
       if((j = board[f + BW]) && !(j&1)) // square behind non-empty and even (black)
-	score -= 7*(p[j].promoGain == 0 & p[j].value<=151);
+        score -= 7*(p[j].promoGain == 0 & p[j].value<=151);
     }
   }
 #endif
@@ -551,16 +552,16 @@ Evaluate (int difEval)
     if(zone > 0) {
       int rw = BW*(bRanks-1-zone), rb = BW*zone, h=0;
       for(f=0; f<bRanks; f++) {
-	if(p[board[rw+f]].pst == PST_ADVANCE) {
-	  h += (p[board[rw+f-BW]].pst == PST_ADVANCE);
-	  if(f > 0)    h += (p[board[rw+f-BW-1]].pst == PST_ADVANCE);
-	  if(f+1 < bFiles) h += (p[board[rw+f-BW+1]].pst == PST_ADVANCE);
-	}
-	if(p[board[rb+f]].pst == PST_ADVANCE) {
-	  h -= (p[board[rb+f+BW]].pst == PST_RETRACT);
-	  if(f > 0)    h -= (p[board[rb+f+BW-1]].pst == PST_RETRACT);
-	  if(f+1 < bFiles) h -= (p[board[rb+f+BW+1]].pst == PST_RETRACT);
-	}
+        if(p[board[rw+f]].pst == PST_ADVANCE) {
+          h += (p[board[rw+f-BW]].pst == PST_ADVANCE);
+          if(f > 0)    h += (p[board[rw+f-BW-1]].pst == PST_ADVANCE);
+          if(f+1 < bFiles) h += (p[board[rw+f-BW+1]].pst == PST_ADVANCE);
+        }
+        if(p[board[rb+f]].pst == PST_ADVANCE) {
+          h -= (p[board[rb+f+BW]].pst == PST_RETRACT);
+          if(f > 0)    h -= (p[board[rb+f+BW-1]].pst == PST_RETRACT);
+          if(f+1 < bFiles) h -= (p[board[rb+f+BW+1]].pst == PST_RETRACT);
+        }
       }
       score += h*TANDEM;
     }
@@ -608,7 +609,7 @@ printf("\n# search(%d) {%d,%d} eval=%d stm=%d ",level,alpha,beta,difEval,stm);
         return -INF;   // lose when no King (in tsume only for side to be mated)
     } else if(p[king + 2].pos != ABSENT) {
       if(tsume && tsume & stm+1) {
-	retDep = 60; return INF; // we win when not in check
+        retDep = 60; return INF; // we win when not in check
       }
       k = ABSENT; // two kings is no king...
     }
@@ -672,7 +673,7 @@ printf("# probe hash index=%x hit=%d\n", index, hit);
       if(!level) iterDep = 0; // no hash cutoff in root
       if(lmr && bestScore <= alpha && iterDep == depth) depth ++, lmr--; // self-deepening LMR
       if(pvCuts && iterDep >= depth && hashMove && bestScore < beta && bestScore > alpha)
-	iterDep = depth - 1; // prevent hash cut in PV node
+        iterDep = depth - 1; // prevent hash cut in PV node
     }
   } else { // decide on replacement
     if(depth >= hashTable[index].depth[nr] ||
@@ -694,11 +695,11 @@ if(depth >= QSDEPTH) printf("# new iter %d:%d\n", depth, iterDep);
     if(depth <= QSDEPTH) {
       bestScore = curEval; resDep = QSDEPTH;
       if(bestScore > alpha) {
-	alpha = bestScore;
+        alpha = bestScore;
 #if 0
 printf("# stand pat %d (beta=%d)\n", bestScore, beta);
 #endif
-	if(bestScore >= beta) goto cutoff;
+        if(bestScore >= beta) goto cutoff;
       }
     }
     for(curMove = firstMove; ; curMove++) { // loop over moves
@@ -706,130 +707,130 @@ if(PATH) printf("# phase=%d: first=%d curr=%d last=%d depth=%d:%d (%d)\n", phase
       // MOVE SOURCE
       if(curMove >= msp) { // we ran out of moves; generate some new
 if(PATH) printf("# new moves, phase=%d\n", phase);
-	switch(phase) {
-	  case 0: // null move
+        switch(phase) {
+          case 0: // null move
 #ifdef NULLMOVE
-	    if(depth > QSDEPTH && curEval >= beta && !inCheck && filling > 10) {
+            if(depth > QSDEPTH && curEval >= beta && !inCheck && filling > 10) {
               int nullDep = depth - 3;
-	      stm ^= WHITE;
+              stm ^= WHITE;
 path[level++] = INVALID;
 if(PATH) printf("%d:%d null move\n", level, depth);
-	      int score = -Search(-beta, 1-beta, -difEval, nullDep<QSDEPTH ? QSDEPTH : nullDep, 0, promoSuppress & SQUARE, ABSENT, INF);
+              int score = -Search(-beta, 1-beta, -difEval, nullDep<QSDEPTH ? QSDEPTH : nullDep, 0, promoSuppress & SQUARE, ABSENT, INF);
 if(PATH) printf("%d:%d null move score = %d\n", level, depth, score);
 level--;
-	      xstm = stm; stm ^= WHITE;
-	      if(score >= beta) { msp = oldMSP; retDep += 3; pvPtr = myPV; return score + (score < curEval); }
-//	      else depth += lmr, lmr = 0;
-	    }
+              xstm = stm; stm ^= WHITE;
+              if(score >= beta) { msp = oldMSP; retDep += 3; pvPtr = myPV; return score + (score < curEval); }
+//              else depth += lmr, lmr = 0;
+            }
 #endif
-	    if(tenFlag) FireSet(&tb); // in tenjiku we must identify opposing Fire Demons to perform any moves
+            if(tenFlag) FireSet(&tb); // in tenjiku we must identify opposing Fire Demons to perform any moves
 if(PATH && tenFlag) printf("fireMask=%x\n",tb.fireMask),pbytes(fireBoard);
-	    phase = 1;
-	  case 1: // hash move
-	    phase = 2;
+            phase = 1;
+          case 1: // hash move
+            phase = 2;
 #ifdef HASH
-	    if(hashMove && (depth > QSDEPTH || // must be capture in QS
-		 (hashMove & SQUARE) >= SPECIAL || board[hashMove & SQUARE] != EMPTY)) {
-	      moveStack[sorted = msp++] = hashMove;
-	      goto extractMove;
-	    }
+            if(hashMove && (depth > QSDEPTH || // must be capture in QS
+                 (hashMove & SQUARE) >= SPECIAL || board[hashMove & SQUARE] != EMPTY)) {
+              moveStack[sorted = msp++] = hashMove;
+              goto extractMove;
+            }
 #endif
-	  case 2: // capture-gen init
-	    nextVictim = xstm; autoFail = (depth == 0);
-	    phase = 3;
-	  case 3: // generate captures
+          case 2: // capture-gen init
+            nextVictim = xstm; autoFail = (depth == 0);
+            phase = 3;
+          case 3: // generate captures
 if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp);
-	    while(nextVictim < pieces[xstm]) {        // more victims may exist
-	      int group, to = p[nextVictim += 2].pos; // take next
-	      if(to == ABSENT) continue;              // ignore if absent
-	      if(!ATTACK(to, stm)) continue;          // skip if not attacked
-	      group = p[nextVictim].value;            // remember value of this found victim
-	      if(iterDep <= QSDEPTH + 1 && 2*group + curEval + 30 < alpha) {
-		resDep = QSDEPTH + 1; nextVictim -= 2;
-		if(bestScore < 2*group + curEval + 30) bestScore = 2*group + curEval + 30;
-		goto cutoff;
-	      }
+            while(nextVictim < pieces[xstm]) {        // more victims may exist
+              int group, to = p[nextVictim += 2].pos; // take next
+              if(to == ABSENT) continue;              // ignore if absent
+              if(!ATTACK(to, stm)) continue;          // skip if not attacked
+              group = p[nextVictim].value;            // remember value of this found victim
+              if(iterDep <= QSDEPTH + 1 && 2*group + curEval + 30 < alpha) {
+                resDep = QSDEPTH + 1; nextVictim -= 2;
+                if(bestScore < 2*group + curEval + 30) bestScore = 2*group + curEval + 30;
+                goto cutoff;
+              }
 if(PATH) printf("%d:%2d:%2d group=%d, to=%c%d\n", level, depth, iterDep, group, FILECH(to), RANK(to));
-	      GenCapts(to, 0);
+              GenCapts(to, 0);
 if(PATH) printf("%d:%2d:%2d first=%d last=%d\n",level,depth,iterDep,firstMove,msp);
-	      while(nextVictim < pieces[xstm] && p[nextVictim+2].value == group) { // more victims of same value exist
-		to = p[nextVictim += 2].pos;   // take next
-		if(to == ABSENT) continue;     // ignore if absent
-		if(!ATTACK(to, stm)) continue; // skip if not attacked
+              while(nextVictim < pieces[xstm] && p[nextVictim+2].value == group) { // more victims of same value exist
+                to = p[nextVictim += 2].pos;   // take next
+                if(to == ABSENT) continue;     // ignore if absent
+                if(!ATTACK(to, stm)) continue; // skip if not attacked
 if(PATH) printf("%d:%2d:%2d p=%d, to=%c%d\n", level, depth, iterDep, nextVictim, FILECH(to), RANK(to)), fflush(stdout);
-		GenCapts(to, 0);
+                GenCapts(to, 0);
 if(PATH) printf("%d:%2d:%2d last=%d\n",level,depth,iterDep,msp);
-	      }
+              }
 if(PATH) printf("# captures on %c%d generated, last=%d, group=%d, threshold=%d\n", FILECH(to), RANK(to), msp, group, threshold);
-	      goto extractMove; // in auto-fail phase, only search if they might auto-fail-hi
-	    }
+              goto extractMove; // in auto-fail phase, only search if they might auto-fail-hi
+            }
 if(PATH) printf("# phase=%d autofail=%d\n", phase, autoFail);
-	    if(autoFail) { // non-captures cannot auto-fail; flush queued captures first
+            if(autoFail) { // non-captures cannot auto-fail; flush queued captures first
 if(PATH) printf("# phase=%d autofail end (%d-%d)\n", phase, firstMove, msp);
-	      autoFail = 0; curMove = firstMove - 1; continue; // release stashed moves for search (next phase)
-	    }
-	    phase = 4; // out of victims: all captures generated
-	    if(chessFlag && (ep = promoSuppress & SQUARE) != ABSENT) { // e.p. rights. Create e.p. captures as Lion moves
-		int n = board[ep-1], old = msp; // a-side neighbor of pushed pawn
-		if( n != EMPTY && (n&TYPE) == stm && p[n].value == pVal ) NewCapture(ep-1, SPECIAL + 20 - 4*stm, 0);
-		n = board[ep+1];      // h-side neighbor of pushed pawn
-		if( n != EMPTY && (n&TYPE) == stm && p[n].value == pVal ) NewCapture(ep+1, SPECIAL + 52 - 4*stm, 0);
-		if(msp != old) goto extractMove; // one or more e.p. capture were generated
-	    }
-	  case 4: // dubious captures
+              autoFail = 0; curMove = firstMove - 1; continue; // release stashed moves for search (next phase)
+            }
+            phase = 4; // out of victims: all captures generated
+            if(chessFlag && (ep = promoSuppress & SQUARE) != ABSENT) { // e.p. rights. Create e.p. captures as Lion moves
+                int n = board[ep-1], old = msp; // a-side neighbor of pushed pawn
+                if( n != EMPTY && (n&TYPE) == stm && p[n].value == pVal ) NewCapture(ep-1, SPECIAL + 20 - 4*stm, 0);
+                n = board[ep+1];      // h-side neighbor of pushed pawn
+                if( n != EMPTY && (n&TYPE) == stm && p[n].value == pVal ) NewCapture(ep+1, SPECIAL + 52 - 4*stm, 0);
+                if(msp != old) goto extractMove; // one or more e.p. capture were generated
+            }
+          case 4: // dubious captures
 #if 0
-	    while( dubious < framePtr + 250 ) // add dubious captures back to move stack
-	      moveStack[msp++] = moveStack[dubious++];
-	    if(curMove != msp) break;
+            while( dubious < framePtr + 250 ) // add dubious captures back to move stack
+              moveStack[msp++] = moveStack[dubious++];
+            if(curMove != msp) break;
 #endif
-	    phase = 5;
-	  case 5: // killers
-	    if(depth <= QSDEPTH) { if(resDep > QSDEPTH) resDep = QSDEPTH; goto cutoff; }
-	    phase = 6;
-	  case 6: // non-captures
-	    nonCapts = msp;
-	    nullMove = GenNonCapts(oldPromo);
-	    if(msp == nonCapts) goto cutoff;
+            phase = 5;
+          case 5: // killers
+            if(depth <= QSDEPTH) { if(resDep > QSDEPTH) resDep = QSDEPTH; goto cutoff; }
+            phase = 6;
+          case 6: // non-captures
+            nonCapts = msp;
+            nullMove = GenNonCapts(oldPromo);
+            if(msp == nonCapts) goto cutoff;
 #ifdef KILLERS
-	    { // swap killers to front
-	      Move h = killer[level][0]; int j = curMove;
-	      for(i=curMove; i<msp; i++) if(moveStack[i] == h) { moveStack[i] = moveStack[j]; moveStack[j++] = h; break; }
-	      h = killer[level][1];
-	      for(i=curMove; i<msp; i++) if(moveStack[i] == h) { moveStack[i] = moveStack[j]; moveStack[j++] = h; break; }
-	      late = j;
-	    }
+            { // swap killers to front
+              Move h = killer[level][0]; int j = curMove;
+              for(i=curMove; i<msp; i++) if(moveStack[i] == h) { moveStack[i] = moveStack[j]; moveStack[j++] = h; break; }
+              h = killer[level][1];
+              for(i=curMove; i<msp; i++) if(moveStack[i] == h) { moveStack[i] = moveStack[j]; moveStack[j++] = h; break; }
+              late = j;
+            }
 #else
-	    late = j;
+            late = j;
 #endif
-	    phase = 7;
-	    sorted = msp; // do not sort noncapts
-	    break;
-	  case 7: // bad captures
-	  case 8: // PV null move
-	    phase = 9;
+            phase = 7;
+            sorted = msp; // do not sort noncapts
+            break;
+          case 7: // bad captures
+          case 8: // PV null move
+            phase = 9;
 if(PATH) printf("# null = %0x\n", nullMove);
-	    if(nullMove != ABSENT) {
-	      moveStack[msp++] = nullMove + (nullMove << SQLEN) | DEFER; // kludge: setting DEFER guarantees != 0, and has no effect
-	      break;
-	    }
+            if(nullMove != ABSENT) {
+              moveStack[msp++] = nullMove + (nullMove << SQLEN) | DEFER; // kludge: setting DEFER guarantees != 0, and has no effect
+              break;
+            }
 //printf("# %d. sqr = %08x null = %08x\n", msp, nullMove, moveStack[msp-1]);
-	  case 9:
-	    goto cutoff;
-	}
+          case 9:
+            goto cutoff;
+        }
       }
 
       // MOVE EXTRACTION (FROM GENERATED MOVES)
     extractMove:
 if(PATH) printf("# extract sorted=%d\n", sorted);
       if(curMove > sorted) {
-	move = moveStack[sorted=j=curMove];
-	for(i=curMove+1; i<msp; i++)
-	  if(move == INVALID || moveStack[i] > move) move = moveStack[j=i]; // search move with highest priority
-	if(j>curMove) { moveStack[j] = moveStack[curMove]; moveStack[curMove] = move; } // swap highest-priority move to front of remaining
-	if(move == INVALID) { msp = curMove--; continue; } // remaining moves are invalid; clip off move list
+        move = moveStack[sorted=j=curMove];
+        for(i=curMove+1; i<msp; i++)
+          if(move == INVALID || moveStack[i] > move) move = moveStack[j=i]; // search move with highest priority
+        if(j>curMove) { moveStack[j] = moveStack[curMove]; moveStack[curMove] = move; } // swap highest-priority move to front of remaining
+        if(move == INVALID) { msp = curMove--; continue; } // remaining moves are invalid; clip off move list
       } else {
-	move = moveStack[curMove];
-	if(move == INVALID) continue; // skip invalidated move
+        move = moveStack[curMove];
+        if(move == INVALID) continue; // skip invalidated move
       }
 #if 0
 if(depth >= 0) printf("# (%d) evaluate 0x%04X %s level=%d autofail=%d\n", curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), level, autoFail);
@@ -843,14 +844,14 @@ if(depth >= 0) printf("# (%d) evaluate 0x%04X %s level=%d autofail=%d\n", curMov
 //      if(level == 1 && randomize) tb.booty += (hashKeyH * seed >> 24 & 31) - 20;
 
       if(autoFail) {
-	UnMake(&tb); // never search moves during auto-fail phase
-	xstm = stm; stm ^= WHITE;
+        UnMake(&tb); // never search moves during auto-fail phase
+        xstm = stm; stm ^= WHITE;
 #if 0
 printf("#       prune %d-%d ?= %d\n", tb.gain, tb.loss, threshold);
 #endif
-	if(tb.gain <= threshold) { // found refutations that cannot possibly auto-fail
-	  autoFail = 0; curMove = firstMove-1; continue; // release all for search (next phase)
-	}
+        if(tb.gain <= threshold) { // found refutations that cannot possibly auto-fail
+          autoFail = 0; curMove = firstMove-1; continue; // release all for search (next phase)
+        }
         if(tb.gain - tb.loss > threshold) {
           bestScore = INF+1; resDep = 0; goto leave; // auto-fail-hi
         } else continue; // ignore for now if not obvious refutation
@@ -863,18 +864,18 @@ printf("#       validate 0x%04X %s\n", moveStack[curMove], MoveToText(moveStack[
 #if 0
 printf("#       repetition %d\n", i);
 #endif
-	retDep = iterDep;
-	if(repDraws) { score = 0; goto repetition; }
-	if(!allowRep) {
-	  moveStack[curMove] = INVALID; // erase forbidden repetition move
-	  if(!level) repeatMove[repCnt++] = move & 0xFFFFFF; // remember outlawed move
-	} else { // check for perpetuals (TODO: count consecutive checks)
-//	  Flag repKey = 1;
-//	  for(i-=level; i>1; i-=2) {repKey &= checkStack[LEVELS-i]; if(!level)printf("# repkey[%d] = %d\n", LEVELS-i, repKey);}
-	  if(inCheck) { score = INF-20; goto repetition; } // we might be subject to perpetual check: score as win
-	  if(i == 2 && repStack[LEVELS+level-1] == hashKeyH) { score = INF-20; goto repetition; } // consecutive passing
-	}
-	score = -INF + 8*allowRep; goto repetition;
+        retDep = iterDep;
+        if(repDraws) { score = 0; goto repetition; }
+        if(!allowRep) {
+          moveStack[curMove] = INVALID; // erase forbidden repetition move
+          if(!level) repeatMove[repCnt++] = move & 0xFFFFFF; // remember outlawed move
+        } else { // check for perpetuals (TODO: count consecutive checks)
+//          Flag repKey = 1;
+//          for(i-=level; i>1; i-=2) {repKey &= checkStack[LEVELS-i]; if(!level)printf("# repkey[%d] = %d\n", LEVELS-i, repKey);}
+          if(inCheck) { score = INF-20; goto repetition; } // we might be subject to perpetual check: score as win
+          if(i == 2 && repStack[LEVELS+level-1] == hashKeyH) { score = INF-20; goto repetition; } // consecutive passing
+        }
+        score = -INF + 8*allowRep; goto repetition;
       }
       repStack[level+LEVELS] = hashKeyH;
 
@@ -885,16 +886,16 @@ mobilityScore = MapAttacks(level); // for as long as incremental update does not
 #if 0
 printf("#       revalidate %d 0x%04X %s\n", level, moveStack[curMove], MoveToText(moveStack[curMove], 0));
 #endif
-	score = 0;
-	if(p[tb.piece].value == LVAL) {          // Ln x Ln: can make Ln 'vulnerable' (if distant and not through intemediate > GB)
-	  if(dist(tb.from, tb.to) != 1 && ATTACK(tb.to, stm) && p[tb.epVictim[0]].value <= 50)
-	    score = -INF;                           // our Lion is indeed made vulnerable and can be recaptured
-	} else {                                    // other x Ln
-	  if(promoSuppress & PROMOTE) {             // non-Lion captures Lion after opponent did same
-	    if(!okazaki || ATTACK(tb.to, stm)) score = -INF;
-	  }
-	  defer |= PROMOTE;                         // if we started, flag  he cannot do it in reply
-	}
+        score = 0;
+        if(p[tb.piece].value == LVAL) { // Ln x Ln: can make Ln 'vulnerable' (if distant and not through intemediate > GB)
+          if(dist(tb.from, tb.to) > 1 && ATTACK(tb.to, stm) && p[tb.epVictim[0]].value <= 50)
+            score = -INF;               // our defended Lion is invulnerable (cannot be captured)
+        } else {                        // other x Ln
+          if(promoSuppress & PROMOTE) { // non-Lion captures Lion after opponent did same
+            if(!okazaki || ATTACK(tb.to, stm)) score = -INF;
+          }
+          defer |= PROMOTE;                         // if we started, flag  he cannot do it in reply
+        }
         if(score == -INF) {
           if(level == 1) repeatMove[repCnt++] = move & 0xFFFFFF | (p[tb.piece].value == LVAL ? 3<<24 : 1 << 24);
           moveStack[curMove] = INVALID; // zap illegal lion moves
@@ -922,36 +923,36 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d (%d)\n", level, depth, iterDep,
 
       // ALPHA-BETA STUFF
       if(score > bestScore) {
-	bestScore = score; bestMoveNr = curMove;
-	if(score > iterAlpha) {
-	  iterAlpha = score;
-	  if(curMove < firstMove + 5) { // if not too much work, sort move to front
-	    int i;
-	    for(i=curMove; i>firstMove; i--) {
-	      moveStack[i] = moveStack[i-1];
-	    }
-	    moveStack[firstMove] = move;
-	  } else { // late move appended in front of list, and leaves hole in list
-	    moveStack[--firstMove] = move;
-	    moveStack[curMove] = 0;
-	  }
-	  bestMoveNr = firstMove;
-	  if(score >= beta) { // beta cutoff
+        bestScore = score; bestMoveNr = curMove;
+        if(score > iterAlpha) {
+          iterAlpha = score;
+          if(curMove < firstMove + 5) { // if not too much work, sort move to front
+            int i;
+            for(i=curMove; i>firstMove; i--) {
+              moveStack[i] = moveStack[i-1];
+            }
+            moveStack[firstMove] = move;
+          } else { // late move appended in front of list, and leaves hole in list
+            moveStack[--firstMove] = move;
+            moveStack[curMove] = 0;
+          }
+          bestMoveNr = firstMove;
+          if(score >= beta) { // beta cutoff
 #ifdef KILLERS
-	    if(iterDep == depth && move != killer[level][0]
-		 && (tb.victim == EMPTY && (move & SQUARE) < SPECIAL)) {
-	      // update killer
-	      killer[level][1] = killer[level][0]; killer[level][0] = move;
-	    }
+            if(iterDep == depth && move != killer[level][0]
+                 && (tb.victim == EMPTY && (move & SQUARE) < SPECIAL)) {
+              // update killer
+              killer[level][1] = killer[level][0]; killer[level][0] = move;
+            }
 #endif
-	    resDep = retDep+1-ext;
-	    goto cutoff;
-	  }
-	  { int i=pvPtr;
-	    for(pvPtr = myPV+1; pv[pvPtr++] = pv[i++]; ); // copy daughter PV
-	    pv[myPV] = move;                              // behind our move (pvPtr left at end of copy)
-	  }
-	}
+            resDep = retDep+1-ext;
+            goto cutoff;
+          }
+          { int i=pvPtr;
+            for(pvPtr = myPV+1; pv[pvPtr++] = pv[i++]; ); // copy daughter PV
+            pv[myPV] = move;                              // behind our move (pvPtr left at end of copy)
+          }
+        }
       }
       if(retDep+1-ext < resDep) resDep = retDep+1-ext;
     } // next move
@@ -960,11 +961,11 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d (%d)\n", level, depth, iterDep,
       lastRootIter = GetTickCount() - startTime;
       if(postThinking > 0) {
         int i;   // WB thinking output
-	printf("%d %d %d %d", iterDep-QSDEPTH, bestScore, lastRootIter/10, nodes);
+        printf("%d %d %d %d", iterDep-QSDEPTH, bestScore, lastRootIter/10, nodes);
         if(ponderMove) printf(" (%s)", MoveToText(ponderMove, 0));
-	for(i=0; pv[i]; i++) printf(" %s", MoveToText(pv[i], 0));
+        for(i=0; pv[i]; i++) printf(" %s", MoveToText(pv[i], 0));
         if(iterDep == QSDEPTH+1) printf(" { root eval = %4.2f dif = %4.2f; abs = %4.2f f=%d D=%4.2f %d/%d}", curEval/100., difEval/100., PSTest()/100., filling, promoDelta/100., Ftest(0), Ftest(1));
-	printf("\n");
+        printf("\n");
       }
       if(!(abortFlag & 1) && GetTickCount() - startTime > tlim1) break; // do not start iteration we can (most likely) not finish
     }
@@ -1245,9 +1246,9 @@ printf("# moveNr = %d in {%d,%d}\n", i, listStart, listEnd);
 printf("# deferral of %d\n", deferred);
       i = deferred; // in any case we take that move
       if(!(flags & promoBoard[t] & (CANT_DEFER | LAST_RANK))) { // but change it into a deferral if that is allowed
-	moveStack[i] &= ~PROMOTE;
-	if(p[board[f]].value == 40) p[board[f]].promoFlag &= LAST_RANK; else
-	if(!(flags & promoBoard[f]) && currentVariant != V_WOLF) moveStack[i] |= DEFER; // came from outside zone, so essential deferral
+        moveStack[i] &= ~PROMOTE;
+        if(p[board[f]].value == 40) p[board[f]].promoFlag &= LAST_RANK; else
+        if(!(flags & promoBoard[f]) && currentVariant != V_WOLF) moveStack[i] |= DEFER; // came from outside zone, so essential deferral
       }
     }
     if(i >= listEnd) {
@@ -1279,9 +1280,9 @@ Highlight (int listStart, int listEnd, char *coords)
       int t = moveStack[i] & SQUARE;
       if(t >= CASTLE) t = toList[t - SPECIAL]; else  // decode castling
       if(t >= SPECIAL) {
-	int e = sqr + epList[t - SPECIAL]; // decode
-	b[e] = 'C';
-	continue;
+        int e = sqr + epList[t - SPECIAL]; // decode
+        b[e] = 'C';
+        continue;
       }
       if(!b[t]) {
         b[t] = (!boardCopy[t] ? 'Y' : 'R'); cnt++;
@@ -1294,18 +1295,18 @@ Highlight (int listStart, int listEnd, char *coords)
     // we lifted a piece for second leg of move
     for(i=listStart; i<listEnd; i++) {
       if(lastLift == (moveStack[i]>>SQLEN & SQUARE)) {
-	int e, t = moveStack[i] & SQUARE;
-	if(t < SPECIAL) continue; // only special moves
-	e = lastLift + epList[t - SPECIAL]; // decode
-	if(sqr == lastLift + ep2List[t - SPECIAL]) { // second leg of 3-leg move
-	  b[e] = 'C'; cnt++;
-	  continue;
-	}
-	t = lastLift + toList[t - SPECIAL];
-	if(e != sqr) continue;
-	if(!b[t]) {
+        int e, t = moveStack[i] & SQUARE;
+        if(t < SPECIAL) continue; // only special moves
+        e = lastLift + epList[t - SPECIAL]; // decode
+        if(sqr == lastLift + ep2List[t - SPECIAL]) { // second leg of 3-leg move
+          b[e] = 'C'; cnt++;
+          continue;
+        }
+        t = lastLift + toList[t - SPECIAL];
+        if(e != sqr) continue;
+        if(!b[t]) {
           b[t] = (!boardCopy[t] ? 'Y' : 'R'); cnt++;
-	}
+        }
       }
     }
     if(!cnt) return;
@@ -1316,12 +1317,12 @@ Highlight (int listStart, int listEnd, char *coords)
     for(j=0; j<bFiles; j++) {
       n = POS(i, j);
       if(b[n]) *q++ = b[n]; else {
-	if(q > buf && q[-1] <= '9' && q[-1] >= '0') {
-	  q[-1]++;
-	  if(q[-1] > '9') {
-	    if(q > buf+1 && q[-2] <= '9' && q[-2] >= '0') q[-2]++; else q[-1] = '1', *q++ = '0';
-	  }
-	} else *q++ = '1';
+        if(q > buf && q[-1] <= '9' && q[-1] >= '0') {
+          q[-1]++;
+          if(q[-1] > '9') {
+            if(q > buf+1 && q[-2] <= '9' && q[-2] >= '0') q[-2]++; else q[-1] = '1', *q++ = '0';
+          }
+        } else *q++ = '1';
       }
     }
     *q++ = '/';
@@ -1450,7 +1451,7 @@ printf("# ponder hit\n");
 //if(moveNr >20) printf("resign\n");
 
 #ifdef HASH
-	if(hashMask)
+        if(hashMask)
 #endif
         if(retMSP == 0) retMSP = ListMoves(retFirst, retMSP);   // always maintain a list of legal moves in root position
         abortFlag = -(ponder && WHITE+BLACK-stm == engineSide && moveNr); // pondering and opponent on move
@@ -1503,7 +1504,7 @@ pboard(board);
             Move dummy;
             *ponderMoveText = 0; // forces miss on any move
             abortFlag = -1;      // set pondering
-	    pvCuts = noCut;
+            pvCuts = noCut;
             SearchBestMove(&dummy, &dummy);
             abortFlag = pvCuts = 0;
         }
@@ -1547,11 +1548,11 @@ pboard(board);
           if(sscanf(inBuf+7, "Okazaki rule=%d", &okazaki)    == 1) continue;
           if(sscanf(inBuf+7, "Promote on entry=%d", &entryProm) == 1) continue;
           if(sscanf(inBuf+7, "Tsume=%s", command) == 1) {
-	    if(!strcmp(command, "no"))    tsume = 0; else
-	    if(!strcmp(command, "Sente")) tsume = 1; else
-	    if(!strcmp(command, "Gote"))  tsume = 2;
-	    continue;
-	  }
+            if(!strcmp(command, "no"))    tsume = 0; else
+            if(!strcmp(command, "Sente")) tsume = 1; else
+            if(!strcmp(command, "Gote"))  tsume = 2;
+            continue;
+          }
           continue;
         }
         if(!strcmp(command, "sd"))      { sscanf(inBuf, "sd %d", &maxDepth);    continue; }
@@ -1568,7 +1569,7 @@ pboard(board);
         if(!strcmp(command, "random"))  { randomize = ON;    continue; }
         if(!strcmp(command, "hint"))    { if(ponderMove != INVALID) printf("Hint: %s\n", MoveToText(ponderMove, 0)); continue; }
         if(!strcmp(command, "book"))    {  continue; }
-	// non-standard commands
+        // non-standard commands
         if(!strcmp(command, "p"))       { pboard(board); continue; }
         if(!strcmp(command, "f"))       { pbytes(fireBoard); continue; }
         if(!strcmp(command, "w"))       { MapAttacksByColor(WHITE, pieces[WHITE], level); pmap(WHITE); continue; }
@@ -1609,7 +1610,7 @@ pboard(board);
             if(!strcmp(variants[i].name, command)) {
               Init(curVarNr = i); stm = Setup2(NULL); break;
             }
-	  }
+          }
           if(currentVariant == V_WOLF)
             printf("setup (PNBR......................WKpnbr......................wk) 8x8+0_fairy rnbwkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBWKBNR w 0 1\n"
                    "piece W& K3cpafK\n");
@@ -1618,7 +1619,7 @@ pboard(board);
           if(currentVariant == V_WA)
             printf("setup (P..^S^FV..^LW^OH.F.^R.E....R...D.GOL^M..^H.M.C.^CU.^W/.......^V.^P.^U..^DS.^GXK"
                           "p..^s^fv..^lw^oh.f.^r.e....r...d.gol^m..^h.m.c.^cu.^w/.......^v.^p.^u..^ds.^gxk) 11x11+0_chu "
-							"hmlcvkwgudo/1e3s3f1/ppprpppxppp/3p3p3/11/11/11/3P3P3/PPPXPPPRPPP/1F3S3E1/ODUGWKVCLMH w 0 1\n"
+                                                        "hmlcvkwgudo/1e3s3f1/ppprpppxppp/3p3p3/11/11/11/3P3P3/PPPXPPPRPPP/1F3S3E1/ODUGWKVCLMH w 0 1\n"
                    "piece P& fW\npiece O& fR\npiece H& fRbW2\npiece U& fWbF\npiece L& fWbF\npiece M& vWfF\npiece G& vWfF\npiece C& sWfF\n"
                    "piece +P& WfF\npiece +O& K\npiece +H& vN\npiece +U& BfW\npiece +L& vRfF3bFsW\npiece +M& FfW\npiece +G& sRvW\npiece +C& vRsWfF\n"
                    "piece D& sbWfF\npiece V& FfW\npiece W& WfF\npiece S& sRvW\npiece R& FfRbW\npiece F& BfW\npiece X& FvWAvD\n"
@@ -1626,11 +1627,11 @@ pboard(board);
           if(currentVariant == V_MACAD)
             printf("setup (P.*B*RQSEXOG....D^J'..*LP'.L!J'=J...*W!...*F'...^C.C.^L!.^P'^K.T*L'.*C!*H!^I'=Z.^E...*R'^P^T*W'*G'^G^SI'^X^OK"
                           "p.*b*rqsexog....d^j'..*lp'.l!j'=j...*w!...*f'...^c.c.^l!.^p'^k.t*l'.*c!*h!^i'=z.^e...*r'^p^t*w'*g'^g^si'^x^ok) 13x13+0_chu %s w 0 1\n"
-		   "piece P& fW\npiece S& FfW\npiece E& FfsW\npiece X& WA\npiece O& FD\npiece G& WfF\npiece D& RF\npiece +J'& QNADcaKmabK\n"
-		   "piece L& fR\npiece P'& vW\npiece L!& KNADcaKmabK\npiece J'& blfFrW\npiece H!& RmasR\npiece W!& KADcavKmcpafmcpavK\n"
-		   "piece C!& BmasB\npiece F'& F2\npiece +C& vRfB\npiece C& vWfF\npiece +L!& K3NADcaKmabK\npiece +P'& vR\npiece T& FbsW\n"
-		   "piece L'& lfrbBfRbW\npiece +I'& QADcavKmcpafmcpavK\npiece +E& K\npiece R'& rflbBfRbW\npiece +P& WfF\npiece +T& BbsR\n"
-		   "piece W'& F3sW\npiece G'& W3fF\npiece +G& RfB\npiece +S& BfR\npiece I'& rbfFlW\npiece +X& F3vRsW\npiece +O& F3sRvW\n", macadArray);
+                   "piece P& fW\npiece S& FfW\npiece E& FfsW\npiece X& WA\npiece O& FD\npiece G& WfF\npiece D& RF\npiece +J'& QNADcaKmabK\n"
+                   "piece L& fR\npiece P'& vW\npiece L!& KNADcaKmabK\npiece J'& blfFrW\npiece H!& RmasR\npiece W!& KADcavKmcpafmcpavK\n"
+                   "piece C!& BmasB\npiece F'& F2\npiece +C& vRfB\npiece C& vWfF\npiece +L!& K3NADcaKmabK\npiece +P'& vR\npiece T& FbsW\n"
+                   "piece L'& lfrbBfRbW\npiece +I'& QADcavKmcpafmcpavK\npiece +E& K\npiece R'& rflbBfRbW\npiece +P& WfF\npiece +T& BbsR\n"
+                   "piece W'& F3sW\npiece G'& W3fF\npiece +G& RfB\npiece +S& BfR\npiece I'& rbfFlW\npiece +X& F3vRsW\npiece +O& F3sRvW\n", macadArray);
           if(currentVariant == V_CASHEW)
             printf("setup (P.^K'^P'QS^W!XOGND'.HDT!...P'.L!E'.^W'K'W!..LF'V^E'J'H'...^L!^N..FT'L'C'G!H!D!I'.^H'..R'..^C'^F'..W'^X^OK"
                           "p.^k'^p'qs^w!xognd'.hdt!...p'.l!e'.^w'k'w!..lf'v^e'j'h'...^l!^n..ft'l'c'g!h!d!i'.^h'..r'..^c'^f'..w'^x^ok) 13x13+0_chu %s w 0 1\n"
@@ -1640,7 +1641,7 @@ pboard(board);
                    "piece T!& vRsW2flBfrF\npiece T'& fFvW2\npiece L'& lfrbBfRbW\npiece N& K\npiece R'& rflbBfRbW\npiece I'& FvrW\n"
                    "piece +X& F3vRsW2\npiece +O& F3sRvW2\npiece H'& WfF2\npiece +H'& Q\npiece C'& F\npiece D!& sRvW2frBflF\npiece P'& sWfDbA\n"
                    "piece K'& W2fF\npiece +K'& WBmasB\npiece +P'& RmasR\npiece +N& fRfBbF2bsW2\npiece F& FvW\npiece V& fF2sW\n", cashewArray);
-	  repStack[LEVELS-1] = hashKeyH, checkStack[LEVELS-1] = 0;
+          repStack[LEVELS-1] = hashKeyH, checkStack[LEVELS-1] = 0;
           continue;
         }
         if(!strcmp(command, "setboard")){ engineSide = NONE;  Init(curVarNr); stm = Setup2(inBuf+9); continue; }
