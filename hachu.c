@@ -229,29 +229,24 @@ if(board[x] == EDGE) { printf("    edge hit %x-%x dir=%d att=%o\n", sqr, x, i, a
             case L: // Lion
               if(d > 2) break;
               NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
-              att -= ray[i];
-              // now the multi-captures of designated victim together with lower-valued piece
-              if(d == 2) { // primary (valuable) victim on second ring; look for victims to take in passing
-                if((board[sqr+v] & TYPE) == xstm && board[sqr+v] > board[sqr])
+              att -= ray[i];   // attacker is being considered
+              if(d == 2) {     // victim on second ring; look for victims to take in passing
+                if((board[sqr+v] & TYPE) == xstm)
                   NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
-                if((i&1) == 0) { // orthogonal: two extra bent paths
-                  v = kStep[i-1];
-                  if((board[x+v] & TYPE) == xstm && board[x+v] > board[sqr])
-                    NewCapture(x, SPECIAL + RAYS*(i-1 % RAYS) + (i+1 % RAYS) + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
-                  v = kStep[i+1];
-                  if((board[x+v] & TYPE) == xstm && board[x+v] > board[sqr])
-                    NewCapture(x, SPECIAL + RAYS*(i+1 % RAYS) + (i-1 % RAYS) + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
+                if(i%2 == 0) { // orthogonal: two extra bent paths
+                  if((board[x+kStep[i-1]] & TYPE) == xstm)
+                    NewCapture(x, SPECIAL + RAYS*(i+RAYS-1%RAYS) + (i+1%RAYS) + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
+                  if((board[x+kStep[i+1]] & TYPE) == xstm)
+                    NewCapture(x, SPECIAL + RAYS*(i+1%RAYS) + (i+RAYS-1%RAYS) + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
                 }
-              } else { // primary (valuable) victim on first ring
+              } else { // victim(s) on first ring
                 int j;
                 for(j=0; j<RAYS; j++) { // we can go on in 8 directions after we captured it in passing
                   int v = kStep[j];
                   if(sqr+v == x || board[sqr+v] == EMPTY) { // hit & run; make sure we include igui (attacker is still at x!)
                     NewCapture(x, SPECIAL + RAYS*i + j + victimValue, p[attacker].promoFlag);
-                  } else if((board[sqr+v] & TYPE) == xstm && board[sqr+v] > board[sqr]) {     // double capture
-                    NewCapture(x, SPECIAL + RAYS*i + j + victimValue, p[attacker].promoFlag); // other victim after primary
-                    if(dist(sqr+v, x) == 1) // other victim also on first ring; reverse order is possible
-                      NewCapture(x, SPECIAL + reverse[RAYS*i + j] + victimValue, p[attacker].promoFlag);
+                  } else if((board[sqr+v] & TYPE) == xstm && dist(x, sqr+v) == 1) { // double capture (both adjacent)
+                    NewCapture(x, SPECIAL + RAYS*i + j + victimValue, p[attacker].promoFlag);
                   }
                 }
               }
@@ -341,20 +336,17 @@ if(board[x] == EDGE) { printf("    edge hit %x-%x dir=%d att=%o\n", sqr, x, i, a
     }
   }
   // off-ray attacks
-  if(att & 0700000000) { // Knight attack
-    int value = p[board[sqr]].value;
-    for(i=0; i<RAYS; i++) {    // scan all knight jumps to locate source
-      int to = sqr - nStep[i], attacker = board[to];
+  if(att & 0700000000) {    // Knight attack
+    for(i=0; i<RAYS; i++) { // scan knight jumps to locate attacker(s)
+      int from = sqr-nStep[i], attacker = board[from];
       if(attacker == EMPTY || (attacker & TYPE) != stm) continue;
       if(p[attacker].range[i] == L || p[attacker].range[i] < W && p[attacker].range[i] >= S || p[attacker].range[i] == N) { // has Knight jump in our direction
-        NewCapture(to, sqr + victimValue, p[attacker].promoFlag);   // plain jump (as in N)
+        NewCapture(from, sqr + victimValue, p[attacker].promoFlag); // plain jump (as in N)
         if(p[attacker].range[i] < N) { // Lion power; generate double captures over two possible intermediates
-          int v = kStep[i]; // leftish path
-          if((board[to+v] & TYPE) == xstm && (value != LVAL || !ATTACK(to, xstm) || p[board[to+v]].value > 50))
-            NewCapture(to, SPECIAL + RAYS*i + (i+1 % RAYS) + victimValue, p[attacker].promoFlag);
-          v = kStep[i+1];  // rightish path
-          if((board[to+v] & TYPE) == xstm && (value != LVAL || !ATTACK(to, xstm) || p[board[to+v]].value > 50))
-            NewCapture(to, SPECIAL + RAYS*(i+1 % RAYS) + i + victimValue, p[attacker].promoFlag);
+          if((board[from+kStep[i]] & TYPE) == xstm)   // left-ish path
+            NewCapture(from, SPECIAL + RAYS*i + (i+1%RAYS) + victimValue, p[attacker].promoFlag);
+          if((board[from+kStep[i+1]] & TYPE) == xstm) // right-ish path
+            NewCapture(from, SPECIAL + RAYS*(i+1%RAYS) + i + victimValue, p[attacker].promoFlag);
         }
       }
     }
