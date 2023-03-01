@@ -53,7 +53,7 @@ NewNonCapture (int x, int y, int promoFlags)
   } else
     moveStack[msp++] = x<<SQLEN | y; // push normal move
 #if 0
-printf("last=%d nc=%d pf=%d move=%d\n", msp, nonCapts, promoFlags, x<<SQLEN | y);
+printf("last=%d nc=%d pf=%d move=%d %s\n", msp, nonCapts, promoFlags, x<<SQLEN | y, MoveToText(moveStack[msp-1], 0));
 #endif
   return 0;
 }
@@ -71,6 +71,9 @@ NewCapture (int from, int y, int promoFlags)
     }
   } else
     moveStack[msp++] = from<<SQLEN | y; // push normal move
+#if 0
+printf("last=%d nc=%d pf=%d move=%d %s\n", msp, nonCapts, promoFlags, from<<SQLEN | y, MoveToText(moveStack[msp-1], 0));
+#endif
   return 0;
 }
 

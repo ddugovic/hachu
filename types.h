@@ -12,19 +12,19 @@
 #define BH 16
 #define BW 16
 #define BSIZE BW*BH
-#define STEP(X,Y) (BW*(X)+ (Y))
+#define STEP(X,Y) (BW*(X)+(Y))
 #define POS(X,Y) STEP((BH-bRanks)/2 + X, (BW-bFiles)/2 + Y)
 #define LL POS(0, 0)
 #define LR POS(0, bFiles-1)
 #define UL POS(bRanks-1, 0)
 #define UR POS(bRanks-1, bFiles-1)
-#define FILECH(s) ((s-LL)%BW+'a')
-#define RANK(s) ((s-LL)/BW+1)
+#define FILECH(s) (((s)-LL)%BW+'a')
+#define RANK(s) (((s)-LL)/BW+1)
 
 #define BLACK      0
 #define WHITE      1
 #define COLORS     2
-#define SQLEN      8               /* bits in square number   */
+#define SQLEN      9               /* bits in square number + special */
 #define EMPTY      0
 #define EDGE   (1<<SQLEN)
 #define TYPE   (WHITE|BLACK|EDGE)
@@ -36,7 +36,7 @@
 #define DEFER   (1<<2*SQLEN)       /* deferral on zone entry  */
 #define PROMOTE (1<<2*SQLEN+1)     /* promotion bit in move   */
 #define INVALID     0              /* cannot occur as a valid move */
-#define SPECIAL  1400              /* start of special moves  */
+#define SPECIAL   400              /* start of special moves  */
 #define BURN    (SPECIAL + 96)     /* start of burn encodings */
 #define CASTLE  (SPECIAL + 100)    /* castling encodings      */
 #define SORTKEY(X) 0
