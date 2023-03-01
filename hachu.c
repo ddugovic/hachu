@@ -617,9 +617,6 @@ printf("\n# search(%d) {%d,%d} eval=%d stm=%d ",level,alpha,beta,difEval,stm);
   if(inCheck && depth >= QSDEPTH) depth++;
 #endif
 
-#if 1
-if(!level) for(i=0; i<5 && (repStack[LEVELS-i] || checkStack[LEVELS-i]); i++)printf("# %d %08x, %d\n", i, repStack[LEVELS-i], checkStack[LEVELS-i]);
-#endif
   // KING CAPTURE
   k = p[king=royal[xstm]].pos;
   if(k != ABSENT) {
@@ -863,9 +860,9 @@ printf("#       repetition %d\n", i);
           moveStack[curMove] = INVALID; // erase forbidden repetition move
           if(!level) repeatMove[repCnt++] = move & 0xFFFFFF; // remember outlawed move
         } else { // check for perpetuals (TODO: count consecutive checks)
-//          Flag repKey = 1;
-//          for(i-=level; i>1; i-=2) {repKey &= checkStack[LEVELS-i]; if(!level)printf("# repkey[%d] = %d\n", LEVELS-i, repKey);}
-          if(inCheck) { score = INF-20; goto repetition; } // we might be subject to perpetual check: score as win
+          Flag repCheck = inCheck;
+          for(j=i-level; j>1; j-=2) repCheck &= checkStack[LEVELS-j];
+          if(repCheck) { score = INF-20; goto repetition; } // assume perpetual check by opponent: score as win
           if(i == 2 && repStack[LEVELS+level-1] == hashKeyH) { score = INF-20; goto repetition; } // consecutive passing
         }
         score = -INF + 8*allowRep; goto repetition;
