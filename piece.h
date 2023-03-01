@@ -6,7 +6,6 @@
 /**************************************************************************/
 #ifndef PIECE_H
 #define PIECE_H
-
 #include "types.h"
 
 // promotion codes

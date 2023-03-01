@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "piece.h"
+#include "types.h"
 #include "variant.h"
 
 #define HASH

@@ -17,6 +17,7 @@
 #include <stdint.h>
 #include "hachu.h"
 #include "piece.h"
+#include "types.h"
 #include "variant.h"
 
 #define HASH

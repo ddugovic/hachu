@@ -6,25 +6,7 @@
 /**************************************************************************/
 #include <stddef.h>
 #include "types.h"
-
-#define X 36 /* slider              */
-#define R 37 /* jump capture        */
-#define N -1 /* Knight              */
-#define J -2 /* jump                */
-#define I -3 /* jump + step         */
-#define K -4 /* triple + range      */
-#define T -5 /* linear triple move  */
-#define D -6 /* linear double move  */
-#define L -7 /* true Lion move      */
-#define W -8 /* Werewolf move       */
-#define F -9 /* Lion + 3-step       */
-#define S -10 /* Lion + range        */
-#define H -11 /* hook move           */
-#define C -12 /* capture only       */
-#define M -13 /* non-capture only   */
-
-#define LVAL 1000 /* piece value of Lion. Used in chu for recognizing it to implement Lion-trade rules  */
-#define FVAL 5000 /* piece value of Fire Demon. Used in code for recognizing moves with it and do burns */
+#include "variant.h"
 
 PieceDesc chuPieces[] = {
   {"LN", "",  LVAL, { L,L,L,L,L,L,L,L }, 4 }, // lion
@@ -396,11 +378,6 @@ char makaIDs[]  = "RVB C DKDEFLG DHI ..K L SMN KNP FKR S BTSG..EWPHT .."  // L (
 char dadaIDs[]  = "RVB C DKEFFLG DHI ..K L SMNKKNP FKR S ..SGVBEWPH...."  // L (also for Cashew)
                   "ABEBCSHDEaFDPRFHLGRGOKLCOMNoORPS  RCSoST  W WeVO    "  // L'
                   "RAWB  BD    LGHM      LN        SQ    WTRUVMLD      "; // L!
-
-typedef enum { V_CHESS, V_SHO, V_CHU, V_DAI, V_DADA, V_MAKA, V_TAI, V_KYOKU, V_TENJIKU,
-	       V_CASHEW, V_MACAD, V_SHATRANJ, V_MAKRUK, V_LION, V_WA, V_WOLF } Variant;
-
-#define SAME (-1)
 
 VariantDesc variants[] = {
   { 12, 12, 4, V_CHU,     "chu",     chuArray,  chuIDs },    // Chu
