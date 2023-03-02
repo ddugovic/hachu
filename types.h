@@ -93,7 +93,7 @@ typedef struct {
 } PieceInfo; // piece-list entry
 
 typedef struct {
-  int from, to, piece, victim, new, booty, epSquare, epVictim[9], ep2Square, revMoveCount;
+  int from, to, piece, victim, new, booty, epSquare, epVictim[RAYS+1], ep2Square, revMoveCount;
   int savKeyL, savKeyH, gain, loss, filling, saveDelta;
   Flag fireMask;
 } UndoInfo;

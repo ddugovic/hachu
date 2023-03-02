@@ -651,7 +651,7 @@ MakeMove (Move m, UndoInfo *u)
   u->revMoveCount = cnt50++;
   u->savKeyL = hashKeyL;
   u->savKeyH = hashKeyH;
-  u->epVictim[0] = EMPTY;
+  memset(u->epVictim, EMPTY, (RAYS+1)*sizeof(int));
   u->saveDelta = promoDelta;
   u->filling = filling;
 
