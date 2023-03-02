@@ -864,7 +864,9 @@ printf("#       repetition %d\n", i);
           if(!level) repeatMove[repCnt++] = move & 0xFFFFFF; // remember outlawed move
         } else { // check for perpetuals (TODO: count consecutive checks)
           Flag repCheck = inCheck;
+#ifndef KILLERS
           for(j=i-level; j>1; j-=2) repCheck &= checkStack[LEVELS-j];
+#endif
           if(repCheck) { score = INF-20; goto repetition; } // assume perpetual check by opponent: score as win
           if(i == 2 && repStack[LEVELS+level-1] == hashKeyH) { score = INF-20; goto repetition; } // consecutive passing
         }
