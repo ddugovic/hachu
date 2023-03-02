@@ -26,7 +26,7 @@
 #define COLORS     2
 #define SQLEN      9               /* bits in square number + special */
 #define EMPTY      0
-#define EDGE   (1<<SQLEN)
+#define EDGE   (1<<(SQLEN-1))
 #define TYPE   (WHITE|BLACK|EDGE)
 #define ABSENT  2047
 #define INF     8000
