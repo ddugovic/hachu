@@ -20,8 +20,8 @@
 #include "types.h"
 #include "variant.h"
 
-//#define HASH
-//#define KILLERS
+#define HASH
+#define KILLERS
 #define NULLMOVE
 #define CHECKEXT
 #define LMR 4
