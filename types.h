@@ -20,6 +20,7 @@
 #define UR POS(bRanks-1, bFiles-1)
 #define FILECH(s) (((s)-LL)%BW+'a')
 #define RANK(s) (((s)-LL)/BW+1)
+#define MOVE(from, to) (from<<SQLEN | to)
 
 #define BLACK      0
 #define WHITE      1

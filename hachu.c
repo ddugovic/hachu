@@ -37,21 +37,21 @@
 #define PROMO 0 /* extra bonus for 'vertical' piece when it actually promotes (diagonal pieces get half) */
 
 static inline int
-NewNonCapture (int x, int y, int promoFlags)
+NewNonCapture (int from, int y, int promoFlags)
 {
   if(board[y] != EMPTY) return 1; // edge, capture or own piece
-  if( (entryProm ? promoBoard[y] & ~promoBoard[x] & CAN_PROMOTE
-                 : promoBoard[y] |  promoBoard[x]       ) & promoFlags ){ // piece can promote with this move
-    moveStack[msp++] = moveStack[nonCapts];           // create space for promotion
-    moveStack[nonCapts++] = x<<SQLEN | y | PROMOTE;   // push promotion
+  if( (entryProm ? promoBoard[y] & ~promoBoard[from] & CAN_PROMOTE
+                 : promoBoard[y] |  promoBoard[from]       ) & promoFlags ){ // piece can promote with this move
+    moveStack[msp++] = moveStack[nonCapts];          // create space for promotion
+    moveStack[nonCapts++] = MOVE(from, y) | PROMOTE; // push promotion
     if((promoFlags & promoBoard[y] & (CANT_DEFER | DONT_DEFER | LAST_RANK)) == 0) { // deferral could be a better alternative
-      moveStack[msp++] = x<<SQLEN | y;                // push deferral
-      if( (promoBoard[x] & CAN_PROMOTE) == 0 ) {      // enters zone
-        moveStack[msp-1] |= DEFER;                    // flag that promo-suppression takes place after this move
+      moveStack[msp++] = MOVE(from, y);              // push deferral
+      if( (promoBoard[from] & CAN_PROMOTE) == 0 ) {  // enters zone
+        moveStack[msp-1] |= DEFER;                   // flag that promo-suppression takes place after this move
       }
     }
   } else
-    moveStack[msp++] = x<<SQLEN | y; // push normal move
+    moveStack[msp++] = MOVE(from, y); // push non-promotion move
   return 0;
 }
 
@@ -59,15 +59,15 @@ static inline int
 NewCapture (int from, int y, int promoFlags)
 {
   if( (promoBoard[from] | promoBoard[(y < BSIZE ? y : from)]) & promoFlags) { // piece can promote with this move
-    moveStack[msp++] = from<<SQLEN | y | PROMOTE;   // push promotion
+    moveStack[msp++] = MOVE(from, y) | PROMOTE;     // push promotion
     if((promoFlags & promoBoard[y] & (CANT_DEFER | DONT_DEFER | LAST_RANK)) == 0) { // deferral could be a better alternative
-      moveStack[msp++] = from<<SQLEN | y;           // push deferral
+      moveStack[msp++] = MOVE(from, y);             // push deferral
       if( (promoBoard[from] & CAN_PROMOTE) == 0 ) { // enters zone
         moveStack[msp-1] |= DEFER;                  // flag that promo-suppression takes place after this move
       }
     }
   } else
-    moveStack[msp++] = from<<SQLEN | y; // push non-promotion move
+    moveStack[msp++] = MOVE(from, y); // push non-promotion move
   return 0;
 }
 
