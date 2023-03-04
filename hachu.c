@@ -52,9 +52,6 @@ NewNonCapture (int x, int y, int promoFlags)
     }
   } else
     moveStack[msp++] = x<<SQLEN | y; // push normal move
-#if 0
-printf("last=%d nc=%d pf=%d move=%d %s\n", msp, nonCapts, promoFlags, x<<SQLEN | y, MoveToText(moveStack[msp-1], 0));
-#endif
   return 0;
 }
 
@@ -70,10 +67,7 @@ NewCapture (int from, int y, int promoFlags)
       }
     }
   } else
-    moveStack[msp++] = from<<SQLEN | y; // push normal move
-#if 0
-printf("last=%d nc=%d pf=%d move=%d %s\n", msp, nonCapts, promoFlags, from<<SQLEN | y, MoveToText(moveStack[msp-1], 0));
-#endif
+    moveStack[msp++] = from<<SQLEN | y; // push non-promotion move
   return 0;
 }
 
@@ -239,18 +233,18 @@ if(board[x] == EDGE) { printf("    edge hit %x-%x dir=%d att=%o\n", sqr, x, i, a
                   NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
                 if(i%2 == 0) { // orthogonal: two extra bent paths
                   if((board[x+kStep[i-1]] & TYPE) == xstm)
-                    NewCapture(x, SPECIAL + RAYS*(i+RAYS-1%RAYS) + (i+1%RAYS) + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
+                    NewCapture(x, SPECIAL + RAY((i+RAYS-1)%RAYS, (i+1)%RAYS) + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
                   if((board[x+kStep[i+1]] & TYPE) == xstm)
-                    NewCapture(x, SPECIAL + RAYS*(i+1%RAYS) + (i+RAYS-1%RAYS) + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
+                    NewCapture(x, SPECIAL + RAY((i+1)%RAYS, (i+RAYS-1)%RAYS) + victimValue - SORTKEY(attacker), p[attacker].promoFlag);
                 }
               } else { // victim(s) on first ring
                 int j;
                 for(j=0; j<RAYS; j++) { // we can go on in 8 directions after we captured it in passing
                   int v = kStep[j];
                   if(sqr+v == x || board[sqr+v] == EMPTY) { // hit & run; make sure we include igui (attacker is still at x!)
-                    NewCapture(x, SPECIAL + RAYS*i + j + victimValue, p[attacker].promoFlag);
+                    NewCapture(x, SPECIAL + RAY(i, j) + victimValue, p[attacker].promoFlag);
                   } else if((board[sqr+v] & TYPE) == xstm && dist(x, sqr+v) == 1) { // double capture (both adjacent)
-                    NewCapture(x, SPECIAL + RAYS*i + j + victimValue, p[attacker].promoFlag);
+                    NewCapture(x, SPECIAL + RAY(i, j) + victimValue, p[attacker].promoFlag);
                   }
                 }
               }
@@ -263,7 +257,7 @@ if(board[x] == EDGE) { printf("    edge hit %x-%x dir=%d att=%o\n", sqr, x, i, a
                 if((board[x-v] & TYPE) == xstm && board[x-v] > board[sqr])
                   NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p.
               } else { // d=1; can move on to second, or move back for igui
-                NewCapture(x, SPECIAL + RAYS*i + (i^4) + victimValue, p[attacker].promoFlag); // igui
+                NewCapture(x, SPECIAL + RAY(i, i^4) + victimValue, p[attacker].promoFlag); // igui
                 if(board[sqr-v] == EMPTY || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
                   NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // hit and run
               }
@@ -289,7 +283,7 @@ if(board[x] == EDGE) { printf("    edge hit %x-%x dir=%d att=%o\n", sqr, x, i, a
                 } else if(board[sqr-v] == EMPTY || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
                   NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 2nd
               } else { // d=1; can move on to second, or move back for igui
-                NewCapture(x, SPECIAL + RAYS*i + (i^4) + victimValue, p[attacker].promoFlag); // igui
+                NewCapture(x, SPECIAL + RAY(i, i^4) + victimValue, p[attacker].promoFlag); // igui
                 if(board[sqr-v] == EMPTY) { // 2nd empty
                   NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag); // e.p. 1st and run to 2nd
                   if(board[sqr-2*v] == EMPTY || (board[sqr-2*v] & TYPE) == xstm && board[sqr-2*v] > board[sqr])
@@ -348,9 +342,9 @@ if(board[x] == EDGE) { printf("    edge hit %x-%x dir=%d att=%o\n", sqr, x, i, a
         NewCapture(from, sqr + victimValue, p[attacker].promoFlag); // plain jump (as in N)
         if(p[attacker].range[i] < N) { // Lion power; generate double captures over two possible intermediates
           if((board[from+kStep[i]] & TYPE) == xstm)   // left-ish path
-            NewCapture(from, SPECIAL + RAYS*i + (i+1%RAYS) + victimValue, p[attacker].promoFlag);
+            NewCapture(from, SPECIAL + RAY(i, (i+1)%RAYS) + victimValue, p[attacker].promoFlag);
           if((board[from+kStep[i+1]] & TYPE) == xstm) // right-ish path
-            NewCapture(from, SPECIAL + RAYS*(i+1%RAYS) + i + victimValue, p[attacker].promoFlag);
+            NewCapture(from, SPECIAL + RAY((i+1)%RAYS, i) + victimValue, p[attacker].promoFlag);
         }
       }
     }
@@ -786,15 +780,15 @@ if(PATH) printf("# phase=%d autofail end (%d-%d)\n", phase, firstMove, msp);
             if(msp == nonCapts) goto cutoff;
 #ifdef KILLERS
             { // swap killers to front
-              Move h = killer[level][0]; int j = curMove;
-              for(i=curMove; i<msp; i++) if(moveStack[i] == h) { moveStack[i] = moveStack[j]; moveStack[j++] = h; break; }
-              h = killer[level][1];
-              for(i=curMove; i<msp; i++) if(moveStack[i] == h) { moveStack[i] = moveStack[j]; moveStack[j++] = h; break; }
-              late = j;
+              Move m = killer[level][0];
+              int l;
+              j = curMove;
+              for(l=j; l<msp; l++) if(moveStack[l] == m) { moveStack[l] = moveStack[j]; moveStack[j++] = m; break; }
+              m = killer[level][1];
+              for(l=j; l<msp; l++) if(moveStack[l] == m) { moveStack[l] = moveStack[j]; moveStack[j++] = m; break; }
             }
-#else
-            late = j;
 #endif
+            late = j;
             phase = 7;
             sorted = msp; // do not sort noncapts
             break;
@@ -814,7 +808,6 @@ if(PATH) printf("# null = %0x\n", nullMove);
 
       // MOVE EXTRACTION (FROM GENERATED MOVES)
     extractMove:
-if(PATH) printf("# extract sorted=%d\n", sorted);
       if(curMove > sorted) {
         move = moveStack[sorted=j=curMove];
         for(i=curMove+1; i<msp; i++)
@@ -826,7 +819,7 @@ if(PATH) printf("# extract sorted=%d\n", sorted);
         if(move == INVALID) continue; // skip invalidated move
       }
 #if 0
-if(depth >= 0) printf("# (%d) evaluate 0x%04X %s level=%d autofail=%d\n", curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), level, autoFail);
+if(depth >= 0) printf("# %2d (%d) extracted 0x%04X %-10s autofail=%d\n", level, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), autoFail);
 #endif
 
       // RECURSION
@@ -864,7 +857,7 @@ printf("#       repetition %d\n", i);
           if(!level) repeatMove[repCnt++] = move & 0xFFFFFF; // remember outlawed move
         } else { // check for perpetuals (TODO: count consecutive checks)
           Flag repCheck = inCheck;
-#ifndef KILLERS
+#if 0 // HGM
           for(j=i-level; j>1; j-=2) repCheck &= checkStack[LEVELS-j];
 #endif
           if(repCheck) { score = INF-20; goto repetition; } // assume perpetual check by opponent: score as win
@@ -1207,7 +1200,7 @@ ParseMove (int listStart, int listEnd, char *moveText)
     } else {
       for(j=0; j<RAYS; j++) if(e + kStep[j] == t) break;
       if(j >= RAYS) return INVALID; // this rejects Lion Dog 1+2 moves!
-      t2 = SPECIAL + RAYS*i + j;
+      t2 = SPECIAL + RAY(i, j);
     }
   } else if(chessFlag && board[f] != EMPTY && p[board[f]].value == pVal && board[t] == EMPTY) { // Pawn to empty, could be e.p.
       if(t == f + BW + 1) t2 = SPECIAL + 16; else

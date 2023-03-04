@@ -24,22 +24,24 @@
 #define BLACK      0
 #define WHITE      1
 #define COLORS     2
-#define SQLEN      9               /* bits in square number + special */
+#define SQLEN      9           /* bits in square number + special bits */
 #define EMPTY      0
 #define EDGE   (1<<(SQLEN-1))
 #define TYPE   (WHITE|BLACK|EDGE)
 #define ABSENT  2047
 #define INF     8000
-#define NPIECES EDGE+1             /* length of piece list    */
+#define NPIECES EDGE+1         /* length of piece list    */
 
-#define SQUARE  ((1<<SQLEN) - 1)   /* mask for square in move */
-#define DEFER   (1<<2*SQLEN)       /* deferral on zone entry  */
-#define PROMOTE (1<<2*SQLEN+1)     /* promotion bit in move   */
-#define INVALID     0              /* cannot occur as a valid move */
-#define SPECIAL   400              /* start of special moves  */
-#define BURN    (SPECIAL + 96)     /* start of burn encodings */
-#define CASTLE  (SPECIAL + 100)    /* castling encodings      */
+#define SQUARE  ((1<<SQLEN)-1) /* mask for square in move */
+#define DEFER   (1<<2*SQLEN)   /* deferral on zone entry  */
+#define PROMOTE (1<<2*SQLEN+1) /* promotion bit in move   */
+#define INVALID     0          /* cannot occur as a valid move */
+#define SPECIAL   400          /* start of special moves  */
+#define BURN    (SPECIAL+96)   /* start of burn encodings */
+#define CASTLE  (SPECIAL+100)  /* castling encodings (4)  */
 #define SORTKEY(X) 0
+#define RAYS       8
+#define RAY(X,Y) (RAYS*(X)+(Y))
 
 typedef int Color;
 typedef unsigned char Flag;
@@ -66,7 +68,6 @@ typedef struct {
   char age;
 } HashEntry; // hash-table entry
 
-#define RAYS 8
 typedef struct {
   char *name, *promoted;
   int value;
