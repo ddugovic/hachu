@@ -62,8 +62,7 @@ int hashMask;
 #define H_UPPER 2
 #define H_LOWER 1
 
-Flag abortFlag;
-char fenArray[4000], startPos[4000], *reason;
+char abortFlag, fenArray[4000], startPos[4000], *reason;
 int retFirst, retMSP, retDep, pvPtr;
 int nodes, startTime, lastRootMove, lastRootIter, tlim1, tlim2, tlim3, repCnt, comp;
 Move ponderMove;
