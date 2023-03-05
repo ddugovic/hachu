@@ -40,8 +40,8 @@ static inline int
 NewNonCapture (int from, int y, int promoFlags)
 {
   if(board[y] != EMPTY) return 1; // edge, capture or own piece
-  if( (entryProm ? promoBoard[y] & ~promoBoard[from] & CAN_PROMOTE
-                 : promoBoard[y] |  promoBoard[from]       ) & promoFlags ){ // piece can promote with this move
+  if( (entryProm ? promoBoard[(y < BSIZE ? y : from)] & ~promoBoard[from] & CAN_PROMOTE
+                 : promoBoard[(y < BSIZE ? y : from)] |  promoBoard[from]       ) & promoFlags ){ // piece can promote with this move
     moveStack[msp++] = moveStack[nonCapts];          // create space for promotion
     moveStack[nonCapts++] = MOVE(from, y) | PROMOTE; // push promotion
     if((promoFlags & promoBoard[y] & (CANT_DEFER | DONT_DEFER | LAST_RANK)) == 0) { // deferral could be a better alternative
@@ -58,7 +58,8 @@ NewNonCapture (int from, int y, int promoFlags)
 static inline int
 NewCapture (int from, int y, int promoFlags)
 {
-  if( (promoBoard[from] | promoBoard[(y < BSIZE ? y : from)]) & promoFlags) { // piece can promote with this move
+  if( (entryProm ? promoBoard[(y < BSIZE ? y : from)] & ~promoBoard[from] & CAN_PROMOTE
+                 : promoBoard[(y < BSIZE ? y : from)] |  promoBoard[from]       ) & promoFlags ){ // piece can promote with this move
     moveStack[msp++] = MOVE(from, y) | PROMOTE;     // push promotion
     if((promoFlags & promoBoard[y] & (CANT_DEFER | DONT_DEFER | LAST_RANK)) == 0) { // deferral could be a better alternative
       moveStack[msp++] = MOVE(from, y);             // push deferral
@@ -573,7 +574,7 @@ void TerminationCheck();
 int
 Search (int alpha, int beta, int difEval, int depth, int lmr, int oldPromo, int promoSuppress, int threshold)
 {
-  int i, j, k, phase, king, nextVictim, defer, autoFail=0, late=100000, ep;
+  int i, j, k, king, defer, autoFail=0, late=100000, ep;
   Flag inCheck=0;
   int firstMove, oldMSP=msp, curMove, sorted, bestMoveNr=0;
   int resDep=0, iterDep, ext;
@@ -635,7 +636,7 @@ printf("\n# search(%d) {%d,%d} eval=%d stm=%d ",level,alpha,beta,difEval,stm);
   if(inCheck) lmr = 0; else depth -= lmr; // no LMR of checking moves
 
   firstMove = j = curMove = sorted = msp; // leave 50 empty slots in front of move list
-  iterDep = -(depth == 0); tb.fireMask = phase = 0;
+  iterDep = -(depth == 0); tb.fireMask = 0;
 
 #if 0
   printf("depth=%d iterDep=%d resDep=%d\n", depth, iterDep, resDep);
@@ -672,7 +673,7 @@ printf("# iterDep = %d score = %d hash move = %s\n",iterDep,bestScore,MoveToText
 #endif
 
   if(depth > QSDEPTH) iterDep = MAX(iterDep, QSDEPTH); // full-width: start at least from 1-ply
-  while(++iterDep <= depth) {
+  for(int phase = 0, nextVictim = xstm; ++iterDep <= depth; phase = 0, nextVictim = xstm) {
 #if 0
 if(depth >= QSDEPTH) printf("# new iter %d:%d\n", depth, iterDep);
 #endif
@@ -728,8 +729,7 @@ if(PATH && tenFlag) printf("fireMask=%x\n",tb.fireMask),pbytes(fireBoard);
 if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp);
             while(nextVictim < pieces[xstm]) {        // more victims may exist
               int group, to = p[nextVictim += 2].pos; // take next
-              if(to == ABSENT) continue;              // ignore if absent
-              if(!ATTACK(to, stm)) continue;          // skip if not attacked
+              if(to == ABSENT || !ATTACK(to, stm)) continue; // skip if absent or not aligned
               group = p[nextVictim].value;            // remember value of this found victim
               if(iterDep <= QSDEPTH + 1 && 2*group + curEval + 30 < alpha) {
                 resDep = QSDEPTH + 1; nextVictim -= 2;
@@ -741,13 +741,12 @@ if(PATH) printf("%d:%2d:%2d group=%d, to=%c%d\n", level, depth, iterDep, group, 
 if(PATH) printf("%d:%2d:%2d first=%d last=%d\n",level,depth,iterDep,firstMove,msp);
               while(nextVictim < pieces[xstm] && p[nextVictim+2].value == group) { // more victims of same value exist
                 to = p[nextVictim += 2].pos;   // take next
-                if(to == ABSENT) continue;     // ignore if absent
-                if(!ATTACK(to, stm)) continue; // skip if not attacked
+                if(to == ABSENT || !ATTACK(to, stm)) continue; // skip if absent or not aligned
 if(PATH) printf("%d:%2d:%2d p=%d, to=%c%d\n", level, depth, iterDep, nextVictim, FILECH(to), RANK(to)), fflush(stdout);
                 GenCapts(to, 0);
 if(PATH) printf("%d:%2d:%2d last=%d\n",level,depth,iterDep,msp);
               }
-if(PATH) printf("# captures on %c%d generated, last=%d, group=%d, threshold=%d\n", FILECH(to), RANK(to), msp, group, threshold);
+if(PATH) printf("# captures of group %d generated, last=%d, threshold=%d\n", group, msp, threshold);
               goto extractMove; // in auto-fail phase, only search if they might auto-fail-hi
             }
 if(PATH) printf("# phase=%d autofail=%d\n", phase, autoFail);
@@ -818,7 +817,7 @@ if(PATH) printf("# null = %0x\n", nullMove);
         if(move == INVALID) continue; // skip invalidated move
       }
 #if 0
-if(depth >= 0) printf("# %2d (%d) extracted 0x%04X %-10s autofail=%d\n", level, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), autoFail);
+if(depth >= 0) printf("# %2d (%d) extracted 0x%04X %-10s autofail=%d\n", phase, curMove, moveStack[curMove], MoveToText(moveStack[curMove], 0), autoFail);
 #endif
 
       // RECURSION
