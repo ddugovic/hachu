@@ -1052,7 +1052,7 @@ InCheck (int level)
   if( k == ABSENT) k = p[royal[stm] + 2].pos;
   else if(p[royal[stm] + 2].pos != ABSENT) k = ABSENT; // two kings is no king...
   if( k != ABSENT) {
-    mobilityScore = MapAttacks(level);
+    MapAttacks(level);
     if(ATTACK(k, WHITE+BLACK-stm)) return 1;
   }
   return 0;
@@ -1147,7 +1147,7 @@ int
 ListMoves (int listStart, int listEnd)
 { // create move list on move stack
   int i;
-mobilityScore = MapAttacks(level);
+  MapAttacks(level);
   postThinking--; repCnt = 0; tlim1 = tlim2 = tlim3 = 1e8; abortFlag = msp = 0;
   Search(-INF-1, INF+1, 0, QSDEPTH+1, 0, sup1 & ~PROMOTE, sup2, INF);
   postThinking++;
@@ -1344,7 +1344,7 @@ printf("# SearchBestMove\n");
   startTime = GetTickCount();
   nodes = 0;
 printf("# s=%d\n", startTime);fflush(stdout);
-mobilityScore = MapAttacks(level);
+  MapAttacks(level);
   retMove = INVALID; repCnt = 0;
   score = Search(-INF-1, INF+1, rootEval, maxDepth + QSDEPTH, 0, sup1, sup2, INF);
   *move = retMove;
