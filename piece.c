@@ -641,7 +641,7 @@ MakeMove (Move m, UndoInfo *u)
 {
   int deferred = ABSENT;
   // first execute move on board
-  u->from = m>>SQLEN & SQUARE;
+  u->from = FROM(m);
   u->to = m & SQUARE;
   u->piece = board[u->from];
   board[u->from] = EMPTY;

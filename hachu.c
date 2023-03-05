@@ -997,7 +997,7 @@ pmoves(int start, int end)
   printf("# move stack from %d to %d\n", start, end);
   for(i=start; i<end; i++) {
     m = moveStack[i];
-    f = m>>SQLEN & SQUARE;
+    f = FROM(m);
     t = m & SQUARE;
     printf("# %3d. %08x %3d-%3d %s\n", i, m, f, t, MoveToText(m, 0));
   }
@@ -1109,7 +1109,7 @@ char *
 MoveToText (Move move, int multiLine)
 {
   static char buf[50];
-  int from = move>>SQLEN & SQUARE, to = move & SQUARE;
+  int from = FROM(move), to = move & SQUARE;
   char *promoChar = "";
   if(from == to) { sprintf(buf, "@@@@"); return buf; } // null-move notation in WB protocol
   buf[0] = '\0';
@@ -1126,7 +1126,7 @@ MoveToText (Move move, int multiLine)
     sprintf(buf, "%c%d%c%d,", FILECH(from), RANK(from), FILECH(e), RANK(e)); from = e;
     if(multiLine) printf("move %s\n", buf), buf[0] = '\0';
    }
-   to = (move>>SQLEN & SQUARE) + toList[to - SPECIAL];
+   to = FROM(move) + toList[to - SPECIAL];
   }
   if(move & PROMOTE) promoChar = currentVariant == V_MAKRUK ? "m" : currentVariant == V_WOLF ? "r" : repDraws ? "q" : "+";
   sprintf(buf+strlen(buf), "%c%d%c%d%s", FILECH(from), RANK(from), FILECH(to), RANK(to), promoChar);
@@ -1158,7 +1158,7 @@ printf("last=%d nc=%d retMSP=%d\n", msp, nonCapts, retMSP);
   msp = retMSP;
   if(currentVariant == V_LION) listEnd = GenCastlings();      // castlings for Lion Chess
   if(currentVariant == V_WOLF) for(i=listStart; i<msp; i++) { // mark Werewolf captures as promotions
-    int to = moveStack[i] & SQUARE, from = moveStack[i] >> SQLEN & SQUARE;
+    int to = moveStack[i] & SQUARE, from = FROM(moveStack[i]);
     if(to >= SPECIAL) continue;
     if(p[board[to]].ranking >= 5 && p[board[from]].ranking < 4) moveStack[i] |= PROMOTE;
   }
@@ -1222,7 +1222,7 @@ printf("# suppress = %c%d\n", FILECH(sup1), RANK(sup1));
 #endif
   for(i=listStart; i<listEnd; i++) {
     if(moveStack[i] == INVALID) continue;
-    if(c == '@' && (moveStack[i] & SQUARE) == (moveStack[i] >> SQLEN & SQUARE)) break; // any null move matches @@@@
+    if(c == '@' && (moveStack[i] & SQUARE) == FROM(moveStack[i])) break; // any null move matches @@@@
     if((moveStack[i] & (PROMOTE | DEFER-1)) == ret) break;
     if((moveStack[i] & DEFER-1) == ret) deferred = i; // promoted version of entered non-promotion is legal
   }
@@ -1263,7 +1263,7 @@ Highlight (int listStart, int listEnd, char *coords)
   char b[BSIZE]={0}, buf[2000], *q;
   ReadSquare(coords, &sqr);
   for(i=listStart; i<listEnd; i++) {
-    if(sqr == (moveStack[i]>>SQLEN & SQUARE)) {
+    if(sqr == FROM(moveStack[i])) {
       int t = moveStack[i] & SQUARE;
       if(t >= CASTLE) t = toList[t - SPECIAL]; else  // decode castling
       if(t >= SPECIAL) {
@@ -1281,7 +1281,7 @@ Highlight (int listStart, int listEnd, char *coords)
     if(sqr != lastPut) return; // refrain from sending empty FEN
     // we lifted a piece for second leg of move
     for(i=listStart; i<listEnd; i++) {
-      if(lastLift == (moveStack[i]>>SQLEN & SQUARE)) {
+      if(lastLift == FROM(moveStack[i])) {
         int e, t = moveStack[i] & SQUARE;
         if(t < SPECIAL) continue; // only special moves
         e = lastLift + epList[t - SPECIAL]; // decode
@@ -1476,7 +1476,7 @@ pboard(board);
           } else {
             Move f, pMove = move;
             static char *pName[] = { "w", "z", "j" };
-            if((move & SQUARE) >= SPECIAL && p[board[f = move>>SQLEN & SQUARE]].value == pVal) { // e.p. capture
+            if((move & SQUARE) >= SPECIAL && p[board[f = FROM(move)]].value == pVal) { // e.p. capture
               pMove = move & ~SQUARE | f + toList[(move & SQUARE) - SPECIAL]; // print as a single move
             }
             stm = MakeMove2(stm, move);  // assumes MakeMove returns new side to move
