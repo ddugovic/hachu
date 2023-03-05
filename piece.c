@@ -37,7 +37,7 @@ VariantDesc *variant;
 int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
 
 int pVal;
-int stm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
+int stm, hashKeyH=1, hashKeyL=1, framePtr, rootEval, filling, promoDelta;
 int cnt50;
 
 Vector direction[2*RAYS] = { // clockwise!

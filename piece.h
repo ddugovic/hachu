@@ -67,7 +67,7 @@ extern int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
 #define wolfFlag (currentVariant == V_WOLF)
 
 extern int pVal;
-extern int stm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
+extern int stm, hashKeyH, hashKeyL, framePtr, rootEval, filling, promoDelta;
 #define xstm (WHITE+BLACK-stm)
 extern int level, cnt50;
 
