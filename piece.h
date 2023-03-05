@@ -61,10 +61,14 @@ extern VariantDesc *variant;
 extern int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
 #define chessFlag (currentVariant == V_CHESS || currentVariant == V_LION || currentVariant == V_WOLF)
 #define chuFlag (currentVariant == V_CHU || currentVariant == V_LION)
+#define makrukFlag (currentVariant == V_MAKRUK)
+#define lionFlag (currentVariant == V_LION)
 #define tenFlag (currentVariant == V_TENJIKU)
+#define wolfFlag (currentVariant == V_WOLF)
 
 extern int pVal;
-extern int stm, xstm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
+extern int stm, hashKeyH, hashKeyL, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
+#define xstm (WHITE+BLACK-stm)
 extern int level, cnt50;
 
 extern Vector direction[2*RAYS];

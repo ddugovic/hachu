@@ -34,6 +34,7 @@
 #define NPIECES EDGE+1         /* length of piece list    */
 
 #define SQUARE  ((1<<SQLEN)-1) /* mask for square in move */
+#define FROM(move) (move>>SQLEN & SQUARE)
 #define DEFER   (1<<2*SQLEN)   /* deferral on zone entry  */
 #define PROMOTE (1<<2*SQLEN+1) /* promotion bit in move   */
 #define INVALID     0          /* cannot occur as a valid move */

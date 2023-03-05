@@ -37,7 +37,7 @@ VariantDesc *variant;
 int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
 
 int pVal;
-int stm, xstm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
+int stm, hashKeyH=1, hashKeyL=1, framePtr, msp, nonCapts, rootEval, filling, promoDelta;
 int cnt50;
 
 Vector direction[2*RAYS] = { // clockwise!
@@ -409,7 +409,7 @@ SetUp (char *fen, char *IDs, int var)
   } else p[i].promoGain = 0;
   StackMultis(WHITE);
   StackMultis(BLACK);
-  stm = WHITE; xstm = BLACK;
+  stm = WHITE;
 }
 
 int myRandom()
@@ -430,7 +430,7 @@ Init (int var)
   bRanks = variants[var].boardRanks;
   zone   = variants[var].zoneDepth;
   }
-  stalemate = (chessFlag || currentVariant == V_MAKRUK || currentVariant == V_LION || currentVariant == V_WOLF);
+  stalemate = (chessFlag || makrukFlag || lionFlag || wolfFlag);
   repDraws  = (stalemate || currentVariant == V_SHATRANJ);
   pawn = LookUp("P", currentVariant); pVal = pawn ? pawn->value : 0; // get Pawn value
 

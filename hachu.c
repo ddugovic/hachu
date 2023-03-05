@@ -588,7 +588,6 @@ Search (int alpha, int beta, int difEval, int depth, int lmr, int oldPromo, int 
 #if 0
 printf("\n# search(%d) {%d,%d} eval=%d stm=%d ",level,alpha,beta,difEval,stm);
 #endif
-  xstm = stm ^ WHITE;
 //printf("map made\n");fflush(stdout);
 
   // in-check test and TSUME filter
@@ -705,7 +704,7 @@ if(PATH) printf("%d:%d null move\n", level, depth);
               int score = -Search(-beta, 1-beta, -difEval, nullDep<QSDEPTH ? QSDEPTH : nullDep, 0, promoSuppress & SQUARE, ABSENT, INF);
 if(PATH) printf("%d:%d null move score = %d\n", level, depth, score);
 level--;
-              xstm = stm; stm ^= WHITE;
+              stm ^= WHITE;
               if(score >= beta) { msp = oldMSP; retDep += 3; pvPtr = myPV; return score + (score < curEval); }
 //              else depth += lmr, lmr = 0;
             }
@@ -831,7 +830,7 @@ if(depth >= 0) printf("# %2d (%d) extracted 0x%04X %-10s autofail=%d\n", level, 
 
       if(autoFail) {
         UnMake(&tb); // never search moves during auto-fail phase
-        xstm = stm; stm ^= WHITE;
+        stm ^= WHITE;
 #if 0
 printf("#       prune %d-%d ?= %d\n", tb.gain, tb.loss, threshold);
 #endif
@@ -901,7 +900,7 @@ printf("#       revalidate %d 0x%04X %s\n", level, moveStack[curMove], MoveToTex
 level--;
     repetition:
       UnMake(&tb);
-      xstm = stm; stm ^= WHITE;
+      stm ^= WHITE;
       if(abortFlag > 0) { // unwind search
 printf("# abort (%d) @ %d\n", abortFlag, level);
         if(curMove == firstMove) bestScore = oldBest, bestMoveNr = firstMove; // none searched yet
@@ -1458,7 +1457,7 @@ pboard(board);
             abortFlag = 0;
           } else
           if(move == INVALID) {         // game apparently ended
-            int kcapt = 0, xstm = stm ^ WHITE, king, k = p[king=royal[xstm]].pos;
+            int kcapt = 0, king, k = p[king=royal[xstm]].pos;
             if( k != ABSENT) { // test if King capture possible
               if(ATTACK(k, stm)) {
                 if( p[king + 2].pos == ABSENT ) kcapt = 1; // we have an attack on his only King
