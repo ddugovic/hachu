@@ -145,7 +145,7 @@ extern int board[BSIZE];
 extern int attacksByLevel[LEVELS][COLORS][BSIZE];
 #define attacks attacksByLevel[level]
 #define ATTACK(pos, color) attacks[color][pos]
-extern char promoBoard[BSIZE];   // flags to indicate promotion zones
+extern Flag promoBoard[BSIZE];   // flags to indicate promotion zones
 extern Flag fireBoard[BSIZE];    // flags to indicate squares controlled by Fire Demons
 extern signed char psq[PSTSIZE][BSIZE]; // cache of piece-value-per-square
 #define PSQ(type, sq, color) psq[type][color == BLACK ? sq : BSIZE-sq-1]

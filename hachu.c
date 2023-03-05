@@ -27,6 +27,8 @@
 #define LMR 4
 #define PATH 0
 #define QSDEPTH 4
+
+#define INF 8000
 #define LIONTRAP
 #define KINGSAFETY
 #define KSHIELD

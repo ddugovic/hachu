@@ -17,19 +17,6 @@
 #include "types.h"
 #include "variant.h"
 
-#define HASH
-#define KILLERS
-#define NULLMOVE
-#define CHECKEXT
-#define LMR 4
-#define PATH 0
-#define QSDEPTH 4
-#define LIONTRAP
-#define KINGSAFETY
-#define KSHIELD
-#define FORTRESS
-#define PAWNBLOCK
-#define TANDEM 100 /* bonus for pairs of attacking light steppers */
 #define KYLIN 100 /* extra end-game value of Kylin for promotability */
 #define PROMO 0 /* extra bonus for 'vertical' piece when it actually promotes (diagonal pieces get half) */
 
@@ -107,7 +94,7 @@ int board[BSIZE] = { [0 ... BSIZE-1] = EDGE };
 
 int attacksByLevel[LEVELS][COLORS][BSIZE];
 
-char promoBoard[BSIZE] = { [0 ... BSIZE-1] = 0 }; // flags to indicate promotion zones
+Flag promoBoard[BSIZE] = { [0 ... BSIZE-1] = 0 }; // flags to indicate promotion zones
 Flag fireBoard[BSIZE]; // flags to indicate squares controlled by Fire Demons
 signed char psq[PSTSIZE][BSIZE] = { 0 }; // cache of piece-value-per-square
 
@@ -465,7 +452,7 @@ Init (int var)
 
   // promotion zones
   for(i=0; i<bRanks; i++) for(j=0; j<bFiles; j++) {
-    char v = 0;
+    Flag v = 0;
     if(i == 0)           v |= LAST_RANK & P_BLACK;
     if(i < 2)            v |= CANT_DEFER & P_BLACK;
     if(i < zone)         v |= (CAN_PROMOTE | DONT_DEFER) & P_BLACK; else v &= ~P_BLACK;
@@ -842,7 +829,7 @@ pboard (int *b)
   for(i=0; i<bRanks; i++) {
     printf("#");
     for(j=0; j<bFiles; j++) {
-      p=b[POS(i, j)];
+      p=b[POS(i, bFiles-j-1)];
       if(p) printf("%4d", p); else printf("    ");
     }
     printf("\n");
