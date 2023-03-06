@@ -963,7 +963,7 @@ if(PATH) printf("%d:%2d:%d %3d %6x %-10s %6d %6d (%d)\n", level, depth, iterDep,
         if(iterDep == QSDEPTH+1) printf(" { root eval = %4.2f dif = %4.2f; abs = %4.2f f=%d D=%4.2f %d/%d}", curEval/100., difEval/100., PSTest()/100., filling, promoDelta/100., Ftest(0), Ftest(1));
         printf("\n");
       }
-      if(!(abortFlag & 1) && GetTickCount() - startTime > tlim1) break; // do not start iteration we can (most likely) not finish
+      if((abortFlag == 0 || abortFlag == 2) && GetTickCount() - startTime > tlim1) break; // do not start iteration we can (most likely) not finish
     }
 #if 0
     printf("# (%d) %d CUT %d %d %d MAX(%d) %d\n", curMove, phase, depth, iterDep, resDep, MAX(iterDep, resDep), level);
@@ -1352,7 +1352,7 @@ SearchBestMove (Color stm, Move *move, Move *ponderMove, int retMSP)
 printf("# SearchBestMove\n");
   startTime = GetTickCount();
   nodes = 0;
-printf("# s=%d\n", startTime);fflush(stdout);
+//printf("# s=%d\n", startTime);fflush(stdout);
   MapAttacks(level);
   retMove = INVALID; repCnt = 0;
   score = Search(stm, -INF-1, INF+1, rootEval, maxDepth + QSDEPTH, 0, sup1, sup2, INF, retMSP);
@@ -1483,7 +1483,7 @@ pboard(board);
             } else reason = "resign";
             engineSide = NONE;          // so stop playing
             PrintResult(stm, score);
-          } else {
+          } else if(abortFlag >= 0) {   // prevents accidental self-play
             Move f, pMove = move;
             static char *pName[] = { "w", "z", "j" };
             if((move & SQUARE) >= SPECIAL && p[board[f = FROM(move)]].value == pVal) { // e.p. capture
