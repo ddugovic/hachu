@@ -33,29 +33,29 @@
 
 PieceDesc *ListLookUp(char *name, PieceDesc *list);
 PieceDesc *LookUp(char *name, int var);
-void DeletePiece(int stm, int n);
+void DeletePiece(Color c, int n);
 int Worse(int a, int b);
 int Lance(MoveType *r);
 int EasyProm(MoveType *r);
 Flag IsUpwardCompatible(MoveType *r, MoveType *s);
 int ForwardOnly(MoveType *range);
 int Range(MoveType *range);
-void StackMultis(int col);
-void Compactify(int stm);
-int AddPiece(int stm, PieceDesc *list);
+void StackMultis(Color c);
+void Compactify(Color c);
+int AddPiece(Color c, PieceDesc *list);
 void SetUp(char *fen, char *IDs, int var);
 int myRandom();
 void Init(int var);
 int PSTest();
 int Dtest();
-int MapAttacksByColor(int color, int pieces, int level);
+int MapAttacksByColor(Color color, int pieces, int level);
 int MapAttacks(int level);
-int MakeMove(Move m, UndoInfo *u);
+int MakeMove(Color stm, Move m, UndoInfo *u);
 void UnMake(UndoInfo *u);
 void pplist();
 void pboard(int *b);
 void pbytes(Flag *b);
-void pmap(int color);
+void pmap(Color c);
 
 extern VariantDesc *variant;
 extern int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
@@ -67,8 +67,7 @@ extern int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
 #define wolfFlag (currentVariant == V_WOLF)
 
 extern int pVal;
-extern int stm, hashKeyH, hashKeyL, framePtr, rootEval, filling, promoDelta;
-#define xstm (WHITE+BLACK-stm)
+extern int hashKeyH, hashKeyL, framePtr, rootEval, filling, promoDelta;
 extern int level, cnt50;
 
 extern Vector direction[2*RAYS];

@@ -24,7 +24,7 @@ VariantDesc *variant;
 int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
 
 int pVal;
-int stm, hashKeyH=1, hashKeyL=1, framePtr, rootEval, filling, promoDelta;
+int hashKeyH=1, hashKeyL=1, framePtr, rootEval, filling, promoDelta;
 int cnt50;
 
 Vector direction[2*RAYS] = { // clockwise!
@@ -142,18 +142,18 @@ LookUp (char *name, int var)
 }
 
 void
-DeletePiece (int stm, int n)
+DeletePiece (Color c, int n)
 { // remove piece number n from the mentioned side's piece list (and adapt the reference to the displaced pieces!)
   int i;
-  for(i=stm+2; i<=pieces[stm]; i+=2)
+  for(i=c+2; i<=pieces[c]; i+=2)
     if(p[i].promo > n) p[i].promo -= 2;
-  for(i=n; i<pieces[stm]; i+=2) {
+  for(i=n; i<pieces[c]; i+=2) {
     p[i] = p[i+2];
-    if(i+2 == royal[stm]) royal[stm] -= 2; // NB: squeezing out the King moves up Crown Prince to royal[stm]
-    if(i+2 == kylin[stm]) kylin[stm] -= 2;
+    if(i+2 == royal[c]) royal[c] -= 2; // NB: squeezing out the King moves up Crown Prince to royal[c]
+    if(i+2 == kylin[c]) kylin[c] -= 2;
     if(i < 10) fireFlags[i-2] = fireFlags[i];
   }
-  pieces[stm] -= 2;
+  pieces[c] -= 2;
 }
 
 int
@@ -224,54 +224,54 @@ Range (MoveType *range)
 int multis[2], multiMovers[100];
 
 void
-StackMultis (int col)
+StackMultis (Color c)
 {
   int i, j;
-  multis[col] = col;
-  for(i=col+2; i<=pieces[col]; i+=2) { // scan piece list for multi-capturers
+  multis[c] = c;
+  for(i=c+2; i<=pieces[c]; i+=2) { // scan piece list for multi-capturers
     for(j=0; j<RAYS; j++) if(p[i].range[j] < J && p[i].range[j] >= S || p[i].value == FVAL) {
-      multiMovers[multis[col]] = i; // found one: put its piece number in list
-      multis[col] += 2;
+      multiMovers[multis[c]] = i;  // found one: put its piece number in list
+      multis[c] += 2;
       break;
     }
   }
 }
 
 void
-Compactify (int stm)
+Compactify (Color c)
 { // remove pieces that are permanently gone (captured or promoted) from one side's piece list
   int i, k;
-  for(i=stm+2; i<=pieces[stm]; i+=2) { // first pass: unpromoted pieces
+  for(i=c+2; i<=pieces[c]; i+=2) { // first pass: unpromoted pieces
     if((k = p[i].promo) >= 0 && p[i].pos == ABSENT) { // unpromoted piece no longer there
       p[k].promo = -2; // orphan promoted version
-      DeletePiece(stm, i);
+      DeletePiece(c, i);
     }
   }
-  for(i=stm+2; i<=pieces[stm]; i+=2) { // second pass: promoted pieces
+  for(i=c+2; i<=pieces[c]; i+=2) { // second pass: promoted pieces
     if((k = p[i].promo) == -2 && p[i].pos == ABSENT) { // orphaned promoted piece not present
-      DeletePiece(stm, i);
+      DeletePiece(c, i);
     }
   }
-  StackMultis(stm);
+  StackMultis(c);
 }
 
 int
-AddPiece (int stm, PieceDesc *list)
+AddPiece (Color c, PieceDesc *list)
 {
   int i, j, *key, v;
-  for(i=stm+2; i<=pieces[stm]; i += 2) {
+  for(i=c+2; i<=pieces[c]; i += 2) {
     if(p[i].value < list->value || p[i].value == list->value && (p[i].promo < 0)) break;
   }
-  pieces[stm] += 2;
-  for(j=pieces[stm]; j>i; j-= 2) p[j] = p[j-2];
+  pieces[c] += 2;
+  for(j=pieces[c]; j>i; j-= 2) p[j] = p[j-2];
   p[i].value = v = list->value;
-  for(j=0; j<RAYS; j++) p[i].range[j] = list->range[j^(RAYS/2)*(WHITE-stm)];
+  for(j=0; j<RAYS; j++) p[i].range[j] = list->range[j^(RAYS/2)*(WHITE-c)];
   switch(Range(p[i].range)) {
     case 1:  p[i].pst = PST_STEPPER; break;
     case 2:  p[i].pst = PST_JUMPER; break;
     default: p[i].pst = PST_SLIDER;  break;
   }
-  key = (stm == WHITE ? &list->whiteKey : &list->blackKey);
+  key = (c == WHITE ? &list->whiteKey : &list->blackKey);
   if(!*key) *key = ~(myRandom()*myRandom());
   p[i].promoGain = EasyProm(list->range); // flag easy promotion based on white view
   p[i].pieceKey = *key;
@@ -281,12 +281,12 @@ AddPiece (int stm, PieceDesc *list)
   p[i].mobWeight = v > 600 ? 0 : v >= 400 ? 1 : v >= 300 ? 2 : v > 150 ? 3 : v >= 100 ? 2 : 0;
   if(Lance(list->range))
     p[i].mobWeight = 0, p[i].pst = list->range[4] ? PST_NEUTRAL : PST_LANCE; // keep back
-  for(j=stm+2; j<= pieces[stm]; j+=2) {
+  for(j=c+2; j<= pieces[c]; j+=2) {
     if(p[j].promo >= i) p[j].promo += 2;
   }
-  if(royal[stm] >= i) royal[stm] += 2;
-  if(kylin[stm] >= i) kylin[stm] += 2;
-  if(p[i].value == (currentVariant == V_SHO || currentVariant == V_WA ? 410 : 280) ) royal[stm] = i, p[i].pst = PST_NEUTRAL;
+  if(royal[c] >= i) royal[c] += 2;
+  if(kylin[c] >= i) kylin[c] += 2;
+  if(p[i].value == (currentVariant == V_SHO || currentVariant == V_WA ? 410 : 280) ) royal[c] = i, p[i].pst = PST_NEUTRAL;
   p[i].qval = (tenFlag ? list->ranking : 0); // jump-capture hierarchy
   return i;
 }
@@ -294,42 +294,41 @@ AddPiece (int stm, PieceDesc *list)
 void
 SetUp (char *fen, char *IDs, int var)
 {
-  int i, j, n, m, color, c;
+  int i, j, n, m, color;
   char name[3], prince = 0;
-  PieceDesc *p1, *p2;
-  pieces[WHITE] = 1; pieces[BLACK] = 0;
+  pieces[WHITE] = WHITE; pieces[BLACK] = BLACK;
   royal[WHITE] = royal[BLACK] = 0;
   for(i=bRanks-1; ; i--) {
 //printf("next rank: %s\n", fen);
     for(j = bFiles*i; ; j++) {
       int pflag=0;
       if(*fen == '+') pflag++, fen++;
-      c = name[0] = *fen++;
-      if(!c) goto eos;
-      if(c == '.') continue;
-      if(c > '0' && c <= '9') {
-        c -= '0'; if(*fen >= '0' && *fen <= '9') c = 10*c + *fen++ - '0';
-        j += c - 1; continue;
+      int ch = name[0] = *fen++;
+      if(!ch) goto eos;
+      if(ch == '.') continue;
+      if(ch > '0' && ch <= '9') {
+        ch -= '0'; if(*fen >= '0' && *fen <= '9') ch = 10*ch + *fen++ - '0';
+        j += ch - 1; continue;
       }
-      if(c == '/') break;
+      if(ch == '/') break;
       name[1] = name[2] = 0;
-      if(c >= 'a') {
+      if(ch >= 'a') {
 	color = BLACK;
-	c += 'A' - 'a';
+	ch += 'A' - 'a';
       } else color = WHITE;
-      if(*fen == '\'') c += 26, fen++; else
-      if(*fen == '!')  c += 52, fen++;
-      name[0] = IDs[2*(c - 'A')];
-      name[1] = IDs[2*(c - 'A') + 1]; if(name[1] == ' ') name[1] = 0;
+      if(*fen == '\'') ch += 26, fen++; else
+      if(*fen == '!')  ch += 52, fen++;
+      name[0] = IDs[2*(ch - 'A')];
+      name[1] = IDs[2*(ch - 'A') + 1]; if(name[1] == ' ') name[1] = 0;
       if(!strcmp(name, "CP") || pflag && !strcmp(name, "DE")) prince |= color+1; // remember if we added Crown Prince
-      p1 = LookUp(name, var);
-      if(!p1) printf("tellusererror Unknown piece '%s' in setup (%d)\n", name, c), exit(-1);
+      PieceDesc *p1 = LookUp(name, var);
+      if(!p1) printf("tellusererror Unknown piece '%s' in setup (%d)\n", name, ch), exit(-1);
       if(pflag && p1->promoted) p1 = LookUp(p1->promoted, var); // use promoted piece instead
       n = AddPiece(color, p1);
       p[n].pos = POS(j / bFiles, j % bFiles);
       if(p1->promoted[0] && !pflag) {
         if(!strcmp(p1->promoted, "CP")) prince |= color+1; // remember if we added Crown Prince
-	p2 = LookUp(p1->promoted, var);
+        PieceDesc *p2 = LookUp(p1->promoted, var);
         m = AddPiece(color, p2);
 	if(m <= n) n += 2;
 	if(p2->ranking > 5) { // contageous
@@ -396,7 +395,6 @@ SetUp (char *fen, char *IDs, int var)
   } else p[i].promoGain = 0;
   StackMultis(WHITE);
   StackMultis(BLACK);
-  stm = WHITE;
 }
 
 int myRandom()
@@ -526,7 +524,7 @@ Dtest ()
 }
 
 int
-MapAttacksByColor (int color, int pieces, int level)
+MapAttacksByColor (Color color, int pieces, int level)
 {
   bzero(attacks[color], sizeof(attacks[color]));
   int i, j, totMob = 0;
@@ -624,7 +622,7 @@ MapAttacks (int level)
 }
 
 int
-MakeMove (Move m, UndoInfo *u)
+MakeMove (Color stm, Move m, UndoInfo *u)
 {
   int deferred = ABSENT;
   // first execute move on board
@@ -645,7 +643,7 @@ MakeMove (Move m, UndoInfo *u)
   if(p[u->piece].promoFlag & LAST_RANK) cnt50 = 0; // forward piece: move is irreversible
   // TODO: put in some test for forward moves of non-backward pieces?
 //		int n = board[promoSuppress-1];
-//		if( n != EMPTY && (n&TYPE) == xstm && p[n].value == 8 ) NewNonCapt(promoSuppress-1, 16, 0);
+//		if( n != EMPTY && (n&TYPE) == INVERT(stm) && p[n].value == 8 ) NewNonCapt(promoSuppress-1, 16, 0);
 
   if(p[u->piece].value == FVAL) { // move with Fire Demon
     int i, f=~fireFlags[u->piece-2];
@@ -721,7 +719,7 @@ MakeMove (Move m, UndoInfo *u)
 	int x = u->to + kStep[i], burnVictim = board[x];
 	fireBoard[x] |= f;  // mark new burn zone
 	u->epVictim[i+1] = burnVictim; // remember all neighbors, just in case
-	if(burnVictim != EMPTY && (burnVictim & TYPE) == xstm) { // opponent => actual burn
+	if(burnVictim != EMPTY && (burnVictim & TYPE) == INVERT(stm)) { // opponent => actual burn
 	  board[x] = EMPTY; // remove it
 	  p[burnVictim].pos = ABSENT;
 	  u->booty += p[burnVictim].value + PSQ(p[burnVictim].pst, x, BLACK);
@@ -754,7 +752,7 @@ MakeMove (Move m, UndoInfo *u)
   u->gain  += p[u->victim].value;
   if(u->victim != EMPTY) {
     cnt50 = 0; // capture irreversible
-    if(ATTACK(u->to, xstm)) u->loss = p[u->piece].value; // protected
+    if(ATTACK(u->to, INVERT(stm))) u->loss = p[u->piece].value; // protected
   }
 
   p[u->new].pos = u->to;
@@ -847,13 +845,13 @@ pbytes (Flag *b)
 }
 
 void
-pmap (int color)
+pmap (Color c)
 {
   // decode out of double-wide "attacks" array
   int i, j;
   for(i=bFiles-1; i>=0; i--) {
     printf("#");
-    for(j=0; j<bRanks; j++) printf("%11o", ATTACK(POS(i, j), color));
+    for(j=0; j<bRanks; j++) printf("%11o", ATTACK(POS(i, j), c));
     printf("\n");
   }
 }

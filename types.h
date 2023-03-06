@@ -39,6 +39,7 @@
 #define BLACK      0
 #define WHITE      1
 #define COLORS     2
+#define INVERT(C) (WHITE+BLACK-C)
 #define EMPTY      0           /* piece type (empty square) */
 #define TYPE    (WHITE|BLACK|EDGE)
 
@@ -46,7 +47,7 @@
 #define RAYS       8
 #define RAY(X,Y) (RAYS*(X)+(Y))
 
-typedef int Color;
+typedef unsigned char Color;
 typedef unsigned char Flag;
 typedef unsigned int Move;
 typedef signed char MoveType;

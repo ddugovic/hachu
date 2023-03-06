@@ -110,7 +110,7 @@ AreaMoves (int from, int piece, int range, int msp)
 }
 
 void
-MarkBurns (int x)
+MarkBurns (Color stm, int x)
 { // make bitmap of squares in FI (7x7) neighborhood where opponents can be captured or burned
   char rows[9];
   int r=x>>5, f=x&15, top=8, bottom=0, b=0, t=8, left=0, right=8; // 9x9 area; assumes 32x16 board
@@ -120,7 +120,7 @@ MarkBurns (int x)
   for(r=bottom; r<=top; r++) {
     int mask = 0, y = x + 16*r;
     for(f=left; f <= right; f++) {
-      if(board[y + f - (4*16+4)] != EMPTY && (board[y + f - (4*16+4)] & TYPE) == xstm)
+      if(board[y + f - (4*16+4)] != EMPTY && (board[y + f - (4*16+4)] & TYPE) == INVERT(stm))
         mask |= rowMask[f]; // on-rank attacks
     }
     rows[r+2] = mask;
@@ -129,7 +129,7 @@ MarkBurns (int x)
 }
 
 int
-GenCastlings (int msp)
+GenCastlings (Color stm, int msp)
 { // castlings for Lion Chess. Assumes board width = 8 and Kings on e-file, and K/R value = 280/300!
     int f = POS(0, BW/2), t = CASTLE;
     if(stm != WHITE) f += (bRanks*BW) - BW, t += 2;
@@ -141,7 +141,7 @@ GenCastlings (int msp)
 }
 
 int
-GenNonCapts (int promoSuppress, int msp, Move *nullMove)
+GenNonCapts (Color stm, int promoSuppress, int msp, Move *nullMove)
 {
   int i, j;
   *nullMove = ABSENT;
@@ -183,7 +183,7 @@ GenNonCapts (int promoSuppress, int msp, Move *nullMove)
 }
 
 int
-GenCapts (int sqr, int victimValue, int msp)
+GenCapts (Color stm, int sqr, int victimValue, int msp)
 { // generate all moves that capture the piece on the given square
   int i, att = ATTACK(sqr, stm);
 #if 0
@@ -239,12 +239,12 @@ if(board[x] == EDGE) { printf("    edge hit %x-%x dir=%d att=%o\n", sqr, x, i, a
               msp = NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp);
               att -= ray[i];   // attacker is being considered
               if(d == 2) {     // victim on second ring; look for victims to take in passing
-                if((board[sqr+v] & TYPE) == xstm)
+                if((board[sqr+v] & TYPE) == INVERT(stm))
                   msp = NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp);
                 if(i%2 == 0) { // orthogonal: two extra bent paths
-                  if((board[x+kStep[i-1]] & TYPE) == xstm)
+                  if((board[x+kStep[i-1]] & TYPE) == INVERT(stm))
                     msp = NewCapture(x, SPECIAL + RAY((i+RAYS-1)%RAYS, (i+1)%RAYS) + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp);
-                  if((board[x+kStep[i+1]] & TYPE) == xstm)
+                  if((board[x+kStep[i+1]] & TYPE) == INVERT(stm))
                     msp = NewCapture(x, SPECIAL + RAY((i+1)%RAYS, (i+RAYS-1)%RAYS) + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp);
                 }
               } else { // victim(s) on first ring
@@ -253,7 +253,7 @@ if(board[x] == EDGE) { printf("    edge hit %x-%x dir=%d att=%o\n", sqr, x, i, a
                   int v = kStep[j];
                   if(sqr+v == x || IsEmpty(sqr+v)) { // hit & run; make sure we include igui (attacker is still at x!)
                     msp = NewCapture(x, SPECIAL + RAY(i, j) + victimValue, p[attacker].promoFlag, msp);
-                  } else if((board[sqr+v] & TYPE) == xstm && dist(x, sqr+v) == 1) { // double capture (both adjacent)
+                  } else if((board[sqr+v] & TYPE) == INVERT(stm) && dist(x, sqr+v) == 1) { // double capture (both adjacent)
                     msp = NewCapture(x, SPECIAL + RAY(i, j) + victimValue, p[attacker].promoFlag, msp);
                   }
                 }
@@ -264,11 +264,11 @@ if(board[x] == EDGE) { printf("    edge hit %x-%x dir=%d att=%o\n", sqr, x, i, a
               msp = NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp);
               att -= ray[i];
               if(d == 2) { // check if we can take intermediate with it
-                if((board[x-v] & TYPE) == xstm && board[x-v] > board[sqr])
+                if((board[x-v] & TYPE) == INVERT(stm) && board[x-v] > board[sqr])
                   msp = NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp); // e.p.
               } else { // d=1; can move on to second, or move back for igui
                 msp = NewCapture(x, SPECIAL + RAY(i, i^4) + victimValue, p[attacker].promoFlag, msp); // igui
-                if(IsEmpty(sqr-v) || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
+                if(IsEmpty(sqr-v) || (board[sqr-v] & TYPE) == INVERT(stm) && board[sqr-v] > board[sqr])
                   msp = NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp); // hit and run
               }
               break;
@@ -278,33 +278,33 @@ if(board[x] == EDGE) { printf("    edge hit %x-%x dir=%d att=%o\n", sqr, x, i, a
               msp = NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp);
               att -= ray[i];
               if(d == 3) { // check if we can take one or two intermediates (with higher piece index) with it
-                if((board[x-v] & TYPE) == xstm && board[x-v] > board[sqr]) {
+                if((board[x-v] & TYPE) == INVERT(stm) && board[x-v] > board[sqr]) {
                   msp = NewCapture(x, SPECIAL + 64 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp); // e.p. first
-                  if((board[x-2*v] & TYPE) == xstm && board[x-2*v] > board[sqr])
+                  if((board[x-2*v] & TYPE) == INVERT(stm) && board[x-2*v] > board[sqr])
                     msp = NewCapture(x, SPECIAL + 80 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp); // e.p. both
-                } else if((board[x-2*v] & TYPE) == xstm && board[x-2*v] > board[sqr])
+                } else if((board[x-2*v] & TYPE) == INVERT(stm) && board[x-2*v] > board[sqr])
                   msp = NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp); // e.p. second
               } else if(d == 2) { // check if we can take intermediate with it
-                if((board[x-v] & TYPE) == xstm && board[x-v] > board[sqr]) {
+                if((board[x-v] & TYPE) == INVERT(stm) && board[x-v] > board[sqr]) {
                   msp = NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp); // e.p. first, stop at 2nd
                   msp = NewCapture(x, SPECIAL + 88 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp); // shoot 2nd, take 1st
-                  if(IsEmpty(sqr-v) || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
+                  if(IsEmpty(sqr-v) || (board[sqr-v] & TYPE) == INVERT(stm) && board[sqr-v] > board[sqr])
                     msp = NewCapture(x, SPECIAL + 80 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp); // e.p. 1st and 2nd
-                } else if(IsEmpty(sqr-v) || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
+                } else if(IsEmpty(sqr-v) || (board[sqr-v] & TYPE) == INVERT(stm) && board[sqr-v] > board[sqr])
                   msp = NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp); // e.p. 2nd
               } else { // d=1; can move on to second, or move back for igui
                 msp = NewCapture(x, SPECIAL + RAY(i, i^4) + victimValue, p[attacker].promoFlag, msp); // igui
                 if(IsEmpty(sqr-v)) { // 2nd empty
                   msp = NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp); // e.p. 1st and run to 2nd
-                  if(IsEmpty(sqr-2*v) || (board[sqr-2*v] & TYPE) == xstm && board[sqr-2*v] > board[sqr])
+                  if(IsEmpty(sqr-2*v) || (board[sqr-2*v] & TYPE) == INVERT(stm) && board[sqr-2*v] > board[sqr])
                     msp = NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp); // e.p. 1st, end on 3rd
                 } else if((board[sqr-v] & TYPE) == stm) { // 2nd own
-                  if(IsEmpty(sqr-2*v) || (board[sqr-2*v] & TYPE) == xstm && board[sqr-2*v] > board[sqr])
+                  if(IsEmpty(sqr-2*v) || (board[sqr-2*v] & TYPE) == INVERT(stm) && board[sqr-2*v] > board[sqr])
                     msp = NewCapture(x, SPECIAL + 72 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp); // e.p. 1st, end on 3rd
-                } else if((board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr]) {
+                } else if((board[sqr-v] & TYPE) == INVERT(stm) && board[sqr-v] > board[sqr]) {
                   msp = NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp); // e.p. 1st, capture and stop at 2nd
                   msp = NewCapture(x, SPECIAL + 88 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp); // shoot 2nd
-                  if(IsEmpty(sqr-2*v) || (board[sqr-2*v] & TYPE) == xstm && board[sqr-2*v] > board[sqr])
+                  if(IsEmpty(sqr-2*v) || (board[sqr-2*v] & TYPE) == INVERT(stm) && board[sqr-2*v] > board[sqr])
                     msp = NewCapture(x, SPECIAL + 80 + i + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp); // e.p. 1st and 2nd
                 }
               }
@@ -321,10 +321,10 @@ if(board[x] == EDGE) { printf("    edge hit %x-%x dir=%d att=%o\n", sqr, x, i, a
               msp = NewCapture(x, sqr + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp);
               att -= ray[i];
               if(d == 2) { // check if we can take intermediate with it
-                if((board[x-v] & TYPE) == xstm && board[x-v] > board[sqr])
+                if((board[x-v] & TYPE) == INVERT(stm) && board[x-v] > board[sqr])
                   msp = NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp); // e.p.
               } else { // d=1; can move on to second
-                if(IsEmpty(sqr-v) || (board[sqr-v] & TYPE) == xstm && board[sqr-v] > board[sqr])
+                if(IsEmpty(sqr-v) || (board[sqr-v] & TYPE) == INVERT(stm) && board[sqr-v] > board[sqr])
                   msp = NewCapture(x, SPECIAL + 9*i + victimValue - SORTKEY(attacker), p[attacker].promoFlag, msp); // hit and run
               }
               break;
@@ -351,9 +351,9 @@ if(board[x] == EDGE) { printf("    edge hit %x-%x dir=%d att=%o\n", sqr, x, i, a
       if(p[attacker].range[i] == L || p[attacker].range[i] < W && p[attacker].range[i] >= S || p[attacker].range[i] == N) { // has Knight jump in our direction
         msp = NewCapture(from, sqr + victimValue, p[attacker].promoFlag, msp); // plain jump (as in N)
         if(p[attacker].range[i] < N) { // Lion power; generate double captures over two possible intermediates
-          if((board[from+kStep[i]] & TYPE) == xstm)   // left-ish path
+          if((board[from+kStep[i]] & TYPE) == INVERT(stm))   // left-ish path
             msp = NewCapture(from, SPECIAL + RAY(i, (i+1)%RAYS) + victimValue, p[attacker].promoFlag, msp);
-          if((board[from+kStep[i+1]] & TYPE) == xstm) // right-ish path
+          if((board[from+kStep[i+1]] & TYPE) == INVERT(stm)) // right-ish path
             msp = NewCapture(from, SPECIAL + RAY((i+1)%RAYS, i) + victimValue, p[attacker].promoFlag, msp);
         }
       }
@@ -426,12 +426,12 @@ Fortress (int forward, int king, int lion)
 }
 
 int
-Surround (int stm, int king, int start, int max)
+Surround (Color color, int king, int start, int max)
 {
   int i, s=0;
   for(i=start; i<9; i++) {
     int v, piece, sq = king + neighbors[i];
-    if((piece = board[sq]) == EDGE || !piece || piece&1^stm) continue;
+    if((piece = board[sq]) == EDGE || !piece || piece&1^color) continue;
     if(p[piece].promoGain) continue;
     v = p[piece].value;
     s += -(v > 70) & v;
@@ -450,7 +450,7 @@ Ftest (int side)
 }
 
 int
-Evaluate (int difEval)
+Evaluate (Color stm, int difEval)
 {
   int wLion=ABSENT, bLion=ABSENT, score=mobilityScore, f;
 #ifdef KINGSAFETY
@@ -572,17 +572,17 @@ Evaluate (int difEval)
 }
 
 static inline void
-FireSet (UndoInfo *tb)
+FireSet (Color c, UndoInfo *tb)
 { // set fireFlags acording to remaining presene of Fire Demons
   int i;
-  for(i=stm+2; p[i].value == FVAL; i++) // Fire Demons are always leading pieces in list
+  for(i=c+2; p[i].value == FVAL; i++) // Fire Demons are always leading pieces in list
     if(p[i].pos != ABSENT) tb->fireMask |= fireFlags[i-2];
 }
 
-void TerminationCheck();
+void TerminationCheck(Color stm);
 
 int
-Search (int alpha, int beta, int difEval, int depth, int lmr, int oldPromo, int promoSuppress, int threshold, int msp)
+Search (Color stm, int alpha, int beta, int difEval, int depth, int lmr, int oldPromo, int promoSuppress, int threshold, int msp)
 {
   int i, j, k, king, defer, autoFail=0, late=100000, ep;
   Flag inCheck=0;
@@ -614,7 +614,7 @@ printf("\n# search(%d) {%d,%d} eval=%d stm=%d ",level,alpha,beta,difEval,stm);
       k = ABSENT; // two kings is no king...
     }
     if( k != ABSENT) { // check is possible
-      inCheck = InCheck(level);
+      inCheck = InCheck(stm, level);
       if(!inCheck && (tsume && tsume & stm+1)) {
         retDep = 60; return INF; // we win when not in check
       }
@@ -625,7 +625,7 @@ printf("\n# search(%d) {%d,%d} eval=%d stm=%d ",level,alpha,beta,difEval,stm);
 #endif
 
   // KING CAPTURE
-  k = p[king=royal[xstm]].pos;
+  k = p[king=royal[INVERT(stm)]].pos;
   if(k != ABSENT) {
     if(ATTACK(k, stm) && p[king + 2].pos == ABSENT) { // we have an attack on his only King
       return INF;
@@ -637,11 +637,11 @@ printf("\n# search(%d) {%d,%d} eval=%d stm=%d ",level,alpha,beta,difEval,stm);
     }
   }
   // EVALUATION & WINDOW SHIFT
-  curEval = Evaluate(difEval) -20*inCheck;
+  curEval = Evaluate(stm, difEval) -20*inCheck;
   alpha -= (alpha < curEval);
   beta  -= (beta <= curEval);
 
-  if(!(nodes++ & 4095)) TerminationCheck();
+  if(!(nodes++ & 4095)) TerminationCheck(stm);
   pv[pvPtr++] = 0; // start empty PV, directly behind PV of parent
   if(inCheck) lmr = 0; else depth -= lmr; // no LMR of checking moves
 
@@ -683,7 +683,7 @@ printf("# iterDep = %d score = %d hash move = %s\n",iterDep,bestScore,MoveToText
 #endif
 
   if(depth > QSDEPTH) iterDep = MAX(iterDep, QSDEPTH); // full-width: start at least from 1-ply
-  for(int phase = 0, nextVictim = xstm; ++iterDep <= depth; phase = 0, nextVictim = xstm) {
+  for(int phase = 0, nextVictim = INVERT(stm); ++iterDep <= depth; phase = 0, nextVictim = INVERT(stm)) {
 #if 0
 if(depth >= QSDEPTH) printf("# new iter %d:%d\n", depth, iterDep);
 #endif
@@ -712,7 +712,7 @@ if(PATH) printf("# new moves, phase=%d\n", phase);
               stm ^= WHITE;
 path[level++] = INVALID;
 if(PATH) printf("%d:%d null move\n", level, depth);
-              int score = -Search(-beta, 1-beta, -difEval, nullDep<QSDEPTH ? QSDEPTH : nullDep, 0, promoSuppress & SQUARE, ABSENT, INF, msp);
+              int score = -Search(stm, -beta, 1-beta, -difEval, nullDep<QSDEPTH ? QSDEPTH : nullDep, 0, promoSuppress & SQUARE, ABSENT, INF, msp);
 if(PATH) printf("%d:%d null move score = %d\n", level, depth, score);
 level--;
               stm ^= WHITE;
@@ -720,7 +720,7 @@ level--;
 //              else depth += lmr, lmr = 0;
             }
 #endif
-            if(tenFlag) FireSet(&tb); // in tenjiku we must identify opposing Fire Demons to perform any moves
+            if(tenFlag) FireSet(stm, &tb); // in tenjiku we must identify opposing Fire Demons to perform any moves
 if(PATH && tenFlag) printf("fireMask=%x\n",tb.fireMask),pbytes(fireBoard);
             phase = 1;
           case 1: // hash move
@@ -733,11 +733,11 @@ if(PATH && tenFlag) printf("fireMask=%x\n",tb.fireMask),pbytes(fireBoard);
             }
 #endif
           case 2: // capture-gen init
-            nextVictim = xstm; autoFail = (depth == 0);
+            nextVictim = INVERT(stm); autoFail = (depth == 0);
             phase = 3;
           case 3: // generate captures
 if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp);
-            while(nextVictim < pieces[xstm]) {        // more victims may exist
+            while(nextVictim < pieces[INVERT(stm)]) {        // more victims may exist
               int group, to = p[nextVictim += 2].pos; // take next
               if(to == ABSENT || !ATTACK(to, stm)) continue; // skip if absent or not aligned
               group = p[nextVictim].value;            // remember value of this found victim
@@ -747,13 +747,13 @@ if(PATH) printf("%d:%2d:%2d next victim %d/%d\n",level,depth,iterDep,curMove,msp
                 goto cutoff;
               }
 if(PATH) printf("%d:%2d:%2d group=%d, to=%c%d\n", level, depth, iterDep, group, FILECH(to), RANK(to));
-              msp = GenCapts(to, 0, msp);
+              msp = GenCapts(stm, to, 0, msp);
 if(PATH) printf("%d:%2d:%2d first=%d last=%d\n",level,depth,iterDep,firstMove,msp);
-              while(nextVictim < pieces[xstm] && p[nextVictim+2].value == group) { // more victims of same value exist
+              while(nextVictim < pieces[INVERT(stm)] && p[nextVictim+2].value == group) { // more victims of same value exist
                 to = p[nextVictim += 2].pos;   // take next
                 if(to == ABSENT || !ATTACK(to, stm)) continue; // skip if absent or not aligned
 if(PATH) printf("%d:%2d:%2d p=%d, to=%c%d\n", level, depth, iterDep, nextVictim, FILECH(to), RANK(to)), fflush(stdout);
-                msp = GenCapts(to, 0, msp);
+                msp = GenCapts(stm, to, 0, msp);
 if(PATH) printf("%d:%2d:%2d last=%d\n",level,depth,iterDep,msp);
               }
 if(PATH) printf("# captures of group %d generated, last=%d, threshold=%d\n", group, msp, threshold);
@@ -784,7 +784,7 @@ if(PATH) printf("# phase=%d autofail end (%d-%d)\n", phase, firstMove, msp);
             phase = 6;
           case 6: // non-captures
             nonCapts = msp;
-            msp = GenNonCapts(oldPromo, msp, &nullMove);
+            msp = GenNonCapts(stm, oldPromo, msp, &nullMove);
             if(msp == nonCapts) goto cutoff;
 #ifdef KILLERS
             { // swap killers to front
@@ -832,7 +832,7 @@ if(depth >= 0) printf("# %2d (%d) extracted 0x%05X %-10s autofail=%d\n", phase, 
 
       // RECURSION
       stm ^= WHITE;
-      defer = MakeMove(move, &tb);
+      defer = MakeMove(stm, move, &tb);
       ext = (depth == 0); // when out of depth we extend captures if there was no auto-fail-hi
 
 //      if(level == 1 && randomize) tb.booty += (hashKeyH * seed >> 24 & 31) - 20;
@@ -899,7 +899,7 @@ printf("#       revalidate %d 0x%04X %s\n", level, moveStack[curMove], MoveToTex
         }
       }
 #if 1 // HGM
-      score = -Search(-beta, -iterAlpha, -difEval - tb.booty, iterDep-1+ext,
+      score = -Search(stm, -beta, -iterAlpha, -difEval - tb.booty, iterDep-1+ext,
                        curMove >= late && iterDep > QSDEPTH + lmr,
                                                       promoSuppress & ~PROMOTE, defer, depth ? INF : tb.gain, msp);
 #else
@@ -1036,33 +1036,33 @@ UndoInfo undoInfo;
 int sup0, sup1, sup2; // promo suppression squares
 int lastLift, lastPut;
 
-int
-MakeMove2 (int stm, Move move)
+Color
+MakeMove2 (Color stm, Move move)
 {
   int i;
-  FireSet(&undoInfo);
+  FireSet(stm, &undoInfo);
   sup0 = sup1; sup1 = sup2;
-  sup2 = MakeMove(move, &undoInfo);
+  sup2 = MakeMove(stm, move, &undoInfo);
   if(chuFlag && p[undoInfo.victim].value == LVAL && p[undoInfo.piece].value != LVAL) sup2 |= PROMOTE;
   rootEval = -rootEval - undoInfo.booty;
   for(i=0; i<LEVELS; i++)
     repStack[i] = repStack[i+1], checkStack[i] = checkStack[i+1];
-  repStack[LEVELS-1] = hashKeyH, checkStack[LEVELS-1] = InCheck(level);
+  repStack[LEVELS-1] = hashKeyH, checkStack[LEVELS-1] = InCheck(stm, level);
 #if 0
   printf("# made move %s %c%d %c%d\n", MoveToText(move, 0), FILECH(sup1), RANK(sup1), FILECH(sup2), RANK(sup2));
 #endif
-  return stm ^ WHITE;
+  return INVERT(stm);
 }
 
 Flag
-InCheck (int level)
+InCheck (Color stm, int level)
 {
   int k = p[royal[stm]].pos;
   if( k == ABSENT) k = p[royal[stm] + 2].pos;
   else if(p[royal[stm] + 2].pos != ABSENT) k = ABSENT; // two kings is no king...
   if( k != ABSENT) {
     MapAttacks(level);
-    if(ATTACK(k, WHITE+BLACK-stm)) return 1;
+    if(ATTACK(k, INVERT(stm))) return 1;
   }
   return 0;
 }
@@ -1079,11 +1079,11 @@ UnMake2 (Move move)
   sup2 = sup1; sup1 = sup0;
 }
 
-int
+Color
 Setup2 (char *fen)
 {
   char *p;
-  int stm = WHITE;
+  Color stm = WHITE;
   if(fen) {
     char *q = strchr(fen, '\n');
     if(q) *q = 0;
@@ -1153,19 +1153,19 @@ ReadSquare (char *p, int *sqr)
 }
 
 int
-ListMoves (int listStart, int listEnd)
+ListMoves (Color stm, int listStart, int listEnd)
 { // create move list on move stack
   int i;
   MapAttacks(level);
   postThinking--; repCnt = 0; tlim1 = tlim2 = tlim3 = 1e8; abortFlag = listEnd = 0;
-  Search(-INF-1, INF+1, 0, QSDEPTH+1, 0, sup1 & ~PROMOTE, sup2, INF, listEnd);
+  Search(stm, -INF-1, INF+1, 0, QSDEPTH+1, 0, sup1 & ~PROMOTE, sup2, INF, listEnd);
   postThinking++;
 
 #if 0
 printf("last=%d nc=%d retMSP=%d\n", listEnd, nonCapts, retMSP);
 #endif
   listEnd = retMSP;
-  if(currentVariant == V_LION) listEnd = GenCastlings(listEnd);   // castlings for Lion Chess
+  if(currentVariant == V_LION) listEnd = GenCastlings(stm, listEnd); // castlings for Lion Chess
   if(currentVariant == V_WOLF) for(i=listStart; i<listEnd; i++) { // mark Werewolf captures as promotions
     int to = moveStack[i] & SQUARE, from = FROM(moveStack[i]);
     if(to >= SPECIAL) continue;
@@ -1175,7 +1175,7 @@ printf("last=%d nc=%d retMSP=%d\n", listEnd, nonCapts, retMSP);
 }
 
 Move
-ParseMove (int listStart, int listEnd, char *moveText)
+ParseMove (Color stm, int listStart, int listEnd, char *moveText)
 {
   int i, j, f, t, t2, e, ret, deferred=0;
   char c = moveText[0];
@@ -1227,7 +1227,7 @@ ParseMove (int listStart, int listEnd, char *moveText)
 printf("# suppress = %c%d\n", FILECH(sup1), RANK(sup1));
 #if 1
   // TODO: do not rely upon global retMSP assignment (castlings for Lion Chess)
-  retMSP = listEnd = ListMoves(listStart, listEnd);
+  retMSP = listEnd = ListMoves(stm, listStart, listEnd);
 #endif
   for(i=listStart; i<listEnd; i++) {
     if(moveStack[i] == INVALID) continue;
@@ -1346,7 +1346,7 @@ printf("# limits %d, %d, %d mode = %d\n", tlim1, tlim2, tlim3, abortFlag);
 }
 
 int
-SearchBestMove (Move *move, Move *ponderMove, int retMSP)
+SearchBestMove (Color stm, Move *move, Move *ponderMove, int retMSP)
 {
   int score;
 printf("# SearchBestMove\n");
@@ -1355,7 +1355,7 @@ printf("# SearchBestMove\n");
 printf("# s=%d\n", startTime);fflush(stdout);
   MapAttacks(level);
   retMove = INVALID; repCnt = 0;
-  score = Search(-INF-1, INF+1, rootEval, maxDepth + QSDEPTH, 0, sup1, sup2, INF, retMSP);
+  score = Search(stm, -INF-1, INF+1, rootEval, maxDepth + QSDEPTH, 0, sup1, sup2, INF, retMSP);
   *move = retMove;
   *ponderMove = pv[1];
 printf("# best=%s", MoveToText(pv[0],0));
@@ -1365,9 +1365,10 @@ printf("\n");
 }
 
 
-    int TakeBack(int n)
+    Color TakeBack(int n)
     { // reset the game and then replay it to the desired point
-      int last, stm;
+      int last;
+      Color stm;
       last = moveNr - n; if(last < 0) last = 0;
       Init(SAME); stm = Setup2(startPos);
 printf("# setup done");fflush(stdout);
@@ -1375,7 +1376,7 @@ printf("# setup done");fflush(stdout);
       return stm;
     }
 
-    void PrintResult(int stm, int score)
+    void PrintResult(Color stm, int score)
     {
       char tail[100];
       if(reason) sprintf(tail, " {%s}", reason); else *tail = 0;
@@ -1384,7 +1385,7 @@ printf("# setup done");fflush(stdout);
       else printf("0-1%s\n", tail);
     }
 
-    void GetLine(Flag root)
+    void GetLine(Color stm, Flag root)
     {
 
       int i, c;
@@ -1403,7 +1404,7 @@ printf("# in (mode = %d,%d): %s\n", root, abortFlag, command);
         if(!strcmp(command, "put"))     { ReadSquare(inBuf+4, &lastPut); continue; }  // ditto
         if(!strcmp(command, "."))       { inBuf[0] = 0; return; } // ignore for now
         if(!strcmp(command, "hover"))   { inBuf[0] = 0; return; } // ignore for now
-        if(!strcmp(command, "lift"))    { inBuf[0] = 0; retMSP = ListMoves(retFirst, retMSP); Highlight(retFirst, retMSP, inBuf+5); return; } // treat here
+        if(!strcmp(command, "lift"))    { inBuf[0] = 0; retMSP = ListMoves(stm, retFirst, retMSP); Highlight(retFirst, retMSP, inBuf+5); return; } // treat here
         if(!root && !strcmp(command, "usermove")) {
 printf("# move = %s#ponder = %s", inBuf+9, ponderMoveText);
           abortFlag = !!strcmp(inBuf+9, ponderMoveText);
@@ -1421,10 +1422,10 @@ printf("# ponder hit\n");
     }
 
     void
-    TerminationCheck()
+    TerminationCheck(Color stm)
     {
       if(abortFlag < 0) { // check for input
-        if(InputWaiting()) GetLine(0); // read & examine input command
+        if(InputWaiting()) GetLine(stm, 0); // read & examine input command
       } else {        // check for time
         if(GetTickCount() - startTime > tlim3) abortFlag = 2;
       }
@@ -1434,6 +1435,7 @@ printf("# ponder hit\n");
     main()
     {
       int engineSide=NONE;                // side played by engine
+      Color stm=BLACK;
       Move move;
       int i, score, curVarNr = 0;
 
@@ -1449,9 +1451,9 @@ printf("# ponder hit\n");
 #ifdef HASH
         if(hashMask)
 #endif
-        if(retMSP == 0) retMSP = ListMoves(retFirst, retMSP);   // always maintain a list of legal moves in root position
-        abortFlag = -(ponder && WHITE+BLACK-stm == engineSide && moveNr); // pondering and opponent on move
-        if(stm == engineSide || abortFlag && ponderMove) {      // if it is the engine's turn to move, set it thinking, and let it move
+        if(retMSP == 0) retMSP = ListMoves(stm, retFirst, retMSP); // always maintain a list of legal moves in root position
+        abortFlag = -(ponder && INVERT(stm) == engineSide && moveNr); // pondering and opponent on move
+        if(stm == engineSide || abortFlag && ponderMove) {         // if it is the engine's turn to move, set it thinking, and let it move
 printf("# start search: stm=%d engine=%d ponder=%d abort=%d\n", stm, engineSide, ponder, abortFlag);
           if(abortFlag) {
             stm = MakeMove2(stm, ponderMove);                           // for pondering, play speculative move
@@ -1460,12 +1462,12 @@ printf("# start search: stm=%d engine=%d ponder=%d abort=%d\n", stm, engineSide,
 printf("# ponder=%s\n", ponderMoveText);
           } else SetSearchTimes(10*timeLeft);                           // for thinking, schedule end time
 pboard(board);
-          score = SearchBestMove(&move, &ponderMove, retMSP);
+          score = SearchBestMove(stm, &move, &ponderMove, retMSP);
           if(abortFlag == 1) { // ponder search was interrupted (and no hit)
             UnMake2(INVALID); moveNr--; stm ^= WHITE;    // take ponder move back if we made one
             abortFlag = 0;
           } else if(move == INVALID) {                   // game apparently ended
-            int kcapt = 0, king, k = p[king=royal[xstm]].pos;
+            int kcapt = 0, king, k = p[king=royal[INVERT(stm)]].pos;
             if( k != ABSENT) { // test if King capture possible
               if(ATTACK(k, stm)) {
                 if( p[king + 2].pos == ABSENT ) kcapt = 1; // we have an attack on his only King
@@ -1475,7 +1477,7 @@ pboard(board);
               if(ATTACK(k, stm)) kcapt = 1; // we have attack on Crown Prince
             }
             if(kcapt) { // print King capture before claiming
-              int msp = GenCapts(k, 0, retMSP);
+              int msp = GenCapts(stm, k, 0, retMSP);
               printf("move %s\n", MoveToText(moveStack[msp-1], 1));
               reason = "king capture";
             } else reason = "resign";
@@ -1499,12 +1501,12 @@ pboard(board);
             *ponderMoveText = 0; // forces miss on any move
             abortFlag = -1;      // set pondering
             pvCuts = noCut;
-            SearchBestMove(&dummy, &dummy, retMSP);
+            SearchBestMove(stm, &dummy, &dummy, retMSP);
             abortFlag = pvCuts = 0;
         }
 
         if(fflush(stdout) == EOF) break; // make sure everything is printed before we do something that might take time
-        if(!*inBuf) GetLine(1); // takes care of time and otim commands
+        if(!*inBuf) GetLine(stm, 1); // takes care of time and otim commands
 
         // recognize the command,and execute it
         if(!strcmp(command, "quit"))    { break; } // breaks out of infinite loop
@@ -1580,7 +1582,7 @@ pboard(board);
         if(!strcmp(command, "hover"))   { continue; }
         if(!strcmp(command, ""))  {  continue; }
         if(!strcmp(command, "usermove")){
-          int move = ParseMove(retFirst, retMSP, inBuf+9);
+          int move = ParseMove(stm, retFirst, retMSP, inBuf+9);
 pboard(board);
           if(move == INVALID) {
             if(reason) printf("Illegal move {%s}\n", reason); else printf("%s\n", reason="Illegal move");
