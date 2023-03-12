@@ -54,7 +54,7 @@ typedef signed char MoveType;
 
 typedef struct {
   int lock[5];
-  int move[5];
+  Move move[5];
   short int score[5];
   char depth[5];
   char flag[5];

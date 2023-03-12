@@ -92,4 +92,4 @@ Color Setup2(char *fen);            // sets up the position from the given FEN, 
 void SetMemorySize(int n);          // if n is different from last time, resize all tables to make memory usage below n MB
 char *MoveToText(Move move, int m); // converts the move from your internal format to text like e2e2, e1g1, a7a8q.
 Move ParseMove(Color stm, int ls, int le, char *moveText); // converts a long-algebraic text move to your internal move format
-int  SearchBestMove(Color stm, Move *move, Move *ponderMove, int retMSP);
+int  SearchBestMove(Color stm, Move *move, Move *ponderMove, const int oldMSP);
