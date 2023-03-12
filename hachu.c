@@ -701,7 +701,7 @@ printf("# stand pat %d (beta=%d)\n", bestScore, beta);
 if(PATH) printf("# phase=%2d: (%4d:%4d:%4d) depth=%d:%d (%d) 0x%05X\n", phase, firstMove, curMove, msp, iterDep, depth, resDep, moveStack[msp-1]);
       // MOVE SOURCE
       if(curMove >= msp) { // we ran out of moves; generate some new
-moveStack[curMove] = INVALID;
+        moveStack[curMove] = INVALID; // invalidate cache in case move generation fails
 if(PATH) printf("# new moves (%4d:%4d:%4d) phase=%d\n", firstMove, curMove, msp, phase);
         switch(phase) {
           case 0: // null move
