@@ -43,46 +43,48 @@ IsEmpty (int sqr)
 }
 
 static inline int
-PromotionFlags (int from, int y)
+PromotionFlags (Move move)
 {
-  MoveInfo info = MoveToInfo(MOVE(from, y));
+  MoveInfo info = MoveToInfo(move);
   int promo = promoBoard[info.to];
-  if( info.path[0] != ABSENT ) promo |= promoBoard[info.path[0]];
-  if( info.path[1] != ABSENT ) promo |= promoBoard[info.path[1]];
-  return entryProm ? ( promo & ~promoBoard[from] & CAN_PROMOTE )
-                   : ( promo |  promoBoard[from] );
+  if(info.path[0] != ABSENT) promo |= promoBoard[info.path[0]];
+  if(info.path[1] != ABSENT) promo |= promoBoard[info.path[1]];
+  return entryProm ? (promo & ~promoBoard[info.from] & CAN_PROMOTE)
+                   : (promo |  promoBoard[info.from]);
 }
 
 static inline int
 NewNonCapture (int from, int y, int promoFlags, int msp)
 {
-  if( PromotionFlags(from, y) & promoFlags) {        // piece can promote with this move
-    moveStack[msp++] = moveStack[nonCapts];          // create space for promotion
-    moveStack[nonCapts++] = MOVE(from, y) | PROMOTE; // push promotion
+  Move move = MOVE(from, y);
+  if(PromotionFlags(move) & promoFlags) {         // piece can promote with this move
+    moveStack[msp++] = moveStack[nonCapts];       // create space for promotion
+    moveStack[nonCapts++] = move | PROMOTE;       // push promotion
     if((promoFlags & promoBoard[y] & (CANT_DEFER | DONT_DEFER | LAST_RANK)) == 0) { // deferral could be a better alternative
-      moveStack[msp++] = MOVE(from, y);              // push deferral
-      if( (promoBoard[from] & CAN_PROMOTE) == 0 ) {  // enters zone
-        moveStack[msp-1] |= DEFER;                   // flag that promo-suppression takes place after this move
+      moveStack[msp++] = move;                    // push deferral
+      if((promoBoard[from] & CAN_PROMOTE) == 0) { // enters zone
+        moveStack[msp-1] |= DEFER;                // flag that promo-suppression takes place after this move
       }
     }
   } else
-    moveStack[msp++] = MOVE(from, y); // push non-promotion move
+    moveStack[msp++] = move; // push non-promotion move
   return msp;
 }
 
 static inline int
 NewCapture (int from, int y, int promoFlags, int msp)
 {
-  if( PromotionFlags(from, y) & promoFlags) {       // piece can promote with this move
-    moveStack[msp++] = MOVE(from, y) | PROMOTE;     // push promotion
+  Move move = MOVE(from, y);
+  if(PromotionFlags(move) & promoFlags) {         // piece can promote with this move
+    moveStack[msp++] = move | PROMOTE;            // push promotion
     if((promoFlags & promoBoard[y] & (CANT_DEFER | DONT_DEFER | LAST_RANK)) == 0) { // deferral could be a better alternative
-      moveStack[msp++] = MOVE(from, y);             // push deferral
-      if( (promoBoard[from] & CAN_PROMOTE) == 0 ) { // enters zone
-        moveStack[msp-1] |= DEFER;                  // flag that promo-suppression takes place after this move
+      moveStack[msp++] = move;                    // push deferral
+      if((promoBoard[from] & CAN_PROMOTE) == 0) { // enters zone
+        moveStack[msp-1] |= DEFER;                // flag that promo-suppression takes place after this move
       }
     }
   } else
-    moveStack[msp++] = MOVE(from, y); // push non-promotion move
+    moveStack[msp++] = move; // push non-promotion move
   return msp;
 }
 
