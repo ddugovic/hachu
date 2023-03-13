@@ -580,11 +580,11 @@ FireSet (Color c, UndoInfo *tb)
 void TerminationCheck(Color stm);
 
 int
-Search (Color stm, int alpha, int beta, int difEval, int depth, int lmr, int oldPromo, int promoSuppress, int threshold, const int oldMSP)
+Search (Color stm, int alpha, int beta, int difEval, int depth, int lmr, int oldPromo, int promoSuppress, int threshold, int msp)
 {
   int i, j, k, king, defer, autoFail=0, late=100000, ep;
   Flag inCheck=0;
-  int firstMove, msp, curMove, sorted, bestMoveNr=0;
+  int firstMove, curMove, sorted, bestMoveNr=0;
   int resDep=0, iterDep, ext;
   int myPV=pvPtr;
   int score, bestScore=0, oldBest, curEval, iterAlpha;
@@ -643,7 +643,7 @@ printf("\n# search(%d) {%d,%d} eval=%d stm=%d ",level,alpha,beta,difEval,stm);
   pv[pvPtr++] = 0; // start empty PV, directly behind PV of parent
   if(inCheck) lmr = 0; else depth -= lmr; // no LMR of checking moves
 
-  firstMove = j = curMove = sorted = msp = oldMSP; // leave 50 empty slots in front of move list
+  firstMove = j = curMove = sorted = msp; // leave 50 empty slots in front of move list
   iterDep = -(depth == 0); tb.fireMask = 0;
 
 #if 0
@@ -715,7 +715,7 @@ if(PATH) printf("%d:%d null move\n", level, depth);
 if(PATH) printf("%d:%d null move score = %d\n", level, depth, score);
 level--;
               stm ^= WHITE;
-              if(score >= beta) { msp = oldMSP; retDep += 3; pvPtr = myPV; return score + (score < curEval); }
+              if(score >= beta) { retDep += 3; pvPtr = myPV; return score + (score < curEval); }
 //              else depth += lmr, lmr = 0;
             }
 #endif
@@ -987,7 +987,6 @@ if(PATH) printf("%d:%2d:%2d %d 0x%05X %s %d %d (%d)\n", level, depth, iterDep, c
 leave:
   retFirst = firstMove;
   retMSP = msp;
-  msp = oldMSP; // pop move list
   pvPtr = myPV; // pop PV
   retMove = bestMoveNr ? moveStack[bestMoveNr] : INVALID;
   retDep = resDep - (inCheck & depth >= QSDEPTH) + lmr;
