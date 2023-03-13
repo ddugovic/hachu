@@ -73,6 +73,12 @@ typedef struct {
 } HashEntry; // hash-table entry
 
 typedef struct {
+  unsigned int from;
+  unsigned int to;
+  unsigned int path[2];
+} MoveInfo; // future work: replace Move
+
+typedef struct {
   char *name, *promoted;
   int value;
   MoveType range[RAYS];

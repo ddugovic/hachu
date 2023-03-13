@@ -50,7 +50,6 @@
 #define P_WHITE     0x0F
 #define P_BLACK     0xF0
 
-char *MoveToText(Move move, int m);     // from WB driver
 void pmap(Color color);
 void pboard(int *b);
 void pbytes(Flag *b);
@@ -90,6 +89,7 @@ Flag InCheck(Color stm, int level); // generates attack maps, and determines if 
 void UnMake2(Move move);            // unmakes the move;
 Color Setup2(char *fen);            // sets up the position from the given FEN, and returns the new side to move
 void SetMemorySize(int n);          // if n is different from last time, resize all tables to make memory usage below n MB
+MoveInfo MoveToInfo(Move move);     // unboxes (from, to, path)
 char *MoveToText(Move move, int m); // converts the move from your internal format to text like e2e2, e1g1, a7a8q.
 Move ParseMove(Color stm, int ls, int le, char *moveText); // converts a long-algebraic text move to your internal move format
-int  SearchBestMove(Color stm, Move *move, Move *ponderMove, int msp);
+int SearchBestMove(Color stm, Move *move, Move *ponderMove, int msp);

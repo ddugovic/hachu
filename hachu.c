@@ -7,8 +7,6 @@
 
 // TODO:
 // in GenCapts we do not generate jumps of more than two squares yet
-// promotions by pieces with Lion power stepping in & out the zone in same turn
-// promotion on capture
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,10 +43,20 @@ IsEmpty (int sqr)
 }
 
 static inline int
+PromotionFlags (int from, int y)
+{
+  MoveInfo info = MoveToInfo(MOVE(from, y));
+  int promo = promoBoard[info.to];
+  if( info.path[0] != ABSENT ) promo |= promoBoard[info.path[0]];
+  if( info.path[1] != ABSENT ) promo |= promoBoard[info.path[1]];
+  return entryProm ? ( promo & ~promoBoard[from] & CAN_PROMOTE )
+                   : ( promo |  promoBoard[from] );
+}
+
+static inline int
 NewNonCapture (int from, int y, int promoFlags, int msp)
 {
-  if( (entryProm ? promoBoard[(y < BSIZE ? y : from)] & ~promoBoard[from] & CAN_PROMOTE
-                 : promoBoard[(y < BSIZE ? y : from)] |  promoBoard[from]       ) & promoFlags ){ // piece can promote with this move
+  if( PromotionFlags(from, y) & promoFlags) {        // piece can promote with this move
     moveStack[msp++] = moveStack[nonCapts];          // create space for promotion
     moveStack[nonCapts++] = MOVE(from, y) | PROMOTE; // push promotion
     if((promoFlags & promoBoard[y] & (CANT_DEFER | DONT_DEFER | LAST_RANK)) == 0) { // deferral could be a better alternative
@@ -65,8 +73,7 @@ NewNonCapture (int from, int y, int promoFlags, int msp)
 static inline int
 NewCapture (int from, int y, int promoFlags, int msp)
 {
-  if( (entryProm ? promoBoard[(y < BSIZE ? y : from)] & ~promoBoard[from] & CAN_PROMOTE
-                 : promoBoard[(y < BSIZE ? y : from)] |  promoBoard[from]       ) & promoFlags ){ // piece can promote with this move
+  if( PromotionFlags(from, y) & promoFlags) {       // piece can promote with this move
     moveStack[msp++] = MOVE(from, y) | PROMOTE;     // push promotion
     if((promoFlags & promoBoard[y] & (CANT_DEFER | DONT_DEFER | LAST_RANK)) == 0) { // deferral could be a better alternative
       moveStack[msp++] = MOVE(from, y);             // push deferral
@@ -764,14 +771,14 @@ if(PATH) printf("# phase=%d autofail end (%4d:%4d:%4d)\n", phase, firstMove, cur
             }
             phase = 4; // out of victims: all captures generated
             if(chessFlag && (ep = promoSuppress & SQUARE) != ABSENT) { // e.p. rights. Create e.p. captures as Lion moves
-                int n = board[ep-1], old = msp; // a-side neighbor of pushed pawn
-                if( n != EMPTY && (n&TYPE) == stm && p[n].value == pVal ) msp = NewCapture(ep-1, SPECIAL + 20 - 4*stm, 0, msp);
-                n = board[ep+1];      // h-side neighbor of pushed pawn
-                if( n != EMPTY && (n&TYPE) == stm && p[n].value == pVal ) msp = NewCapture(ep+1, SPECIAL + 52 - 4*stm, 0, msp);
+                int n = board[ep + STEP(0, -1)], old = msp; // a-side neighbor of pushed pawn
+                if( n != EMPTY && (n&TYPE) == stm && p[n].value == pVal ) msp = NewCapture(ep + STEP(0, -1), SPECIAL + RAY(2, stm==WHITE ? 0 : RAYS/2), 0, msp);
+                n = board[ep + STEP(0, 1)];      // h-side neighbor of pushed pawn
+                if( n != EMPTY && (n&TYPE) == stm && p[n].value == pVal ) msp = NewCapture(ep + STEP(0, 1), SPECIAL + RAY(6, stm==WHITE ? 0 : RAYS/2), 0, msp);
                 if(msp != old) goto extractMove; // one or more e.p. capture were generated
             }
           case 4: // dubious captures
-#if 0
+#if 0 // HGM
             while( dubious < framePtr + 250 ) // add dubious captures back to move stack
               moveStack[msp++] = moveStack[dubious++];
             if(curMove != msp) break;
@@ -1111,8 +1118,26 @@ SetMemorySize (int n)
 #endif
 }
 
+MoveInfo
+MoveToInfo (Move move)
+{
+  MoveInfo info = { .from = FROM(move), .to = move & SQUARE, .path = { EDGE, EDGE } };
+  if(info.to >= SPECIAL) {
+    int i = info.to - SPECIAL;
+    if(info.to < CASTLE) {
+      if(ep2List[i]) {
+        info.path[1] = info.from + ep2List[i];
+      }
+      info.path[0] = info.from + epList[i];
+    }
+    // decode (ray-based) lion move or castling move
+    info.to = info.from + toList[i];
+  }
+  return info;
+}
+
 char *
-MoveToText (Move move, int multiLine)
+MoveToText (Move move, int multiLine) // copied from WB driver
 {
   static char buf[50];
   int from = FROM(move), to = move & SQUARE;
