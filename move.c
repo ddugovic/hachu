@@ -13,11 +13,9 @@
 #include "types.h"
 #include "variant.h"
 
-#if 0
 int sup0, sup1, sup2; // promo suppression squares
 int repCnt;
 char *reason;
-#endif
 
 MoveInfo
 MoveToInfo (Move move)

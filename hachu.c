@@ -46,9 +46,9 @@
 HashBucket *hashTable;
 int hashMask;
 
-char abortFlag, fenArray[4000], startPos[4000], *reason;
+char abortFlag, fenArray[4000], startPos[4000];
 int nonCapts, retFirst, retMSP, retDep, pvPtr;
-int nodes, startTime, lastRootMove, lastRootIter, tlim1, tlim2, tlim3, repCnt, comp;
+int nodes, startTime, lastRootMove, lastRootIter, tlim1, tlim2, tlim3, comp;
 Move ponderMove;
 Move retMove, moveStack[20000], variation[FIFTY*COLORS], repStack[LEVELS+(FIFTY*COLORS)], pv[1000], repeatMove[LEVELS+(FIFTY*COLORS)], killer[FIFTY*COLORS][2];
 Flag checkStack[LEVELS+(FIFTY*COLORS)];
@@ -1063,7 +1063,6 @@ pmoves(int start, int end)
     Move gameMove[MAXMOVES]; // holds the game history
 
 UndoInfo undoInfo;
-int sup0, sup1, sup2; // promo suppression squares
 int lastLift, lastPut;
 
 Color

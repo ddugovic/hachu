@@ -11,11 +11,9 @@
 
 #define REP_MASK 0xFFFFFF
 
-#if 0
 extern int sup0, sup1, sup2; // promo suppression squares
 extern int repCnt;
 extern char *reason;
-#endif
 
 MoveInfo MoveToInfo(Move move);     // unboxes (from, to, path)
 char *MoveToText(Move move, int m); // converts the move from your internal format to text like e2e2, e1g1, a7a8q.
