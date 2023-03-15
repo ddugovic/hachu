@@ -39,7 +39,6 @@
 
 #define H_UPPER 2
 #define H_LOWER 1
-#define REP_MASK 0xFFFFFF
 #define FIFTY 50
 #define LEVELS 200
 
