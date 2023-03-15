@@ -14,6 +14,7 @@
 #include <signal.h>
 #include <stdint.h>
 #include "hachu.h"
+#include "move.h"
 #include "piece.h"
 #include "types.h"
 #include "variant.h"
@@ -63,12 +64,6 @@ int resign;         // engine-defined option
 int contemptFactor; // likewise
 int seed;
 int tsume, pvCuts, allowRep, entryProm=1, okazaki;
-
-static inline Flag
-IsEmpty (int sqr)
-{
-  return board[sqr] == EMPTY;
-}
 
 static inline int
 PromotionFlags (Move move)
@@ -1147,62 +1142,6 @@ SetMemorySize (int n)
     l = (intptr_t) realHash; hashTable = (HashBucket*) (l & ~63UL); // align with cache line
   }
 #endif
-}
-
-MoveInfo
-MoveToInfo (Move move)
-{
-  MoveInfo info = { .from = FROM(move), .to = move & SQUARE, .path = { EDGE, EDGE } };
-  if(info.to >= SPECIAL) {
-    int i = info.to - SPECIAL;
-    if(info.to < CASTLE) {
-      if(ep2List[i]) {
-        info.path[1] = info.from + ep2List[i];
-      }
-      info.path[0] = info.from + epList[i];
-    }
-    // decode (ray-based) lion move or castling move
-    info.to = info.from + toList[i];
-  }
-  return info;
-}
-
-char *
-MoveToText (Move move, int multiLine) // copied from WB driver
-{
-  static char buf[50];
-  int from = FROM(move), to = move & SQUARE;
-  char *promoChar = "";
-  if(from == to) { sprintf(buf, "@@@@"); return buf; } // null-move notation in WB protocol
-  buf[0] = '\0';
-  if(to >= SPECIAL) {
-   if(to < CASTLE) { // castling is printed as a single move, implying its side effects
-    int e = from + epList[to - SPECIAL];
-    if(ep2List[to - SPECIAL]) {
-      int e2 = from + ep2List[to - SPECIAL];
-//      printf("take %c%d\n", FILECH(e), RANK(e));
-      sprintf(buf+strlen(buf), "%c%d%c%d,", FILECH(from), RANK(from), FILECH(e2), RANK(e2)); from = e2;
-      if(multiLine) printf("move %s\n", buf), buf[0] = '\0';
-    }
-//    printf("take %c%d\n", FILECH(e), RANK(e));
-    sprintf(buf, "%c%d%c%d,", FILECH(from), RANK(from), FILECH(e), RANK(e)); from = e;
-    if(multiLine) printf("move %s\n", buf), buf[0] = '\0';
-   }
-   to = FROM(move) + toList[to - SPECIAL];
-  }
-  if(move & PROMOTE) promoChar = makrukFlag ? "m" : wolfFlag ? "r" : repDraws ? "q" : "+";
-  sprintf(buf+strlen(buf), "%c%d%c%d%s", FILECH(from), RANK(from), FILECH(to), RANK(to), promoChar);
-  return buf;
-}
-
-int
-ReadSquare (char *p, int *sqr)
-{
-  int f, r;
-  f = p[0] - 'a';
-  r = atoi(p+1) - 1;
-  *sqr = POS(r, f);
-  return 2 + (r + 1 > 9);
 }
 
 int

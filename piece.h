@@ -31,6 +31,7 @@
 #define PST_LANCE   11
 #define PSTSIZE     12 // number of PST types
 
+Flag IsEmpty (int sqr);
 PieceDesc *ListLookUp(char *name, PieceDesc *list);
 PieceDesc *LookUp(char *name, int var);
 void DeletePiece(Color c, int n);

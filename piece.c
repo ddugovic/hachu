@@ -98,6 +98,12 @@ Flag promoBoard[BSIZE] = { [0 ... BSIZE-1] = 0 }; // flags to indicate promotion
 Flag fireBoard[BSIZE]; // flags to indicate squares controlled by Fire Demons
 signed char psq[PSTSIZE][BSIZE] = { 0 }; // cache of piece-value-per-square
 
+Flag
+IsEmpty (int sqr)
+{
+  return board[sqr] == EMPTY;
+}
+
 PieceDesc *
 ListLookUp (char *name, PieceDesc *list)
 { // find piece of given name in list of descriptors
