@@ -36,6 +36,34 @@
 #define KYLIN 100 /* extra end-game value of Kylin for promotability */
 #define PROMO 0 /* extra bonus for 'vertical' piece when it actually promotes (diagonal pieces get half) */
 
+#define H_UPPER 2
+#define H_LOWER 1
+#define REP_MASK 0xFFFFFF
+#define FIFTY 50
+#define LEVELS 200
+
+HashBucket *hashTable;
+int hashMask;
+
+char abortFlag, fenArray[4000], startPos[4000], *reason;
+int nonCapts, retFirst, retMSP, retDep, pvPtr;
+int nodes, startTime, lastRootMove, lastRootIter, tlim1, tlim2, tlim3, repCnt, comp;
+Move ponderMove;
+Move retMove, moveStack[20000], variation[FIFTY*COLORS], repStack[LEVELS+(FIFTY*COLORS)], pv[1000], repeatMove[LEVELS+(FIFTY*COLORS)], killer[FIFTY*COLORS][2];
+Flag checkStack[LEVELS+(FIFTY*COLORS)];
+
+int level, maxDepth, mobilityScore; // used by search
+
+// Parameters that control search behavior
+int ponder;
+int randomize;
+int postThinking;
+int noCut=1;        // engine-defined option
+int resign;         // engine-defined option
+int contemptFactor; // likewise
+int seed;
+int tsume, pvCuts, allowRep, entryProm=1, okazaki;
+
 static inline Flag
 IsEmpty (int sqr)
 {
@@ -88,7 +116,7 @@ NewCapture (int from, int y, int promoFlags, int msp)
   return msp;
 }
 
-char mapStep[] = { 7, 8, 1, -6, -7, -8, -1, 6 };
+char mapStep[RAYS] = { 7, 8, 1, -6, -7, -8, -1, 6 };
 char rowMask[] = { 0100, 0140, 0160, 070, 034, 016, 07, 03, 01 };
 
 int
@@ -121,9 +149,10 @@ MarkBurns (Color stm, int x)
 { // make bitmap of squares in FI (7x7) neighborhood where opponents can be captured or burned
   char rows[9];
   int r=x>>5, f=x&15, top=8, bottom=0, b=0, t=8, left=0, right=8; // 9x9 area; assumes 32x16 board
-  if(r < 4) bottom = 4 - r, rows[b=bottom-1] = 0;
-  else if(r > 11) top   = 19 - r, rows[t=top+1] = 0; // adjust area to board edges
-  if(f < 4) left   = 4 - f; else if(f > 11) right = 19 - f;
+  if(r < 4)      bottom =  4 - r, rows[b=bottom-1] = 0;
+  else if(r > 11)   top = 19 - r, rows[t=top+1] = 0; // adjust area to board edges
+  if(f < 4)        left =  4 - f;
+  else if(f > 11) right = 19 - f;
   for(r=bottom; r<=top; r++) {
     int mask = 0, y = x + 16*r;
     for(f=left; f <= right; f++) {
@@ -586,7 +615,7 @@ FireSet (Color c, UndoInfo *tb)
     if(p[i].pos != ABSENT) tb->fireMask |= fireFlags[i-2];
 }
 
-void TerminationCheck(Color stm);
+char TerminationCheck(Color stm);
 
 int
 Search (Color stm, int alpha, int beta, int difEval, int depth, int lmr, int oldPromo, int promoSuppress, int threshold, int msp)
@@ -648,7 +677,7 @@ printf("\n# search(%d) {%d,%d} eval=%d stm=%d ",level,alpha,beta,difEval,stm);
   alpha -= (alpha < curEval);
   beta  -= (beta <= curEval);
 
-  if(!(nodes++ & 4095)) TerminationCheck(stm);
+  if(!(nodes++ & 4095)) abortFlag = TerminationCheck(stm);
   pv[pvPtr++] = 0; // start empty PV, directly behind PV of parent
   if(inCheck) lmr = 0; else depth -= lmr; // no LMR of checking moves
 
@@ -718,7 +747,7 @@ if(PATH) printf("# new moves (%4d:%4d:%4d) phase=%d\n", firstMove, curMove, msp,
             if(depth > QSDEPTH && curEval >= beta && !inCheck && filling > 10) {
               int nullDep = depth - 3;
               stm ^= WHITE;
-path[level++] = INVALID;
+variation[level++] = INVALID;
 if(PATH) printf("%d:%d null move\n", level, depth);
               int score = -Search(stm, -beta, 1-beta, -difEval, nullDep<QSDEPTH ? QSDEPTH : nullDep, 0, promoSuppress & SQUARE, ABSENT, INF, msp);
 if(PATH) printf("%d:%d null move score = %d\n", level, depth, score);
@@ -869,7 +898,7 @@ printf("#       repetition %d\n", i);
         if(repDraws) { score = 0; goto repetition; }
         if(!allowRep) {
           moveStack[curMove] = INVALID; // erase forbidden repetition move
-          if(!level) repeatMove[repCnt++] = move & 0xFFFFFF; // remember outlawed move
+          if(!level) repeatMove[repCnt++] = move & REP_MASK; // remember outlawed move
         } else { // check for perpetuals (TODO: count consecutive checks)
           Flag repCheck = inCheck;
 #if 0 // HGM
@@ -882,7 +911,7 @@ printf("#       repetition %d\n", i);
       }
       repStack[level+LEVELS] = hashKeyH;
 
-path[level++] = move;
+variation[level++] = move;
 mobilityScore = MapAttacks(level); // for as long as incremental update does not work.
 //if(PATH) pmap(stm);
       if(chuFlag && (p[tb.victim].value == LVAL || p[tb.epVictim[0]].value == LVAL)) {// verify legality of Lion capture in Chu Shogi
@@ -900,7 +929,7 @@ printf("#       revalidate %d 0x%04X %s\n", level, moveStack[curMove], MoveToTex
           defer |= PROMOTE;                         // if we started, flag  he cannot do it in reply
         }
         if(score == -INF) {
-          if(level == 1) repeatMove[repCnt++] = move & 0xFFFFFF | (p[tb.piece].value == LVAL ? 3<<24 : 1 << 24);
+          if(level == 1) repeatMove[repCnt++] = move & REP_MASK | (p[tb.piece].value == LVAL ? 3<<24 : 1 << 24);
           moveStack[curMove] = INVALID; // zap illegal lion moves
           goto abortMove;
         }
@@ -1274,7 +1303,7 @@ printf("# deferral of %d\n", deferred);
     if(i >= listEnd) {
       for(i=listStart; i<listEnd; i++) printf("# %d. %08x %08x %s\n", i-50, moveStack[i], ret, MoveToText(moveStack[i], 0));
       reason = NULL;
-      for(i=0; i<repCnt; i++) {if((repeatMove[i] & 0xFFFFFF) == ret) {
+      for(i=0; i<repCnt; i++) {if((repeatMove[i] & REP_MASK) == ret) {
         if(repeatMove[i] & 1<<24) reason = (repeatMove[i] & 1<<25 ? "Distant capture of protected Lion" : "Counterstrike against Lion");
         else reason = "Repeats earlier position";
         break;
@@ -1388,8 +1417,7 @@ printf("\n");
   return score;
 }
 
-
-    Color TakeBack(int n)
+    Color TakeBack (int n)
     { // reset the game and then replay it to the desired point
       int last;
       Color stm;
@@ -1411,7 +1439,6 @@ printf("# setup done");fflush(stdout);
 
     void GetLine(Color stm, Flag root)
     {
-
       int i, c;
       while(1) {
         // wait for input, and read it until we have collected a complete line
@@ -1445,18 +1472,19 @@ printf("# ponder hit\n");
       }
     }
 
-    void
-    TerminationCheck(Color stm)
+    char
+    TerminationCheck (Color stm)
     {
-      if(abortFlag < 0) { // check for input
+      if(abortFlag < 0) { // pondering; check for input
         if(InputWaiting()) GetLine(stm, 0); // read & examine input command
-      } else {        // check for time
+      } else {            // check for time
         if(GetTickCount() - startTime > tlim3) abortFlag = 2;
       }
+      return abortFlag;
     }
 
     int
-    main()
+    main ()
     {
       int engineSide=NONE;                // side played by engine
       Color stm=BLACK;
@@ -1478,7 +1506,7 @@ printf("# ponder hit\n");
         if(retMSP == 0) retMSP = ListMoves(stm, retFirst, retMSP); // always maintain a list of legal moves in root position
         abortFlag = -(ponder && INVERT(stm) == engineSide && moveNr); // pondering and opponent on move
         if(stm == engineSide || abortFlag && ponderMove) {         // if it is the engine's turn to move, set it thinking, and let it move
-printf("# start search: stm=%d engine=%d ponder=%d abort=%d\n", stm, engineSide, ponder, abortFlag);
+printf("# start %s: stm=%d engine=%d ponder=%d\n", abortFlag == -1 ? "ponder" : "searcH", stm, engineSide, ponder);
           if(abortFlag) {
             stm = MakeMove2(stm, ponderMove);                           // for pondering, play speculative move
             gameMove[moveNr++] = ponderMove;                            // remember in game
