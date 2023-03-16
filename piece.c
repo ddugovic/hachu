@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "eval.h"
 #include "piece.h"
 #include "types.h"
 #include "variant.h"
@@ -96,7 +97,6 @@ int attacksByLevel[LEVELS][COLORS][BSIZE];
 
 Flag promoBoard[BSIZE] = { [0 ... BSIZE-1] = 0 }; // flags to indicate promotion zones
 Flag fireBoard[BSIZE]; // flags to indicate squares controlled by Fire Demons
-signed char psq[PSTSIZE][BSIZE] = { 0 }; // cache of piece-value-per-square
 
 Flag
 IsEmpty (int sqr)

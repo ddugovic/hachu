@@ -16,21 +16,6 @@
 #define P_WHITE     0x0F
 #define P_BLACK     0xF0
 
-// Piece-Square Tables/Flags
-#define PST_NEUTRAL  0
-#define PST_STEPPER  1
-#define PST_JUMPER   2
-#define PST_SLIDER   3
-#define PST_TRAP     4
-#define PST_CENTER   5
-#define PST_PPROM    6
-#define PST_ZONDIST  7
-#define PST_ADVANCE  8
-#define PST_RETRACT  9
-#define PST_FLYER   10
-#define PST_LANCE   11
-#define PSTSIZE     12 // number of PST types
-
 Flag IsEmpty (int sqr);
 PieceDesc *ListLookUp(char *name, PieceDesc *list);
 PieceDesc *LookUp(char *name, int var);
@@ -147,8 +132,6 @@ extern int attacksByLevel[LEVELS][COLORS][BSIZE];
 #define ATTACK(pos, color) attacks[color][pos]
 extern Flag promoBoard[BSIZE];   // flags to indicate promotion zones
 extern Flag fireBoard[BSIZE];    // flags to indicate squares controlled by Fire Demons
-extern signed char psq[PSTSIZE][BSIZE]; // cache of piece-value-per-square
-#define PSQ(type, sq, color) psq[type][color == BLACK ? sq : BSIZE-sq-1]
 
 // Maximum of (ranks, files) of ray between squares
 #define dist(s1, s2) MAX(abs((s1-s2)/BW), abs((s1-s2)%BW))

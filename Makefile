@@ -12,8 +12,8 @@ ALL= hachu hachu.6.gz
 
 all: ${ALL}
 
-hachu: hachu.o move.o piece.o variant.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) hachu.o move.o piece.o variant.o $(LDFLAGS) -o hachu
+hachu: eval.o hachu.o move.o piece.o variant.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) eval.o hachu.o move.o piece.o variant.o $(LDFLAGS) -o hachu
 
 %.o: %.c %.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
