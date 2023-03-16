@@ -25,4 +25,25 @@
 
 extern signed char psq[PSTSIZE][BSIZE]; // cache of piece-value-per-square
 #define PSQ(type, sq, color) psq[type][color == BLACK ? sq : BSIZE-sq-1]
+
+typedef struct {
+  int lock[5];
+  Move move[5];
+  short int score[5];
+  char depth[5];
+  char flag[5];
+  char age[4];
+} HashBucket;
+
+typedef struct {
+  int lock;
+  Move move;
+  Flag upper; // bound type
+  Flag lower; // bound type
+  char depthU;
+  char depthL;
+  char flags;
+  char age;
+} HashEntry; // hash-table entry
+
 #endif

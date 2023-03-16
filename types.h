@@ -53,26 +53,6 @@ typedef unsigned int Move;
 typedef signed char MoveType;
 
 typedef struct {
-  int lock[5];
-  Move move[5];
-  short int score[5];
-  char depth[5];
-  char flag[5];
-  char age[4];
-} HashBucket;
-
-typedef struct {
-  int lock;
-  Move move;
-  Flag upper; // bound type
-  Flag lower; // bound type
-  char depthU;
-  char depthL;
-  char flags;
-  char age;
-} HashEntry; // hash-table entry
-
-typedef struct {
   unsigned int from;
   unsigned int to;
   unsigned int path[2];
