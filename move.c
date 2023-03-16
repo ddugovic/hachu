@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "hachu.h" // TODO: reduce dependency on ListMoves/Search
 #include "move.h"
 #include "piece.h"
 #include "types.h"
@@ -73,7 +74,6 @@ ReadSquare (char *p, int *sqr)
   return 2 + (r + 1 > 9);
 }
 
-#if 0
 Move
 ParseMove (Color stm, int listStart, int listEnd, char *moveText, Move *moveStack, Move *repeatMove, int *retMSP)
 {
@@ -159,4 +159,3 @@ printf("# deferral of %d\n", deferred);
   }
   return (i >= listEnd ? INVALID : moveStack[i]);
 }
-#endif

@@ -13,6 +13,7 @@
 #include <string.h>
 #include <signal.h>
 #include <stdint.h>
+#include <time.h>
 #include "hachu.h"
 #include "move.h"
 #include "piece.h"
@@ -41,6 +42,35 @@
 #define H_LOWER 1
 #define FIFTY 50
 #define LEVELS 200
+
+#ifdef WIN32
+#include <windows.h>
+     int InputWaiting()
+     {  // checks for waiting input in pipe
+        static int pipe, init;
+        static HANDLE inp;
+        DWORD cnt;
+
+        if(!init) inp = GetStdHandle(STD_INPUT_HANDLE);
+        if(!PeekNamedPipe(inp, NULL, 0, NULL, &cnt, NULL)) return 1;
+        return cnt;
+    }
+#else
+#include <sys/time.h>
+#include <sys/ioctl.h>
+     int InputWaiting()
+     {
+        int cnt;
+        if(ioctl(0, FIONREAD, &cnt)) return 1;
+        return cnt;
+     }
+     int GetTickCount() // with thanks to Tord
+     {
+        struct timeval t;
+        gettimeofday(&t, NULL);
+        return t.tv_sec*1000 + t.tv_usec/1000;
+     }
+#endif
 
 HashBucket *hashTable;
 int hashMask;
@@ -1164,94 +1194,6 @@ printf("last=%d nc=%d retMSP=%d\n", listEnd, nonCapts, retMSP);
   return listEnd;
 }
 
-Move
-ParseMove (Color stm, int listStart, int listEnd, char *moveText)
-{
-  int i, j, f, t, t2, e, ret, deferred=0;
-  char c = moveText[0];
-  moveText += ReadSquare(moveText, &f);
-  moveText += ReadSquare(moveText, &t); t2 = t;
-  if(*moveText == ',') {
-    moveText++;
-    moveText += ReadSquare(moveText, &e);
-    if(e != t) return INVALID; // must continue with same piece
-    e = t;
-    moveText += ReadSquare(moveText, &t);
-    for(i=0; i<RAYS; i++) if(f + kStep[i] == e) break;
-    if(i >= RAYS) { // first leg not King step. Try Lion Dog 2+1 or 2-1
-      for(i=0; i<RAYS; i++) if(f + 2*kStep[i] == e) break;
-      if(i >= RAYS) return INVALID; // not even that
-      if(f + 3*kStep[i] == t)    t2 = SPECIAL + 72 + i; // 2+1
-      else if(f + kStep[i] == t) t2 = SPECIAL + 88 + i; // 2-1
-      else return INVALID;
-    } else if(f + 3*kStep[i] == t) { // Lion Dog 1+2 move
-      t2 = SPECIAL + 64 + i;
-    } else if(*moveText == ',') { // 3rd leg follows!
-      moveText++;
-      if(f + 2*kStep[i] != t) return INVALID; // 3-leg moves must be linear!
-      moveText += ReadSquare(moveText, &e);
-      if(e != t) return INVALID; // must again continue with same piece
-      moveText += ReadSquare(moveText, &t);
-      if(f + 3*kStep[i] == t)    t2 = SPECIAL + 80 + i; // 1+1+1
-      else if(f + kStep[i] == t) t2 = SPECIAL + 88 + i; // 2-1 entered as 1+1-1
-      else return INVALID;
-    } else {
-      for(j=0; j<RAYS; j++) if(e + kStep[j] == t) break;
-      if(j >= RAYS) return INVALID; // this rejects Lion Dog 1+2 moves!
-      t2 = SPECIAL + RAY(i, j);
-    }
-  } else if(chessFlag && board[f] != EMPTY && p[board[f]].value == pVal && IsEmpty(t)) { // Pawn to empty, could be e.p.
-      if(t == f + BW + 1) t2 = SPECIAL + 16; else
-      if(t == f + BW - 1) t2 = SPECIAL + 48; else
-      if(t == f - BW + 1) t2 = SPECIAL + 20; else
-      if(t == f - BW - 1) t2 = SPECIAL + 52; // fake double-move
-  } else if(currentVariant == V_LION && board[f] != EMPTY && p[board[f]].value == 280 && (t-f == 2 || f-t == 2)) { // castling
-      if(t == f+2 && f < BW) t2 = CASTLE;     else
-      if(t == f-2 && f < BW) t2 = CASTLE + 1; else
-      if(t == f+2 && f > BW) t2 = CASTLE + 2; else
-      if(t == f-2 && f > BW) t2 = CASTLE + 3;
-  }
-  ret = f<<SQLEN | t2;
-  if(currentVariant == V_WOLF && *moveText == 'w') *moveText = '\n';
-  if(*moveText != '\n' && *moveText != '=') ret |= PROMOTE;
-printf("# suppress = %c%d\n", FILECH(sup1), RANK(sup1));
-#if 1
-  // TODO: do not rely upon global retMSP assignment (castlings for Lion Chess)
-  retMSP = listEnd = ListMoves(stm, listStart, listEnd);
-#endif
-  for(i=listStart; i<listEnd; i++) {
-    if(moveStack[i] == INVALID) continue;
-    if(c == '@' && (moveStack[i] & SQUARE) == FROM(moveStack[i])) break; // any null move matches @@@@
-    if((moveStack[i] & (PROMOTE | DEFER-1)) == ret) break;
-    if((moveStack[i] & DEFER-1) == ret) deferred = i; // promoted version of entered non-promotion is legal
-  }
-printf("# moveNr = %d in {%d,%d}\n", i, listStart, listEnd);
-  if(i>=listEnd) { // no exact match
-    if(deferred) { // but maybe non-sensical deferral
-      int flags = p[board[f]].promoFlag;
-printf("# deferral of %d\n", deferred);
-      i = deferred; // in any case we take that move
-      if(!(flags & promoBoard[t] & (CANT_DEFER | LAST_RANK))) { // but change it into a deferral if that is allowed
-        moveStack[i] &= ~PROMOTE;
-        if(p[board[f]].value == 40) p[board[f]].promoFlag &= LAST_RANK;
-        else if(!(flags & promoBoard[f]) && currentVariant != V_WOLF) moveStack[i] |= DEFER; // came from outside zone, so essential deferral
-      }
-    }
-    if(i >= listEnd) {
-      for(i=listStart; i<listEnd; i++) printf("# %d. %08x %08x %s\n", i-50, moveStack[i], ret, MoveToText(moveStack[i], 0));
-      reason = NULL;
-      for(i=0; i<repCnt; i++) {if((repeatMove[i] & REP_MASK) == ret) {
-        if(repeatMove[i] & 1<<24) reason = (repeatMove[i] & 1<<25 ? "Distant capture of protected Lion" : "Counterstrike against Lion");
-        else reason = "Repeats earlier position";
-        break;
-      }
- printf("# %d. %08x %08x %s\n", i, repeatMove[i], ret, MoveToText(repeatMove[i], 0));
-}
-    }
-  }
-  return (i >= listEnd ? INVALID : moveStack[i]);
-}
-
 void
 Highlight (int listStart, int listEnd, char *coords)
 {
@@ -1571,7 +1513,7 @@ pboard(board);
         if(!strcmp(command, "hover"))   { continue; }
         if(!strcmp(command, ""))  {  continue; }
         if(!strcmp(command, "usermove")){
-          int move = ParseMove(stm, retFirst, retMSP, inBuf+9);
+          int move = ParseMove(stm, retFirst, retMSP, inBuf+9, moveStack, repeatMove, &retMSP);
 pboard(board);
           if(move == INVALID) {
             if(reason) printf("Illegal move {%s}\n", reason); else printf("%s\n", reason="Illegal move");
