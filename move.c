@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "board.h" // TODO: reduce dependency on bFiles
 #include "hachu.h" // TODO: reduce dependency on ListMoves/Search
 #include "move.h"
 #include "piece.h"

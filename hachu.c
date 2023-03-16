@@ -14,6 +14,7 @@
 #include <signal.h>
 #include <stdint.h>
 #include <time.h>
+#include "board.h"
 #include "eval.h"
 #include "hachu.h"
 #include "move.h"
