@@ -194,7 +194,7 @@ GenCastlings (Color stm, int msp)
 }
 
 int
-GenNonCapts (Color stm, int promoSuppress, int msp, Move *nullMove)
+GenNonCapts (Color stm, Move promoSuppress, int msp, Move *nullMove)
 {
   int i, j;
   *nullMove = ABSENT;
@@ -426,7 +426,7 @@ FireSet (Color c, UndoInfo *tb)
 char TerminationCheck(Color stm);
 
 Move
-LookupHashMove (Color stm, int alpha, int beta, int *depth, int *lmr, int oldPromo, int promoSuppress, int *bestMoveNr, int *bestScore, int *iterDep, int *resDep, HashKey *index, HashKey *hit)
+LookupHashMove (Color stm, int alpha, int beta, int *depth, int *lmr, Move oldPromo, Move promoSuppress, int *bestMoveNr, int *bestScore, int *iterDep, int *resDep, HashKey *index, HashKey *hit)
 {
   Move hashMove;
   HashKey nr = (hashKeyL >> 30) & 3; // top 2 bits of hashKeyL
@@ -436,7 +436,7 @@ LookupHashMove (Color stm, int alpha, int beta, int *depth, int *lmr, int oldPro
   else if(hashTable[*index].lock[4] == hashKeyH) *hit = 4;
   else { // decide on replacement
     if(*depth >= hashTable[*index].depth[nr] ||
-       *depth+1 == hashTable[*index].depth[nr] && !(nodes&3)) *hit = nr; else *hit = 4;
+       *depth+1 == hashTable[*index].depth[nr] && (nodes % 4 == 0)) *hit = nr; else *hit = 4;
     return INVALID;
   }
 
@@ -456,7 +456,7 @@ LookupHashMove (Color stm, int alpha, int beta, int *depth, int *lmr, int oldPro
 }
 
 int
-Search (Color stm, int alpha, int beta, int difEval, int depth, int lmr, int oldPromo, int promoSuppress, int threshold, int msp)
+Search (Color stm, int alpha, int beta, int difEval, int depth, int lmr, Move oldPromo, Move promoSuppress, int threshold, int msp)
 {
   int i, j, k, king, defer, autoFail=0, late=100000, ep;
   Flag inCheck=0;

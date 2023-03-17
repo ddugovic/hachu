@@ -14,7 +14,7 @@
 #include "types.h"
 #include "variant.h"
 
-int sup0, sup1, sup2; // promo suppression squares
+Move sup0, sup1, sup2; // promo suppression squares
 int repCnt;
 char *reason;
 

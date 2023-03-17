@@ -10,7 +10,7 @@
 
 #define REP_MASK 0xFFFFFF
 
-extern int sup0, sup1, sup2; // promo suppression squares
+extern Move sup0, sup1, sup2; // promo suppression squares
 extern int repCnt;
 extern char *reason;
 
