@@ -24,9 +24,6 @@
 #define C -12 /* capture only       */
 #define M -13 /* non-capture only   */
 
-#define LVAL 1000 /* piece value of Lion. Used in chu for recognizing it to implement Lion-trade rules  */
-#define FVAL 5000 /* piece value of Fire Demon. Used in code for recognizing moves with it and do burns */
-
 extern PieceDesc chuPieces[];
 extern PieceDesc shoPieces[];
 extern PieceDesc daiPieces[];

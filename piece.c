@@ -13,7 +13,6 @@
 #include "types.h"
 #include "variant.h"
 
-#define KYLIN 100 /* extra end-game value of Kylin for promotability */
 #define PROMO 0 /* extra bonus for 'vertical' piece when it actually promotes (diagonal pieces get half) */
 
 Vector direction[2*RAYS] = { // clockwise!

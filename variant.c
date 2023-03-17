@@ -5,6 +5,7 @@
 /* This source code is released in the public domain                      */
 /**************************************************************************/
 #include <stddef.h>
+#include "eval.h"
 #include "types.h"
 #include "variant.h"
 

@@ -8,6 +8,10 @@
 #define EVAL_H
 #include "types.h"
 
+#define LVAL 1000 /* piece value of Lion. Used in chu for recognizing it to implement Lion-trade rules  */
+#define FVAL 5000 /* piece value of Fire Demon. Used in code for recognizing moves with it and do burns */
+#define KYLIN 100 /* extra end-game value of Kylin for promotability */
+
 // Piece-Square Tables/Flags
 #define PST_NEUTRAL  0
 #define PST_STEPPER  1
@@ -25,6 +29,9 @@
 
 extern signed char psq[PSTSIZE][BSIZE]; // cache of piece-value-per-square
 #define PSQ(type, sq, color) psq[type][color == BLACK ? sq : BSIZE-sq-1]
+
+extern int hashKeyH, hashKeyL, rootEval, filling, promoDelta;
+extern int mobilityScore;
 
 typedef struct {
   int lock[5];
@@ -45,5 +52,11 @@ typedef struct {
   char flags;
   char age;
 } HashEntry; // hash-table entry
+
+int Evaluate(Color c, int tsume, int difEval);
+int Surround(Color c, int king, int start, int max);
+int Fortress(int forward, int king, int lion);
+int Ftest(int side);
+int Guard(int sqr);
 
 #endif

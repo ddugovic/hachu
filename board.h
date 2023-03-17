@@ -31,7 +31,7 @@ extern int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
 #define wolfFlag (currentVariant == V_WOLF)
 
 extern int pVal;
-extern int hashKeyH, hashKeyL, framePtr, rootEval, filling, promoDelta;
+extern int framePtr;
 extern int level, cnt50;
 
 extern Flag fireFlags[10]; // flags for Fire-Demon presence (last two are dummies, which stay 0, for compactify)

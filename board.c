@@ -13,13 +13,11 @@
 #include "types.h"
 #include "variant.h"
 
-#define KYLIN 100 /* extra end-game value of Kylin for promotability */
-
 VariantDesc *variant;
 int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
 
 int pVal;
-int hashKeyH=1, hashKeyL=1, framePtr, rootEval, filling, promoDelta;
+int framePtr;
 int cnt50;
 
 int board[BSIZE] = { [0 ... BSIZE-1] = EDGE };
