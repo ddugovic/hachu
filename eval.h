@@ -28,7 +28,9 @@
 extern signed char psq[PSTSIZE][BSIZE]; // cache of piece-value-per-square
 #define PSQ(type, sq, color) psq[type][color == BLACK ? sq : BSIZE-sq-1]
 
-extern int hashKeyH, hashKeyL, rootEval, filling, promoDelta;
+typedef unsigned int HashKey;
+extern HashKey hashKeyH, hashKeyL;
+extern int rootEval, filling, promoDelta;
 extern int mobilityScore;
 
 typedef struct {

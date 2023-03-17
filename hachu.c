@@ -425,6 +425,36 @@ FireSet (Color c, UndoInfo *tb)
 
 char TerminationCheck(Color stm);
 
+Move
+LookupHashMove (Color stm, int alpha, int beta, int *depth, int *lmr, int oldPromo, int promoSuppress, int *bestMoveNr, int *bestScore, int *iterDep, int *resDep, HashKey *index, HashKey *hit)
+{
+  Move hashMove;
+  HashKey nr = (hashKeyL >> 30) & 3; // top 2 bits of hashKeyL
+  *index = hashKeyL ^ 327*stm ^ (oldPromo + 987981)*(63121 + promoSuppress);
+  *index = *index + (*index >> 16) & hashMask;
+  if(hashTable[*index].lock[nr] == hashKeyH) *hit = nr;
+  else if(hashTable[*index].lock[4] == hashKeyH) *hit = 4;
+  else { // decide on replacement
+    if(*depth >= hashTable[*index].depth[nr] ||
+       *depth+1 == hashTable[*index].depth[nr] && !(nodes&3)) *hit = nr; else *hit = 4;
+    return INVALID;
+  }
+
+  *bestScore = hashTable[*index].score[*hit];
+  hashMove = hashTable[*index].move[*hit];
+
+  if((*bestScore <= alpha || hashTable[*index].flag[*hit] & H_LOWER) &&
+     (*bestScore >= beta  || hashTable[*index].flag[*hit] & H_UPPER)   ) {
+    *iterDep = *resDep = hashTable[*index].depth[*hit];
+    *bestMoveNr = 0;
+    if(!level) *iterDep = 0; // no hash cutoff in root
+    if(*lmr && *bestScore <= alpha && *iterDep == *depth) ++*depth, --*lmr; // self-deepening LMR
+    if(pvCuts && *iterDep >= *depth && hashMove && *bestScore < beta && *bestScore > alpha)
+      *iterDep = *depth - 1; // prevent hash cut in PV node
+  }
+  return hashMove;
+}
+
 int
 Search (Color stm, int alpha, int beta, int difEval, int depth, int lmr, int oldPromo, int promoSuppress, int threshold, int msp)
 {
@@ -437,7 +467,7 @@ Search (Color stm, int alpha, int beta, int difEval, int depth, int lmr, int old
   Move move, nullMove=ABSENT;
   UndoInfo tb;
 #ifdef HASH
-  Move hashMove; int index, nr, hit;
+  Move hashMove; HashKey index, hit;
 #endif
 /*if(PATH) pboard(board),pmap(BLACK);*/
 #if 0
@@ -496,31 +526,7 @@ printf("\n# search(%d) {%d,%d} eval=%d stm=%d ",level,alpha,beta,difEval,stm);
   printf("depth=%d iterDep=%d resDep=%d\n", depth, iterDep, resDep);
 #endif
 #ifdef HASH
-  index = hashKeyL ^ 327*stm ^ (oldPromo + 987981)*(63121 + promoSuppress);
-  index = index + (index >> 16) & hashMask;
-  nr = (hashKeyL >> 30) & 3; hit = -1;
-  if(hashTable[index].lock[nr] == hashKeyH) hit = nr;
-  else if(hashTable[index].lock[4]  == hashKeyH) hit = 4;
-#if 0
-printf("# probe hash index=%x hit=%d\n", index, hit);
-#endif
-  if(hit >= 0) {
-    bestScore = hashTable[index].score[hit];
-    hashMove = hashTable[index].move[hit];
-
-    if((bestScore <= alpha || hashTable[index].flag[hit] & H_LOWER) &&
-       (bestScore >= beta  || hashTable[index].flag[hit] & H_UPPER)   ) {
-      iterDep = resDep = hashTable[index].depth[hit]; bestMoveNr = 0;
-      if(!level) iterDep = 0; // no hash cutoff in root
-      if(lmr && bestScore <= alpha && iterDep == depth) depth++, lmr--; // self-deepening LMR
-      if(pvCuts && iterDep >= depth && hashMove && bestScore < beta && bestScore > alpha)
-        iterDep = depth - 1; // prevent hash cut in PV node
-    }
-  } else { // decide on replacement
-    if(depth >= hashTable[index].depth[nr] ||
-       depth+1 == hashTable[index].depth[nr] && !(nodes&3)) hit = nr; else hit = 4;
-    hashMove = INVALID;
-  }
+  hashMove = LookupHashMove(stm, alpha, beta, &depth, &lmr, oldPromo, promoSuppress, &bestMoveNr, &bestScore, &iterDep, &resDep, &index, &hit);
 #if 0
 printf("# iterDep = %d score = %d hash move = %s\n",iterDep,bestScore,MoveToText(hashMove,0));
 #endif

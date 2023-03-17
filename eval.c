@@ -19,7 +19,8 @@
 
 signed char psq[PSTSIZE][BSIZE] = { 0 }; // cache of piece-value-per-square
 
-int hashKeyH=1, hashKeyL=1, rootEval, filling, promoDelta;
+HashKey hashKeyH=1, hashKeyL=1;
+int rootEval, filling, promoDelta;
 int mobilityScore;
 
 int
