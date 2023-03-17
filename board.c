@@ -4,12 +4,6 @@
 /**************************************************************************/
 /* This source code is released in the public domain                      */
 /**************************************************************************/
-
-// TODO:
-// in GenCapts we do not generate jumps of more than two squares yet
-// promotions by pieces with Lion power stepping in & out the zone in same turn
-// promotion on capture
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

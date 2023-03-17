@@ -4,7 +4,6 @@
 /**************************************************************************/
 /* This source code is released in the public domain                      */
 /**************************************************************************/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

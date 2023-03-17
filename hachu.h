@@ -6,7 +6,6 @@
 /**************************************************************************/
 #ifndef HACHU_H
 #define HACHU_H
-
 #include "types.h"
 
 #define VERSION "0.23"

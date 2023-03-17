@@ -4,7 +4,6 @@
 /**************************************************************************/
 /* This source code is released in the public domain                      */
 /**************************************************************************/
-
 // TODO:
 // in GenCapts we do not generate jumps of more than two squares yet
 

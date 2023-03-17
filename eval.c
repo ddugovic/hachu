@@ -4,7 +4,6 @@
 /**************************************************************************/
 /* This source code is released in the public domain                      */
 /**************************************************************************/
-
 #include "eval.h"
 
 signed char psq[PSTSIZE][BSIZE] = { 0 }; // cache of piece-value-per-square

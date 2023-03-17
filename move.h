@@ -6,7 +6,6 @@
 /**************************************************************************/
 #ifndef MOVE_H
 #define MOVE_H
-
 #include "types.h"
 
 #define REP_MASK 0xFFFFFF
