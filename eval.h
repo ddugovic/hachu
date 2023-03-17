@@ -8,8 +8,6 @@
 #define EVAL_H
 #include "types.h"
 
-#define LVAL 1000 /* piece value of Lion. Used in chu for recognizing it to implement Lion-trade rules  */
-#define FVAL 5000 /* piece value of Fire Demon. Used in code for recognizing moves with it and do burns */
 #define KYLIN 100 /* extra end-game value of Kylin for promotability */
 
 // Piece-Square Tables/Flags

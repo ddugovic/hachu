@@ -16,6 +16,11 @@
 #define P_WHITE     0x0F
 #define P_BLACK     0xF0
 
+#define FVAL 5000 /* piece value of Fire Demon. Used in code for recognizing moves with it and do burns */
+#define LVAL 1000 /* piece value of Lion. Used in chu for recognizing it to implement Lion-trade rules  */
+#define DEMON(n) (p[n].value == FVAL)
+#define LION(n)  (p[n].value == LVAL)
+
 PieceDesc *ListLookUp(char *name, PieceDesc *list);
 PieceDesc *LookUp(char *name, int var);
 void DeletePiece(Color c, int n);

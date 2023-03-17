@@ -85,7 +85,7 @@ SetUp (char *fen, char *IDs, int var)
 	p[n].promoFlag &= n&1 ? P_WHITE : P_BLACK;
 	p[m].promo = -1;
 	p[m].pos = ABSENT;
-	if(p[m].value == LVAL) kylin[color] = n; // remember piece that promotes to Lion
+	if(!strcmp(p2->name, "LN")) kylin[color] = n; // remember piece that promotes to Lion
       } else p[n].promo = -1; // unpromotable piece
 //printf("piece = %c%-2s %d(%d) %d/%d\n", color ? 'w' : 'b', name, n, m, last[color], last[!color]);
     }
@@ -98,7 +98,7 @@ SetUp (char *fen, char *IDs, int var)
   if(!(prince & WHITE+1)) p[AddPiece(WHITE, LookUp("CP", V_CHU))].pos = ABSENT;
   if(!(prince & BLACK+1)) p[AddPiece(BLACK, LookUp("CP", V_CHU))].pos = ABSENT;
   for(i=0; i<RAYS; i++)  fireFlags[i] = 0;
-  for(i=2, n=1; i<10; i++) if(p[i].value == FVAL) {
+  for(i=2, n=1; i<10; i++) if(DEMON(i)) {
     int x = p[i].pos; // mark all burn zones
     fireFlags[i-2] = n;
     if(x != ABSENT) for(j=0; j<RAYS; j++) fireBoard[x+kStep[j]] |= n;
@@ -146,7 +146,7 @@ StackMultis (Color c)
   int i, j;
   multis[c] = c;
   for(i=c+COLORS; i<=pieces[c]; i+=COLORS) { // scan piece list for multi-capturers
-    for(j=0; j<RAYS; j++) if(p[i].range[j] < J && p[i].range[j] >= S || p[i].value == FVAL) {
+    for(j=0; j<RAYS; j++) if(p[i].range[j] < J && p[i].range[j] >= S || DEMON(i)) {
       multiMovers[multis[c]] = i;  // found one: put its piece number in list
       multis[c] += COLORS;
       break;
@@ -304,7 +304,7 @@ MakeMove (Color stm, Move m, UndoInfo *u)
 //		int n = board[promoSuppress-1];
 //		if( n != EMPTY && (n&TYPE) == INVERT(stm) && p[n].value == 8 ) NewNonCapt(promoSuppress-1, 16, 0);
 
-  if(p[u->piece].value == FVAL) { // move with Fire Demon
+  if(DEMON(u->piece)) { // move with Fire Demon
     int i, f=~fireFlags[u->piece-2];
     for(i=0; i<RAYS; i++) fireBoard[u->from + kStep[i]] &= f; // clear old burn zone
   }
@@ -361,7 +361,7 @@ MakeMove (Color stm, Move m, UndoInfo *u)
     hashKeyH ^= p[u->epVictim[0]].pieceKey * squareKey[u->epSquare + STEP(1, 0)];
     hashKeyL ^= p[u->epVictim[1]].pieceKey * squareKey[u->ep2Square];
     hashKeyH ^= p[u->epVictim[1]].pieceKey * squareKey[u->ep2Square + STEP(1, 0)];
-    if(p[u->piece].value != LVAL && p[u->epVictim[0]].value == LVAL) deferred |= PROMOTE; // flag non-Lion x Lion
+    if(LION(u->piece) && LION(u->epVictim[0])) deferred |= PROMOTE; // flag non-Lion x Lion
     cnt50 = 0; // double capture irreversible
    }
   }
@@ -372,7 +372,7 @@ MakeMove (Color stm, Move m, UndoInfo *u)
     u->booty -= p[u->piece].value;
     cnt50 = 0;
   } else
-  if(p[u->piece].value == FVAL) { // move with Fire Demon that survives: burn
+  if(DEMON(u->piece)) { // move with Fire Demon that survives: burn
     int i, f=fireFlags[u->piece-2];
     for(i=0; i<RAYS; i++) {
 	int x = u->to + kStep[i], burnVictim = board[x];
@@ -448,7 +448,7 @@ UnMake (UndoInfo *u)
     }
   }
 
-  if(p[u->piece].value == FVAL) {
+  if(DEMON(u->piece)) {
     int i, f=fireFlags[u->piece-2];
     for(i=0; i<RAYS; i++) fireBoard[u->from + kStep[i]] |= f; // restore old burn zone
   }

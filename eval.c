@@ -32,10 +32,10 @@ Evaluate (Color c, int tsume, int difEval)
 
   if(tsume) return difEval;
 
-  if(p[WHITE+2].value == LVAL) wLion = p[WHITE+2].pos;
-  if(p[BLACK+2].value == LVAL) bLion = p[BLACK+2].pos;
-  if(wLion == ABSENT && p[WHITE+4].value == LVAL) wLion = p[WHITE+4].pos;
-  if(bLion == ABSENT && p[BLACK+4].value == LVAL) bLion = p[BLACK+4].pos;
+  if(LION(WHITE+2)) wLion = p[WHITE+2].pos;
+  if(LION(BLACK+2)) bLion = p[BLACK+2].pos;
+  if(wLion == ABSENT && LION(WHITE+4)) wLion = p[WHITE+4].pos;
+  if(bLion == ABSENT && LION(BLACK+4)) bLion = p[BLACK+4].pos;
 
 #ifdef LIONTRAP
   // penalty for Lion in enemy corner, when enemy Lion is nearby
@@ -213,8 +213,8 @@ int
 Ftest (int side)
 {
   int lion = ABSENT, king;
-  if(p[side+2].value == LVAL) lion = p[side+2].pos;
-  if(lion == ABSENT && p[side+4].value == LVAL) lion = p[side+4].pos;
+  if(LION(side+2)) lion = p[side+2].pos;
+  if(lion == ABSENT && LION(side+4)) lion = p[side+4].pos;
   king = p[royal[1-side]].pos; if(king == ABSENT) king = p[royal[1-side]+1].pos;
   return lion == ABSENT ? 0 : Fortress(side ? -BW : BW, king, lion);
 }

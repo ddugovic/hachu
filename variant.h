@@ -8,19 +8,19 @@
 #define VARIANT_H
 #include "types.h"
 
-#define X 36 /* slider              */
-#define R 37 /* jump capture        */
-#define N -1 /* Knight              */
-#define J -2 /* jump                */
-#define I -3 /* jump + step         */
-#define K -4 /* triple + range      */
-#define T -5 /* linear triple move  */
-#define D -6 /* linear double move  */
-#define L -7 /* true Lion move      */
-#define W -8 /* Werewolf move       */
-#define F -9 /* Lion + 3-step       */
-#define S -10 /* Lion + range        */
-#define H -11 /* hook move           */
+#define X 36  /* slider             */
+#define R 37  /* jump capture       */
+#define N -1  /* Knight             */
+#define J -2  /* jump               */
+#define I -3  /* jump + step        */
+#define K -4  /* triple + range     */
+#define T -5  /* linear triple move */
+#define D -6  /* linear double move */
+#define L -7  /* true Lion move     */
+#define W -8  /* Werewolf move      */
+#define F -9  /* Lion + 3-step      */
+#define S -10 /* Lion + range       */
+#define H -11 /* hook move          */
 #define C -12 /* capture only       */
 #define M -13 /* non-capture only   */
 

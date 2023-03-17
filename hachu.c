@@ -419,7 +419,7 @@ static inline void
 FireSet (Color c, UndoInfo *tb)
 { // set fireFlags acording to remaining presene of Fire Demons
   int i;
-  for(i=c+2; p[i].value == FVAL; i++) // Fire Demons are always leading pieces in list
+  for(i=c+2; DEMON(i); i++) // Fire Demons are always leading pieces in list
     if(p[i].pos != ABSENT) tb->fireMask |= fireFlags[i-2];
 }
 
@@ -722,12 +722,12 @@ printf("#       repetition %d\n", i);
 variation[level++] = move;
 mobilityScore = MapAttacks(level); // for as long as incremental update does not work.
 //if(PATH) pmap(stm);
-      if(chuFlag && (p[tb.victim].value == LVAL || p[tb.epVictim[0]].value == LVAL)) {// verify legality of Lion capture in Chu Shogi
+      if(chuFlag && (LION(tb.victim) || LION(tb.epVictim[0]))) {// verify legality of Lion capture in Chu Shogi
 #if 0
 printf("#       revalidate %d 0x%04X %s\n", level, moveStack[curMove], MoveToText(moveStack[curMove], 0));
 #endif
         score = 0;
-        if(p[tb.piece].value == LVAL) { // Ln x Ln: can make Ln 'vulnerable' (if distant and not through intemediate > GB)
+        if(LION(tb.piece)) { // Ln x Ln: can make Ln 'vulnerable' (if distant and not through intemediate > GB)
           if(dist(tb.from, tb.to) > 1 && ATTACK(tb.to, stm) && p[tb.epVictim[0]].value <= 50)
             score = -INF;               // our defended Lion is invulnerable (cannot be captured)
         } else {                        // other x Ln
@@ -737,7 +737,7 @@ printf("#       revalidate %d 0x%04X %s\n", level, moveStack[curMove], MoveToTex
           defer |= PROMOTE;                         // if we started, flag  he cannot do it in reply
         }
         if(score == -INF) {
-          if(level == 1) repeatMove[repCnt++] = move & REP_MASK | (p[tb.piece].value == LVAL ? 3<<24 : 1 << 24);
+          if(level == 1) repeatMove[repCnt++] = move & REP_MASK | (LION(tb.piece) ? 3<<24 : 1 << 24);
           moveStack[curMove] = INVALID; // zap illegal lion moves
           goto abortMove;
         }
@@ -883,9 +883,10 @@ MakeMove2 (Color stm, Move move)
 {
   int i;
   FireSet(stm, &undoInfo);
-  sup0 = sup1; sup1 = sup2;
+  sup0 = sup1;
+  sup1 = sup2;
   sup2 = MakeMove(stm, move, &undoInfo);
-  if(chuFlag && p[undoInfo.victim].value == LVAL && p[undoInfo.piece].value != LVAL) sup2 |= PROMOTE;
+  if(chuFlag && LION(undoInfo.victim) && LION(undoInfo.piece)) sup2 |= PROMOTE; // flag Lion x Lion
   rootEval = -rootEval - undoInfo.booty;
   for(i=0; i<LEVELS; i++)
     repStack[i] = repStack[i+1], checkStack[i] = checkStack[i+1];
