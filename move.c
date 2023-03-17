@@ -110,7 +110,7 @@ ParseMove (Color stm, int listStart, int listEnd, char *moveText, Move *moveStac
       if(j >= RAYS) return INVALID; // this rejects Lion Dog 1+2 moves!
       t2 = SPECIAL + RAY(i, j);
     }
-  } else if(chessFlag && board[f] != EMPTY && p[board[f]].value == pVal && IsEmpty(t)) { // Pawn to empty, could be e.p.
+  } else if(chessFlag && !IsEmpty(f) && PAWN(board[f]) && IsEmpty(t)) { // Pawn to absent, could be e.p.
       if(t == f + BW + 1) t2 = SPECIAL + 16; else
       if(t == f + BW - 1) t2 = SPECIAL + 48; else
       if(t == f - BW + 1) t2 = SPECIAL + 20; else

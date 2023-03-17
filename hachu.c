@@ -611,9 +611,9 @@ if(PATH) printf("# phase=%d autofail end (%4d:%4d:%4d)\n", phase, firstMove, cur
             phase = 4; // out of victims: all captures generated
             if(chessFlag && (ep = promoSuppress & SQUARE) != ABSENT) { // e.p. rights. Create e.p. captures as Lion moves
                 int n = board[ep + STEP(0, -1)], old = msp; // a-side neighbor of pushed pawn
-                if( n != EMPTY && (n&TYPE) == stm && p[n].value == pVal ) msp = NewCapture(ep + STEP(0, -1), SPECIAL + RAY(2, stm==WHITE ? 0 : RAYS/2), 0, msp);
+                if( n != EMPTY && (n&TYPE) == stm && PAWN(n) ) msp = NewCapture(ep + STEP(0, -1), SPECIAL + RAY(2, stm==WHITE ? 0 : RAYS/2), 0, msp);
                 n = board[ep + STEP(0, 1)];      // h-side neighbor of pushed pawn
-                if( n != EMPTY && (n&TYPE) == stm && p[n].value == pVal ) msp = NewCapture(ep + STEP(0, 1), SPECIAL + RAY(6, stm==WHITE ? 0 : RAYS/2), 0, msp);
+                if( n != EMPTY && (n&TYPE) == stm && PAWN(n) ) msp = NewCapture(ep + STEP(0, 1), SPECIAL + RAY(6, stm==WHITE ? 0 : RAYS/2), 0, msp);
                 if(msp != old) goto extractMove; // one or more e.p. capture were generated
             }
           case 4: // dubious captures
@@ -1200,9 +1200,10 @@ pboard(board);
             engineSide = NONE;          // so stop playing
             PrintResult(stm, score);
           } else if(abortFlag >= 0) {   // prevents accidental self-play
-            Move f, pMove = move;
+            int f;
+            Move pMove = move;
             static char *pName[] = { "w", "z", "j" };
-            if((move & SQUARE) >= SPECIAL && p[board[f = FROM(move)]].value == pVal) { // e.p. capture
+            if((move & SQUARE) >= SPECIAL && PAWN(board[f = FROM(move)])) { // e.p. capture
               pMove = move & ~SQUARE | f + toList[(move & SQUARE) - SPECIAL]; // print as a single move
             }
             stm = MakeMove2(stm, move);  // assumes MakeMove returns new side to move

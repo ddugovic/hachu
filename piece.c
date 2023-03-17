@@ -75,6 +75,7 @@ int ray[RAYS+1] = { // 1 in the bit fields for the various directions
 
 int pieces[COLORS], royal[COLORS], kylin[COLORS];
 PieceInfo p[NPIECES]; // piece list
+int pVal;             // value of pawn per variant
 
 int squareKey[BSIZE];
 

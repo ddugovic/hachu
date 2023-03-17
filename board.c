@@ -16,7 +16,6 @@
 VariantDesc *variant;
 int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
 
-int pVal;
 int framePtr;
 int cnt50;
 

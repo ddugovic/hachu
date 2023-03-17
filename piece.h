@@ -20,6 +20,7 @@
 #define LVAL 1000 /* piece value of Lion. Used in chu for recognizing it to implement Lion-trade rules  */
 #define DEMON(n) (p[n].value == FVAL)
 #define LION(n)  (p[n].value == LVAL)
+#define PAWN(n)  (p[n].value == pVal)
 
 PieceDesc *ListLookUp(char *name, PieceDesc *list);
 PieceDesc *LookUp(char *name, int var);
@@ -69,10 +70,11 @@ extern int ray[RAYS+1];
 
 extern int pieces[COLORS], royal[COLORS], kylin[COLORS];
 extern PieceInfo p[NPIECES]; // piece list
+extern int pVal;             // value of pawn per variant
 
 extern int squareKey[BSIZE];
 
-extern Flag promoBoard[BSIZE];   // flags to indicate promotion zones
+extern Flag promoBoard[BSIZE]; // promotion zone indicators
 
 // Maximum of (ranks, files) of ray between squares
 #define dist(s1, s2) MAX(abs((s1-s2)/BW), abs((s1-s2)%BW))

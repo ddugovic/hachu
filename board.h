@@ -30,7 +30,6 @@ extern int bFiles, bRanks, zone, currentVariant, repDraws, stalemate;
 #define tenFlag (currentVariant == V_TENJIKU)
 #define wolfFlag (currentVariant == V_WOLF)
 
-extern int pVal;
 extern int framePtr;
 extern int level, cnt50;
 
