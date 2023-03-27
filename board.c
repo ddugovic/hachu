@@ -53,7 +53,7 @@ SetUp (char *fen, char *IDs, int var)
         j += ch - 1; continue;
       }
       if(ch == '/') break;
-      name[1] = name[2] = 0;
+      name[1] = name[2] = '\0';
       if(ch >= 'a') {
 	color = BLACK;
 	ch += 'A' - 'a';
@@ -61,9 +61,11 @@ SetUp (char *fen, char *IDs, int var)
       if(*fen == '\'') ch += 26, fen++; else
       if(*fen == '!')  ch += 52, fen++;
       name[0] = IDs[2*(ch - 'A')];
-      name[1] = IDs[2*(ch - 'A') + 1]; if(name[1] == ' ') name[1] = 0;
+      PieceDesc *p0 = LookUp(name, var);
+      name[1] = IDs[2*(ch - 'A') + 1]; if(name[1] == ' ') name[1] = '\0';
       if(!strcmp(name, "CP") || pflag && !strcmp(name, "DE")) prince |= color+1; // remember if we added Crown Prince
       PieceDesc *p1 = LookUp(name, var);
+      if(!p1) p1=p0;
       if(!p1) printf("tellusererror Unknown piece '%s' in setup (%d)\n", name, ch), exit(-1);
       if(pflag && p1->promoted) p1 = LookUp(p1->promoted, var); // use promoted piece instead
       n = AddPiece(color, p1);

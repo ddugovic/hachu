@@ -97,8 +97,8 @@ LookUp (char *name, int var)
       desc = ListLookUp(name, tenjikuPieces);
       if(desc) return desc;
       return ListLookUp(name, chuPieces);
-    case V_SHO: // Sho
-      return ListLookUp(name, shoPieces);
+    case V_SHO: // Shogi
+      return ListLookUp(name, shogiPieces);
     case V_DAI: // Dai
       desc = ListLookUp(name, daiPieces);
       if(desc) return desc;

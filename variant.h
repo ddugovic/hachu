@@ -25,7 +25,7 @@
 #define M -13 /* non-capture only   */
 
 extern PieceDesc chuPieces[];
-extern PieceDesc shoPieces[];
+extern PieceDesc shogiPieces[];
 extern PieceDesc daiPieces[];
 extern PieceDesc waPieces[];
 extern PieceDesc ddPieces[];
@@ -44,7 +44,7 @@ extern char daiArray[];
 extern char tenArray[];
 extern char cashewArray[];
 extern char macadArray[];
-extern char shoArray[];
+extern char shogiArray[];
 extern char waArray[];
 extern char chessArray[];
 extern char lionArray[];
