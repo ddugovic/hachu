@@ -1176,7 +1176,7 @@ printf("# ponder hit\n");
         if(retMSP == 0) retMSP = ListMoves(stm, retFirst, retMSP); // always maintain a list of legal moves in root position
         abortFlag = -(ponder && INVERT(stm) == engineSide && moveNr); // pondering and opponent on move
         if(stm == engineSide || abortFlag && ponderMove) {         // if it is the engine's turn to move, set it thinking, and let it move
-printf("# start %s: stm=%d engine=%d ponder=%d\n", abortFlag == -1 ? "ponder" : "searcH", stm, engineSide, ponder);
+printf("# start %s: stm=%d engine=%d ponder=%d\n", abortFlag == -1 ? "ponder" : "search", stm, engineSide, ponder);
           if(abortFlag) {
             stm = MakeMove2(stm, ponderMove);                           // for pondering, play speculative move
             gameMove[moveNr++] = ponderMove;                            // remember in game
