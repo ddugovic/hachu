@@ -354,7 +354,7 @@ char cashewArray[]= "lh!f'dh'j'ki'qc'hg!l/t!p'w!+oogngx+xl!k'd!/r've'fst'+nt'sfw
 		    "13/13/3D'5D'3/PPPPPPPPPPPPP/L'VW'FST'+NT'SFE'VR'/D!K'L!+XXGNGO+OW!P'T!/LG!HC'QI'KJ'H'DF'H!L";
 char macadArray[] = "lxcsgi'kj'gscol/1f'1w!1tet1l!1f'1/rr'g'bdh!qc!dbw'l'r/ppppppppppppp/3p'5p'3/13/"
 		    "13/13/3P'5P'3/PPPPPPPPPPPPP/RL'W'BDC!QH!DBG'R'R/1F'1L!1TET1W!1F'1/LOCSGI'KJ'GSCXL";
-char shogiArray[] = "lnsgkgsnl/1r2e2b1/ppppppppp/9/9/9/PPPPPPPPP/1B2E2R1/LNSGKGSNL";
+char shogiArray[] = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL";
 char waArray[]    = "hmlcvkwgudo/1e3s3f1/ppprpppxppp/3p3p3/11/11/11/3P3P3/PPPXPPPRPPP/1F3S3E1/ODUGWKVCLMH";
 char chessArray[] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 char lionArray[]  = "rlbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RLBQKBNR";

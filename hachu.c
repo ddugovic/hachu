@@ -929,14 +929,14 @@ UnMake2 (Move move)
 }
 
 Color
-Setup2 (char *fen)
+SetUp2 (char *fen)
 {
   char *p;
   Color stm = WHITE;
   if(fen) {
     char *q = strchr(fen, '\n');
-    if(q) *q = 0;
-    if(q = strchr(fen, ' ')) stm = (q[1] == 'b' ? BLACK : WHITE); // fen contains color field
+    if(q) *q = '\0';
+    if(q = strchr(fen, ' ')) stm = (q[1] == 'b' ? BLACK : WHITE), q[0] = '\0'; // fen contains color field
   } else fen = variant->array;
   rootEval = promoDelta = filling = cnt50 = moveNr = 0;
   SetUp(fen, variant->IDs, currentVariant);
@@ -966,6 +966,9 @@ SetMemorySize (int n)
 int
 ListMoves (Color stm, int listStart, int listEnd)
 { // create move list on move stack
+#if 0
+pboard(board);
+#endif
   int i;
   MapAttacks(level);
   postThinking--; repCnt = 0; tlim1 = tlim2 = tlim3 = 1e8; abortFlag = listEnd = 0;
@@ -1092,7 +1095,7 @@ printf("\n");
       int last;
       Color stm;
       last = moveNr - n; if(last < 0) last = 0;
-      Init(SAME); stm = Setup2(startPos);
+      Init(SAME); stm = SetUp2(startPos);
 printf("# setup done");fflush(stdout);
       for(moveNr=0; moveNr<last; moveNr++) stm = MakeMove2(stm, gameMove[moveNr]),printf("make %2d: %x\n", moveNr, gameMove[moveNr]);
       return stm;
@@ -1183,7 +1186,9 @@ printf("# start %s: stm=%d engine=%d ponder=%d\n", abortFlag == -1 ? "ponder" : 
             sprintf(ponderMoveText, "%s\n", MoveToText(ponderMove, 0)); // for detecting ponder hits
 printf("# ponder=%s\n", ponderMoveText);
           } else SetSearchTimes(10*timeLeft);                           // for thinking, schedule end time
+#if 0
 pboard(board);
+#endif
           score = SearchBestMove(stm, &move, &ponderMove, retMSP);
           if(abortFlag == 1) { // ponder search was interrupted (and no hit)
             UnMake2(INVALID); moveNr--; stm ^= WHITE;    // take ponder move back if we made one
@@ -1306,7 +1311,9 @@ pboard(board);
         if(!strcmp(command, ""))  {  continue; }
         if(!strcmp(command, "usermove")){
           int move = ParseMove(stm, retFirst, retMSP, inBuf+9, moveStack, repeatMove, &retMSP);
+#if 0
 pboard(board);
+#endif
           if(move == INVALID) {
             if(reason) printf("Illegal move {%s}\n", reason); else printf("%s\n", reason="Illegal move");
             if(comp) PrintResult(stm, -INF); // against computer: claim
@@ -1320,14 +1327,14 @@ pboard(board);
         ponderMove = INVALID; // the following commands change the position, invalidating ponder move
         retMSP = 0;           // list has been consumed
         if(!strcmp(command, "new"))     {
-          engineSide = BLACK; Init(V_CHESS); stm = Setup2(NULL); maxDepth = MAXPLY; randomize = OFF; curVarNr = comp = 0;
+          engineSide = BLACK; Init(V_CHESS); stm = SetUp2(NULL); maxDepth = MAXPLY; randomize = OFF; curVarNr = comp = 0;
           continue;
         }
         if(!strcmp(command, "variant")) {
           for(i=0; variants[i].boardRanks; i++) {
             sscanf(inBuf+8, "%s", command);
             if(!strcmp(variants[i].name, command)) {
-              Init(curVarNr = i); stm = Setup2(NULL); break;
+              Init(curVarNr = i); stm = SetUp2(NULL); break;
             }
           }
           if(currentVariant == V_WOLF)
@@ -1363,7 +1370,7 @@ pboard(board);
           repStack[LEVELS-1] = hashKeyH, checkStack[LEVELS-1] = 0;
           continue;
         }
-        if(!strcmp(command, "setboard")){ engineSide = NONE;  Init(curVarNr); stm = Setup2(inBuf+9); continue; }
+        if(!strcmp(command, "setboard")){ engineSide = NONE; Init(curVarNr); stm = SetUp2(inBuf+9); continue; }
         if(!strcmp(command, "undo"))    { stm = TakeBack(1); continue; }
         if(!strcmp(command, "remove"))  { stm = TakeBack(2); continue; }
         printf("Error: unknown command\n");
