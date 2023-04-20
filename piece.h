@@ -68,7 +68,10 @@ extern int ray[RAYS+1];
 //   (1) can promote (2) can defer when the to-square is on last rank, last two ranks, or anywhere.
 //   Pawns normally can't defer anywhere, but if the user defers with them, their promoFlag is set to promote on last rank only
 
-extern int pieces[COLORS], royal[COLORS], kylin[COLORS];
+extern int pieces[COLORS], royal[COLORS];
+#if KYLIN
+extern int kylin[COLORS];
+#endif
 extern PieceInfo p[NPIECES]; // piece list
 extern int pVal;             // value of pawn per variant
 

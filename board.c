@@ -86,7 +86,9 @@ SetUp (char *fen, char *IDs, int var)
 	p[n].promoFlag &= n&1 ? P_WHITE : P_BLACK;
 	p[m].promo = -1;
 	p[m].pos = ABSENT;
+#if KYLIN
 	if(!strcmp(p2->name, "LN")) kylin[color] = n; // remember piece that promotes to Lion
+#endif
       } else p[n].promo = -1; // unpromotable piece
 //printf("piece = %c%-2s %d(%d) %d/%d\n", color ? 'w' : 'b', name, n, m, last[color], last[!color]);
     }
@@ -109,7 +111,9 @@ SetUp (char *fen, char *IDs, int var)
   for(i=0; i<bRanks; i++) for(j=0; j<bFiles; j++) board[POS(i, j)] = EMPTY;
   for(i=WHITE+2; i<=pieces[WHITE]; i+=2) if(p[i].pos != ABSENT) {
     int g = p[i].promoGain;
+#if KYLIN
     if(i == kylin[WHITE]) p[i].promoGain = 1.25*KYLIN, p[i].value += KYLIN;
+#endif
 //    if(j > 0 && p[i].pst == PST_STEPPER) p[i].pst = PST_PPROM; // use white pre-prom bonus
     if(j > 0 && p[i].pst == PST_STEPPER && p[i].value >= 100)
 	p[i].pst = p[i].value <= 150 ? PST_ADVANCE : PST_PPROM;  // light steppers advance
@@ -131,7 +135,9 @@ SetUp (char *fen, char *IDs, int var)
     if((j = p[i].promo) > 0 && g)
       p[i].promoGain = (p[j].value - p[i].value - g)*0.9, p[i].value = p[j].value - g;
     else p[i].promoGain = 0;
+#if KYLIN
     if(i == kylin[BLACK]) p[i].promoGain = 1.25*KYLIN, p[i].value += KYLIN;
+#endif
     board[p[i].pos] = i;
     rootEval -= p[i].value + PSQ(p[i].pst, p[i].pos, BLACK);
     promoDelta -= p[i].promoGain;

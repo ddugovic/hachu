@@ -73,7 +73,10 @@ int ray[RAYS+1] = { // 1 in the bit fields for the various directions
  0100000000  // marks knight jumps
 };
 
-int pieces[COLORS], royal[COLORS], kylin[COLORS];
+int pieces[COLORS], royal[COLORS];
+#if KYLIN
+int kylin[COLORS];
+#endif
 PieceInfo p[NPIECES]; // piece list
 int pVal;             // value of pawn per variant
 
@@ -133,7 +136,9 @@ DeletePiece (Color c, int n)
   for(i=n; i<pieces[c]; i+=2) {
     p[i] = p[i+2];
     if(i+2 == royal[c]) royal[c] -= 2; // NB: squeezing out the King moves up Crown Prince to royal[c]
+#if KYLIN
     if(i+2 == kylin[c]) kylin[c] -= 2;
+#endif
     if(i < 10) fireFlags[i-2] = fireFlags[i];
   }
   pieces[c] -= 2;
@@ -252,7 +257,9 @@ AddPiece (Color c, PieceDesc *list)
     if(p[j].promo >= i) p[j].promo += 2;
   }
   if(royal[c] >= i) royal[c] += 2;
+#if KYLIN
   if(kylin[c] >= i) kylin[c] += 2;
+#endif
   if(p[i].value == (currentVariant == V_SHO || currentVariant == V_WA ? 410 : 280) ) royal[c] = i, p[i].pst = PST_NEUTRAL;
   p[i].qval = (tenFlag ? list->ranking : 0); // jump-capture hierarchy
   return i;

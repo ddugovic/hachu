@@ -8,7 +8,7 @@
 #define EVAL_H
 #include "types.h"
 
-#define KYLIN 100 /* extra end-game value of Kylin for promotability */
+#define KYLIN 0 /* extra end-game value of Kylin for promotability */
 
 // Piece-Square Tables/Flags
 #define PST_NEUTRAL  0
