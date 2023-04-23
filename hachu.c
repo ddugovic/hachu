@@ -1122,7 +1122,9 @@ printf("# setup done");fflush(stdout);
 
         // extract the first word
         sscanf(inBuf, "%s", command);
+#if 0
 printf("# in (mode = %d,%d): %s\n", root, abortFlag, command);
+#endif
         if(!strcmp(command, "otim"))    { continue; } // do not start pondering after receiving time commands, as move will follow immediately
         if(!strcmp(command, "time"))    { sscanf(inBuf, "time %d", &timeLeft); continue; }
         if(!strcmp(command, "put"))     { ReadSquare(inBuf+4, &lastPut); continue; }  // ditto
